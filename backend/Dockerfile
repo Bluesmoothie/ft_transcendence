@@ -1,0 +1,13 @@
+FROM alpine:3.20
+
+RUN apk update && apk upgrade
+RUN apk add php-fpm nodejs npm
+RUN apk add sqlite bash
+
+COPY ./db.sql /db.sql
+COPY ./test.js /test.js
+
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["bash", "/entrypoint.sh"] 

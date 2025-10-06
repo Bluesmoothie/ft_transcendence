@@ -1,14 +1,27 @@
 services:
 
-  mariadb:
-    restart: always
-    build: ./requirements/mariadb/
-    container_name: SQLite
+  backend:
+    # restart: always
+    build: ./backend/
+    container_name: backend
     env_file: ./.env
     ports:
-      - "3306:3306"
+      - "3309:3309"
+      - "9000:9000"
     volumes:
-      - sqlite:/var/lib/mysql
+      - sqlite:/var/lib/sqlite
+    networks:
+      - transcendence
+
+  frontend:
+    restart: always
+    build: ./frontend/
+    container_name: frontend
+    env_file: ./.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - front_data:/var/www/html
     networks:
       - transcendence
 
@@ -17,5 +30,7 @@ networks:
     driver: bridge
 
 volumes:
-  mariadb:
+  sqlite:
     name: sqlite
+  front_data:
+    name: front_data
