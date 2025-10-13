@@ -23,9 +23,6 @@ npm init -y
 npm install -D tailwindcss@3 postcss autoprefixer
 npx tailwindcss init -p
 
-# cp /
-
-npx tailwindcss -i ./css/input.css -o ./styles.css
-
+npx tailwindcss -i ./css/input.css -o ./css/styles/output.css
 
 exec nginx -g "daemon off;"
