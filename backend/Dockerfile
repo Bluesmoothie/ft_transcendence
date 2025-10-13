@@ -5,7 +5,7 @@ RUN apk add php-fpm nodejs npm
 RUN apk add sqlite bash
 
 COPY ./db.sql /db.sql
-COPY ./test.js /test.js
+# COPY ./test.js /test.js
 
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
