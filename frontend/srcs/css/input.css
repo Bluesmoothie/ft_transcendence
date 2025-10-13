@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Vos styles personnalisés pour le jeu Pong */
+@layer components {
+  .game-container {
+    @apply relative bg-black w-full h-screen overflow-hidden;
+  }
+  
+  .paddle {
+    @apply absolute bg-white;
+  }
+  
+  .ball {
+    @apply absolute bg-white rounded-full;
+  }
+  
+  .score {
+    @apply absolute text-white text-4xl font-bold;
+  }
+}
