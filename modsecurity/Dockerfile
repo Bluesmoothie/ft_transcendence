@@ -68,4 +68,4 @@ RUN ln -s /etc/nginx/sbin/nginx /usr/sbin/nginx			&& \
 
 EXPOSE 80 443
 
-ENTRYPOINT [ "nginx", "-g", "daemon off;" ]
+ENTRYPOINT [ "sh", "/entrypoint.sh" ]

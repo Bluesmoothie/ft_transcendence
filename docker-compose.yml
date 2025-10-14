@@ -20,6 +20,21 @@ services:
     volumes:
       - front_data:/var/www/html
     networks:
+      - web
+      - db
+
+  modsecurity:
+    restart: always
+    build: ./modsecurity/
+    container_name: modsecurity
+    depends_on:
+      - frontend
+    volumes:
+      - cert:/etc/nginx/conf/ssl
+    ports:
+      - "8080:80"
+      - "8081:443"
+    networks:
       - transcendence
       - web
 
@@ -34,3 +49,5 @@ volumes:
     name: sqlite
   front_data:
     name: front_data
+  cert:
+    name: cert
