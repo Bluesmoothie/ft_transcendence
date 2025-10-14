@@ -10,9 +10,9 @@ else
 
 function submit_new_user()
 {
-	const	passw = document.getElementById("passw")?.nodeValue;
-	const	username = document.getElementById("username")?.nodeValue;
 	var		email = (<HTMLInputElement>document.getElementById("email")).value;
+	var		passw = (<HTMLInputElement>document.getElementById("passw")).value;
+	var		username = (<HTMLInputElement>document.getElementById("username")).value;
 
 	console.log(email);
 	console.log(passw);
