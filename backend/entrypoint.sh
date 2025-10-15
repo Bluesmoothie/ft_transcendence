@@ -1,11 +1,13 @@
 #!/bin/bash
 
-sqlite3 /var/lib/sqlite/app.db < /db.sql
+sqlite3 /var/www/server/app.sqlite < /db.sql
 
 cd /var/www/server
 
 npm init -y
-npm install fastify
-node server.ts
+npm install fastify typescript @types/node sqlite3 sqlite 
 
-tail -f
+make re
+
+node js/server.js
+

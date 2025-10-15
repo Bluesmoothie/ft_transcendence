@@ -19,7 +19,12 @@ openssl req -x509 -nodes -newkey rsa:2048 \
 
 
 cd /var/www/html
+
 npm init -y
+npm install typescript 
+
+make clean
+make
 npm install -D tailwindcss@3 postcss autoprefixer
 npx tailwindcss init -p
 

@@ -24,6 +24,8 @@ services:
     networks:
       - transcendence
       - backend
+    depends_on:
+      - backend
 
 networks:
   transcendence:
