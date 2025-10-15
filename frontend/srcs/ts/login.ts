@@ -27,6 +27,20 @@ function hash_string(name: string)
 	return hash;
 }
 
+function addLog(code:number, msg:string)
+{
+	const parent = document.getElementById("debug-box");
+
+	if (!parent)
+		return;
+
+	const child = document.createElement("p");
+	child.textContent = `<${code}>: ${msg}`;
+	child.className = "debug-text";
+	
+	parent.prepend(child);
+}
+
 async function submit_new_user()
 {
 	var		email = (<HTMLInputElement>document.getElementById("create_email")).value;
@@ -55,7 +69,13 @@ async function submit_new_user()
 	console.log(data);
 	var txt = document.getElementById("placeholder");
 	if (txt)
-		txt.innerText = jsonString;
+	{
+		if (response.status == 201)
+			txt.innerText = "user created";
+		else 
+			txt.innerText = "database error";
+	}
+	addLog(response.status, jsonString);
 }
 
 async function login()
@@ -83,5 +103,14 @@ async function login()
 	console.log(data);
 	var txt = document.getElementById("placeholder");
 	if (txt)
-		txt.innerText = jsonString;
+	{
+		if (response.status == 200)
+			txt.innerText = "connected !";
+		else if (response.status == 404)
+			txt.innerText = "passw or email invalid";
+		else 
+			txt.innerText = "database error";
+	}
+
+	addLog(response.status, jsonString);
 }

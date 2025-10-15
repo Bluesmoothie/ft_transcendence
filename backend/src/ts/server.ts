@@ -30,9 +30,6 @@ fastify.post('/api/login', (request:any, reply:any) => {
 			reply.code(200).send(row);
 		}
 	})
-	// reply
-	// 	.code(201)
-	// 	.send({ message: 'Success' });
 
 })
 
