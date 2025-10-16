@@ -10,7 +10,7 @@ class Router
 		this.pages = 
 		{
 			home: document.querySelector('.home') as HTMLDivElement,
-			game: document.querySelector('.game-container') as HTMLDivElement,
+			game: document.querySelector('.game') as HTMLDivElement,
 		};
 		this.init();
 	}

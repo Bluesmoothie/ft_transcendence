@@ -4,7 +4,7 @@
 
 @layer components
 {
-	.body			{ @apply bg-[url('../assets/background.jpg')] min-h-screen flex items-start justify-center pt-[10vh]; }
+	.body			{ @apply bg-[url('../assets/background.jpg')] bg-cover min-h-screen flex items-start justify-center pt-[10vh] w-screen; }
 
 	/* HOMEPAGE */
 	.home			{ @apply relative flex flex-col; }
@@ -12,13 +12,16 @@
 	.player-button	{ @apply border-white relative w-[20vw] m-[2vw] text-white text-[2vw] font-bold py-[1vw] rounded-xl hover:bg-white hover:text-black active:scale-90 duration-200; font-family: 'Orbitron', 'Courier New', monospace; }
 
 	/* GAME */
-	.game-container	{ @apply hidden bg-black w-[40vw] aspect-[4/3] border-[0.4vw] border-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-opacity-80; }
+	.game			{ @apply hidden bg-black w-[40vw] aspect-[4/3] border-[0.4vw] border-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2; }
 	.paddle-left	{ @apply absolute left-[3%] top-1/2 transform -translate-y-1/2 w-[2%] h-[20%] bg-white; }
 	.paddle-right	{ @apply absolute right-[3%] top-1/2 transform -translate-y-1/2 w-[2%] h-[20%] bg-white; }
 	.net			{ @apply absolute left-1/2 top-0 transform -translate-x-1/2 w-0 h-full border-l-[0.35vw] border-dashed border-white; }
 	.ball			{ @apply absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[2%] bg-white aspect-square; }
 	.score-left		{ @apply absolute top-[2%] right-1/2 pr-[2vw] text-white text-[3vw] text-right; font-family: 'Orbitron', 'Courier New', monospace; }
 	.score-right	{ @apply absolute top-[2%] left-1/2 pl-[2vw] text-white text-[3vw] text-left; font-family: 'Orbitron', 'Courier New', monospace; }
+	.countdown		{ @apply absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[3vw] font-bold rounded-lg text-center hidden animate-pulse duration-500; font-family: 'Orbitron', 'Courier New', monospace; }
 	.pause-msg		{ @apply absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[3vw] font-bold rounded-lg text-center hidden; font-family: 'Orbitron', 'Courier New', monospace; }
 	.continue-msg	{ @apply absolute top-[70%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[2vw] font-bold rounded-lg text-center hidden w-[40vw] py-[2vw] animate-pulse duration-500; font-family: 'Orbitron', 'Courier New', monospace; }
+	.winner			{ @apply absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[3vw] font-bold rounded-lg text-center hidden animate-pulse duration-500; font-family: 'Orbitron', 'Courier New', monospace; }
+	.play-again		{ @apply absolute top-[70%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[2vw] font-bold rounded-lg text-center hidden w-[40vw] py-[2vw] animate-pulse duration-500; font-family: 'Orbitron', 'Courier New', monospace; }
 }
