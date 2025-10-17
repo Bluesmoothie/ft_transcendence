@@ -17,7 +17,8 @@ export class User
 
 	public getAvatarPath() : string
 	{
-		return this.m_avatarPath;
+		console.log(this.m_avatarPath + "?" + new Date().getTime());
+		return this.m_avatarPath + "?" + new Date().getTime();
 	}
 
 	public async setAvatar(file:File) : Promise<any>
@@ -31,7 +32,9 @@ export class User
 		var response = await fetch("/api/upload/avatar", {
 			method: "POST",
 			headers: {
-				'id': this.m_id.toString()
+				'id': this.m_id.toString(),
+				'email': this.m_email,
+				'prev_avatar': this.m_avatarPath,
 			},
 			body: formData, 
 			

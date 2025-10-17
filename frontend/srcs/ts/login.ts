@@ -22,10 +22,8 @@ async function upload_avatar()
 		return ;
 	}
 
-	const data = await user.setAvatar(fileInput.files[0]);
-	console.warn(user);
+	await user.setAvatar(fileInput.files[0]);
 	updateUser(user, document.getElementById("user1"));
-	// addLog(data.status, data.message)
 }
 
 // Todo: change using sha256
@@ -109,7 +107,6 @@ function setUser(data:any)
 	user = new User(parsed.id, parsed.name, parsed.email, parsed.profile_picture);
 	updateUser(user, document.getElementById("user1"));
 
-	console.warn(user);
 }
 
 async function submit_new_user()
@@ -175,7 +172,6 @@ async function login()
 		setPlaceholderTxt("connected !");
 		setUser(jsonString);
 	}
-
 	addLog(response.status, jsonString);
 
 }
