@@ -23,13 +23,7 @@ npm init -y
 npm install -D tailwindcss@3 postcss autoprefixer
 cat << EOF > tailwind.config.js
 /** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["index.html"],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
+export default { content: ["index.html"], theme: { extend: {}, }, plugins: [], }
 EOF
 
 npx tailwindcss -i css/input.css -o css/output.css

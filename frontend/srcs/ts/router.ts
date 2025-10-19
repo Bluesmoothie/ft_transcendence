@@ -1,5 +1,7 @@
 class Router
 {
+	private static readonly EXIT_KEY: string = 'Escape';
+
 	currentPage: string;
 	pages: { [key: string]: HTMLDivElement };
 	gameInstance: any = null;
@@ -7,7 +9,7 @@ class Router
 	constructor()
 	{
 		this.currentPage = 'home';
-		this.pages = 
+		this.pages =
 		{
 			home: document.querySelector('.home') as HTMLDivElement,
 			game: document.querySelector('.game') as HTMLDivElement,
@@ -25,7 +27,7 @@ class Router
 
 		window.addEventListener('keydown', (e) =>
 		{
-			if (e.key === 'Escape' && this.currentPage === 'game')
+			if (e.key === Router.EXIT_KEY && this.currentPage === 'game')
 			{
 				this.showPage('home', false);
 			}

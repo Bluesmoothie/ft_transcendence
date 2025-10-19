@@ -5,15 +5,15 @@ all:
 
 .PHONY: build
 build:
-	docker compose build
+	docker-compose build
 
 .PHONY: start
 start:
-	docker compose up
+	docker-compose up
 
 .PHONY: clean
 clean:
-	docker compose down
+	docker-compose down
 	docker system prune -a -f
 
 .PHONY: fclean
