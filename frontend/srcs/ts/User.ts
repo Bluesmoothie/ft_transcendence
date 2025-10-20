@@ -17,7 +17,7 @@ export class User
 
 	public getAvatarPath() : string
 	{
-		console.log(this.m_avatarPath + "?" + new Date().getTime());
+		// console.log(this.m_avatarPath + "?" + new Date().getTime());
 		return this.m_avatarPath + "?" + new Date().getTime();
 	}
 

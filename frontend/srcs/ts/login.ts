@@ -2,12 +2,25 @@ import { User } from './User.js';
 
 var user:User = null;
 
-document.getElementById("create_btn")?.addEventListener("click", submit_new_user);
+document.getElementById("create_btn")?.addEventListener("click", submitNewUser);
 document.getElementById("login_btn")?.addEventListener('click', login);
 document.getElementById("logout_btn")?.addEventListener("click", logout);
-document.getElementById("avatar_upload_btn")?.addEventListener("click", upload_avatar);
+document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAvatar);
+document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);
 
-async function upload_avatar()
+async function sendFriendInvite()
+{
+	var inviteInput = document.getElementById("add_friend_input") as HTMLInputElement;
+	if (!inviteInput)
+	{
+		console.error("no add_friend_input found");
+		return ;
+	}
+
+	
+}
+
+async function uploadAvatar()
 {
 	if (!user)
 	{
@@ -27,7 +40,7 @@ async function upload_avatar()
 }
 
 // Todo: change using sha256
-function hash_string(name: string)
+function hashString(name: string)
 {
 	let hash = 0;
 
@@ -93,6 +106,7 @@ function updateUser(user:User, elt:HTMLElement)
 }
 
 
+// TODO: set user status based on login / logout
 function setUser(data:any)
 {
 	if (!data) // logout
@@ -109,7 +123,7 @@ function setUser(data:any)
 
 }
 
-async function submit_new_user()
+async function submitNewUser()
 {
 	var		email = (<HTMLInputElement>document.getElementById("create_email")).value;
 	var		passw = (<HTMLInputElement>document.getElementById("create_passw")).value;
@@ -122,7 +136,7 @@ async function submit_new_user()
 		},
 		body: JSON.stringify({
 			email: email,
-			passw: hash_string(passw),
+			passw: hashString(passw),
 			username: username,
 		})
 	});
@@ -157,7 +171,7 @@ async function login()
 		},
 		body: JSON.stringify({
 			email: email,
-			passw: hash_string(passw),
+			passw: hashString(passw),
 		})
 	});
 	const data = await response.json();

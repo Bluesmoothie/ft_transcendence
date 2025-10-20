@@ -23,14 +23,14 @@ cd /var/www/html
 npm init -y
 npm install typescript 
 
-make clean
-make
-npm install -D tailwindcss@3 postcss autoprefixer
+# make clean
+# make
+npm install -D tailwindcss@3 postcss autoprefixer    
 npx tailwindcss init -p
 
 # cp /
 
 npx tailwindcss -i ./css/input.css -o ./styles.css
-
+npx tsc
 
 exec nginx -g "daemon off;"
