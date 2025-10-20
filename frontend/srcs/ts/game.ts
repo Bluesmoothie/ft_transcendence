@@ -1,26 +1,26 @@
 class Game
 {
 	/* GAME CONSTANTS */
-	private static readonly PADDLE_SPEED: number = 0.8;
+	private static readonly PADDLE_SPEED: number = 1.2;
 	private static readonly PADDLE_HEIGHT: number = 15;
 	private static readonly PADDLE_WIDTH: number = 2;
 	private static readonly PADDLE_PADDING: number = 2;
 	private static readonly MIN_Y_PADDLE: number = Game.PADDLE_HEIGHT / 2;
 	private static readonly MAX_Y_PADDLE: number = 100 - Game.MIN_Y_PADDLE;
 	private static readonly BALL_SIZE: number = 2;
-	private static readonly MIN_Y_BALL: number = Game.BALL_SIZE / 2;
+	private static readonly MIN_Y_BALL: number = Game.BALL_SIZE;
 	private static readonly MAX_Y_BALL: number = 100 - Game.MIN_Y_BALL;
 	private static readonly MIN_X_BALL: number = Game.PADDLE_PADDING + Game.PADDLE_WIDTH + Game.MIN_Y_BALL;
 	private static readonly MAX_X_BALL: number = 100 - Game.MIN_X_BALL;
-	private static readonly MAX_ANGLE: number = 0.9;
-	private static readonly SPEED: number = 0.8;
+	private static readonly MAX_ANGLE: number = 0.75;
+	private static readonly SPEED: number = 1.0;
 	private static readonly SPEED_INCREMENT: number = 0.0;
 	private static readonly BACKGROUND_OPACITY: string = '0.2';
 	private static readonly POINTS_TO_WIN: number = 2;
 	private static readonly COUNTDOWN_TIME: number = 3;
-	private static readonly COUNTDOWN_INTERVAL: number = 0;
+	private static readonly COUNTDOWN_INTERVAL: number = 1000;
 	private static readonly COLOR: string = '255, 255, 255';
-	private static readonly PLAYER1_UP_KEY: string = 'z';
+	private static readonly PLAYER1_UP_KEY: string = 'w';
 	private static readonly PLAYER1_DOWN_KEY: string = 's';
 	private static readonly PLAYER2_UP_KEY: string = 'ArrowUp';
 	private static readonly PLAYER2_DOWN_KEY: string = 'ArrowDown';
@@ -220,6 +220,11 @@ class Game
 			this.score((this.ballX > 100) ? 1 : 2);
 			this.resetBall();
 		}
+		else if (this.collideWall())
+		{
+			this.ballSpeedY = -this.ballSpeedY;
+			this.normalizeSpeed();
+		}
 		else if (this.collidePaddleLeft())
 		{
 			this.bounce(this.leftPaddleY, 1);
@@ -227,11 +232,6 @@ class Game
 		else if (this.collidePaddleRight())
 		{
 			this.bounce(this.rightPaddleY, -1);
-		}
-		else if (this.collideWall())
-		{
-			this.ballSpeedY = -this.ballSpeedY;
-			this.normalizeSpeed();
 		}
 
 		this.elements.ball.style.left = this.ballX + '%';

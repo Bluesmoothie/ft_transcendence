@@ -27,6 +27,6 @@ export default { content: ["index.html"], theme: { extend: {}, }, plugins: [], }
 EOF
 
 npx tailwindcss -i css/input.css -o css/output.css
-make
+npx tsc
 
 exec nginx -g "daemon off;"
