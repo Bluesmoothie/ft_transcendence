@@ -1,33 +1,36 @@
+import { fastify, FastifyInstance } from 'fastify';
+import websocket from '@fastify/websocket';
+
 class GameClient
 {
-	/* GAME CONSTANTS */
-	private static readonly PADDLE_HEIGHT: number = 15;
-	private static readonly PADDLE_WIDTH: number = 2;
-	private static readonly PADDLE_PADDING: number = 2;
-	private static readonly BALL_SIZE: number = 2;
-	private static readonly BACKGROUND_OPACITY: string = '0.2';
-	private static readonly COUNTDOWN_TIME: number = 3;
-	private static readonly COUNTDOWN_INTERVAL: number = 1000;
-	private static readonly COLOR: string = '255, 255, 255';
-	private static readonly PAUSE_KEY: string = ' ';
-	private static readonly PAUSE_MSG: string = `GAME PAUSED`;
-	private static readonly RESUME_MSG: string = `Press ${GameClient.PAUSE_KEY} to continue`;
-	private static readonly PLAY_AGAIN_KEY: string = 'Enter';
-	private static readonly PLAY_AGAIN_MSG: string = `Press ${GameClient.PLAY_AGAIN_KEY} to play again`;
-
-	/* GAME HTML ELEMENTS */
-	private elements: { [key: string]: HTMLDivElement };
-
-	/* GAME STATE */
+	private HTMLelements: { [key: string]: HTMLDivElement };
 	private keysPressed: Set<string> = new Set();
-	private leftPaddleY: number = 50;
-	private rightPaddleY: number = 50;
-	private pauseGame: boolean = false;
-	private end: boolean = false;
-	private spacePressed: boolean = false;
-
-	private socket: WebSocket;
 	private gameState: any;
+
+	private setupServer(): void
+	{
+		const server = fastify();
+		server.register(websocket);
+
+		server.register(async (fastify) =>
+		{
+			fastify.get('/game', { websocket: true } as any, (connection: any, req: any) =>
+			{
+				this.players.set(connection.socket, `player`);
+
+				connection.socket.on('message', (message: Buffer) =>
+				{
+					const data = JSON.parse(message.toString());
+					this.handleClientInput(data);
+				});
+
+				connection.socket.on('close', () =>
+				{
+					this.players.delete(connection.socket);
+				});
+			});
+		});
+	}
 
 	constructor()
 	{
@@ -45,7 +48,7 @@ class GameClient
 
 	private initElements(): void
 	{
-		this.elements =
+		this.HTMLelements =
 		{
 			game: document.querySelector('.game') as HTMLDivElement,
 			leftPaddle: document.querySelector('.paddle-left') as HTMLDivElement,
@@ -64,55 +67,46 @@ class GameClient
 
 	private setStyles(): void
 	{
-		this.elements.leftPaddle.style.height = GameClient.PADDLE_HEIGHT + '%';
-		this.elements.rightPaddle.style.height = GameClient.PADDLE_HEIGHT + '%';
-		this.elements.leftPaddle.style.width = GameClient.PADDLE_WIDTH + '%';
-		this.elements.rightPaddle.style.width = GameClient.PADDLE_WIDTH + '%';
-		this.elements.leftPaddle.style.left = GameClient.PADDLE_PADDING + '%';
-		this.elements.rightPaddle.style.right = GameClient.PADDLE_PADDING + '%';
-		this.elements.leftPaddle.style.top = this.leftPaddleY + '%';
-		this.elements.rightPaddle.style.top = this.rightPaddleY + '%';
-		this.elements.ball.style.width = GameClient.BALL_SIZE + '%';
-		this.elements.net.style.display = 'none';
-		this.elements.ball.style.display = 'none';
-		this.elements.scoreLeft.textContent = '0';
-		this.elements.scoreRight.textContent = '0';
-		this.elements.pauseMessage.style.display = 'none';
-		this.elements.continueMessage.style.display = 'none';
-		this.elements.winner.style.display = 'none';
-		this.elements.playAgain.style.display = 'none';
+		this.HTMLelements.net.style.display = 'none';
+		this.HTMLelements.ball.style.display = 'none';
+		this.HTMLelements.scoreLeft.textContent = '0';
+		this.HTMLelements.scoreRight.textContent = '0';
+		this.HTMLelements.pauseMessage.style.display = 'none';
+		this.HTMLelements.continueMessage.style.display = 'none';
+		this.HTMLelements.winner.style.display = 'none';
+		this.HTMLelements.playAgain.style.display = 'none';
 	}
 
 	private setOpacity(opacity: string): void
 	{
-		this.elements.leftPaddle.style.opacity = opacity;
-		this.elements.rightPaddle.style.opacity = opacity;
-		this.elements.net.style.opacity = opacity;
-		this.elements.ball.style.opacity = opacity;
-		this.elements.scoreLeft.style.opacity = opacity;
-		this.elements.scoreRight.style.opacity = opacity;
-		this.elements.game.style.borderColor = `rgba(${GameClient.COLOR}, ${opacity})`;
+		this.HTMLelements.leftPaddle.style.opacity = opacity;
+		this.HTMLelements.rightPaddle.style.opacity = opacity;
+		this.HTMLelements.net.style.opacity = opacity;
+		this.HTMLelements.ball.style.opacity = opacity;
+		this.HTMLelements.scoreLeft.style.opacity = opacity;
+		this.HTMLelements.scoreRight.style.opacity = opacity;
+		this.HTMLelements.game.style.borderColor = `rgba(${GameClient.COLOR}, ${opacity})`;
 	}
 
 	private launchCountdown(): void
 	{
 		let count = GameClient.COUNTDOWN_TIME;
-		this.elements.countdownElement.style.display = 'block';
-		this.elements.countdownElement.textContent = count.toString();
+		this.HTMLelements.countdownElement.style.display = 'block';
+		this.HTMLelements.countdownElement.textContent = count.toString();
 
 		const countdownInterval = setInterval(() =>
 		{
 			count--;
 			if (count > 0)
 			{
-				this.elements.countdownElement.textContent = count.toString();
+				this.HTMLelements.countdownElement.textContent = count.toString();
 			}
 			else
 			{
-				this.elements.net.style.display = 'block';
-				this.elements.ball.style.display = 'block';
+				this.HTMLelements.net.style.display = 'block';
+				this.HTMLelements.ball.style.display = 'block';
 				clearInterval(countdownInterval);
-				this.elements.countdownElement.style.display = 'none';
+				this.HTMLelements.countdownElement.style.display = 'none';
 				this.setupEventListeners();
 				this.gameLoop();
 			}
@@ -130,17 +124,15 @@ class GameClient
 		if (!this.end)
 		{
 			this.keysPressed.add(event.key);
-			if (event.key === GameClient.PAUSE_KEY && !this.spacePressed)
 			{
 				this.spacePressed = true;
 				this.pauseGame = !this.pauseGame;
 				this.setOpacity(this.pauseGame ? GameClient.BACKGROUND_OPACITY : '1');
-				this.elements.pauseMessage.textContent = GameClient.PAUSE_MSG;
-				this.elements.pauseMessage.style.display = this.pauseGame ? 'block' : 'none';
-				this.elements.continueMessage.textContent = GameClient.RESUME_MSG;
-				this.elements.continueMessage.style.display = this.pauseGame ? 'block' : 'none';
+				this.HTMLelements.pauseMessage.textContent = GameClient.PAUSE_MSG;
+				this.HTMLelements.pauseMessage.style.display = this.pauseGame ? 'block' : 'none';
+				this.HTMLelements.continueMessage.textContent = GameClient.RESUME_MSG;
+				this.HTMLelements.continueMessage.style.display = this.pauseGame ? 'block' : 'none';
 			}
-			else
 			{
 				this.socket.send(JSON.stringify({ key: event.key, type: 'keydown' }));
 			}
@@ -187,31 +179,22 @@ class GameClient
 
 	private connectToServer(): void
 	{
-		this.socket = new WebSocket('ws://localhost:8080/game');
+		this.socket = new WebSocket('ws://localhost:8443/game');
 
 		this.socket.onmessage = (event: MessageEvent) =>
 		{
 			this.gameState = JSON.parse(event.data);
-			this.updateGameState();
 		};
-	}
-
-	private updateGameState(): void
-	{
-		this.leftPaddleY = this.gameState.leftPaddleY;
-		this.rightPaddleY = this.gameState.rightPaddleY;
-		this.elements.leftPaddle.style.top = this.leftPaddleY + '%';
-		this.elements.rightPaddle.style.top = this.rightPaddleY + '%';
 	}
 
 	private showWinner(winner: number): void
 	{
 		this.setOpacity(GameClient.BACKGROUND_OPACITY);
-		this.elements.net.style.display = 'none';
-		this.elements.ball.style.display = 'none';
-		this.elements.winner.textContent = `Player ${winner} wins !`;
-		this.elements.winner.style.display = 'block';
-		this.elements.playAgain.textContent = GameClient.PLAY_AGAIN_MSG;
-		this.elements.playAgain.style.display = 'block';
+		this.HTMLelements.net.style.display = 'none';
+		this.HTMLelements.ball.style.display = 'none';
+		this.HTMLelements.winner.textContent = `Player ${winner} wins !`;
+		this.HTMLelements.winner.style.display = 'block';
+		this.HTMLelements.playAgain.textContent = GameClient.PLAY_AGAIN_MSG;
+		this.HTMLelements.playAgain.style.display = 'block';
 	}
 };
