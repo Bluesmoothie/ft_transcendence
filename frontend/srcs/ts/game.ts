@@ -1,49 +1,165 @@
-import { fastify, FastifyInstance } from 'fastify';
-import websocket from '@fastify/websocket';
-
-class GameClient
+export class GameClient
 {
 	private HTMLelements: { [key: string]: HTMLDivElement };
 	private keysPressed: Set<string> = new Set();
-	private gameState: any;
-
-	private setupServer(): void
-	{
-		const server = fastify();
-		server.register(websocket);
-
-		server.register(async (fastify) =>
-		{
-			fastify.get('/game', { websocket: true } as any, (connection: any, req: any) =>
-			{
-				this.players.set(connection.socket, `player`);
-
-				connection.socket.on('message', (message: Buffer) =>
-				{
-					const data = JSON.parse(message.toString());
-					this.handleClientInput(data);
-				});
-
-				connection.socket.on('close', () =>
-				{
-					this.players.delete(connection.socket);
-				});
-			});
-		});
-	}
+	private countdownInterval: any;
+	private gameId: string | null = null;
+	private pollingInterval: any;
 
 	constructor()
 	{
-		this.init();
-		this.launchCountdown();
-		this.connectToServer();
-	}
-
-	private init(): void
-	{
+		console.log('GameClient initialized');
 		this.initElements();
 		this.setStyles();
 		this.setOpacity('1');
+		this.createGame();
+		this.launchCountdown();
+	}
+
+	private async createGame(): Promise<void>
+	{
+		try
+		{
+			const response = await fetch('http://localhost:3000/create-game', { method: 'POST' });
+			const data = await response.json();
+			this.gameId = data.gameId;
+			console.log('Game created:', this.gameId);
+		}
+		catch (error)
+		{
+			console.error('Failed to create game:', error);
+		}
+	}
+
+	private async fetchGameState(): Promise<void>
+	{
+		if (this.gameId)
+		{
+			try
+			{
+				const response = await fetch(`http://localhost:3000/game-state/${this.gameId}`);
+				const gameState = await response.json();
+				this.updateDisplay(gameState);
+			}
+			catch (error)
+			{
+				console.error('Failed to fetch game state:', error);
+			}
+		}
+	}
+
+	private async sendAction(type: string, key: string): Promise<void>
+	{
+		try
+		{
+			await fetch(`http://localhost:3000/game-action/${this.gameId}`,
+			{
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					type: type,
+					key: key
+				})
+			});
+		}
+		catch (error)
+		{
+			console.error('Failed to send action:', error);
+		}
+	}
+
+	private updateDisplay(gameState: any): void
+	{
+		this.HTMLelements.leftPaddle.style.top = gameState.state.leftPaddleY + '%';
+		this.HTMLelements.rightPaddle.style.top = gameState.state.rightPaddleY + '%';
+		this.HTMLelements.ball.style.left = gameState.state.ballX + '%';
+		this.HTMLelements.ball.style.top = gameState.state.ballY + '%';
+		this.HTMLelements.scoreLeft.textContent = gameState.state.player1Score.toString();
+		this.HTMLelements.scoreRight.textContent = gameState.state.player2Score.toString();
+
+		if (gameState.state.end)
+		{
+			this.showWinner(gameState.state.player1Score > gameState.state.player2Score ? 1 : 2);
+		}
+	}
+
+	private keydownHandler = (event: KeyboardEvent): void =>
+	{
+		this.keysPressed.add(event.key);
+		this.sendAction('keydown', event.key);
+	}
+
+	private keyupHandler = (event: KeyboardEvent): void =>
+	{
+		this.keysPressed.delete(event.key);
+		this.sendAction('keyup', event.key);
+	}
+
+	private startPolling(): void
+	{
+		this.pollingInterval = setInterval(() =>
+		{
+			this.fetchGameState();
+		}, 100);
+	}
+
+	private launchCountdown(): void
+	{
+		let count = 3;
+		this.HTMLelements.countdownElement.style.display = 'block';
+		this.HTMLelements.countdownElement.textContent = count.toString();
+
+		this.countdownInterval = setInterval(() =>
+		{
+			count--;
+			if (count > 0)
+			{
+				this.HTMLelements.countdownElement.textContent = count.toString();
+			}
+			else
+			{
+				this.HTMLelements.net.style.display = 'block';
+				this.HTMLelements.ball.style.display = 'block';
+				clearInterval(this.countdownInterval);
+				this.HTMLelements.countdownElement.style.display = 'none';
+				this.setupEventListeners();
+				this.startPolling();
+				this.gameLoop();
+			}
+		}, 1000);
+	}
+
+	private setupEventListeners(): void
+	{
+		document.addEventListener('keydown', this.keydownHandler);
+		document.addEventListener('keyup', this.keyupHandler);
+	}
+
+	public destroy(): void
+	{
+		if (this.countdownInterval)
+		{
+			clearInterval(this.countdownInterval);
+		}
+		if (this.pollingInterval)
+		{
+			clearInterval(this.pollingInterval);
+		}
+		
+		document.removeEventListener('keydown', this.keydownHandler);
+		document.removeEventListener('keyup', this.keyupHandler);
+		this.keysPressed.clear();
+	}
+
+	private gameLoop = (): void =>
+	{
+		// if (!this.fetchGameState)
+		{
+			this.updateDisplay(this.fetchGameState);
+			requestAnimationFrame(this.gameLoop);
+		}
 	}
 
 	private initElements(): void
@@ -75,6 +191,32 @@ class GameClient
 		this.HTMLelements.continueMessage.style.display = 'none';
 		this.HTMLelements.winner.style.display = 'none';
 		this.HTMLelements.playAgain.style.display = 'none';
+
+		this.HTMLelements.leftPaddle.style.width = '2%';
+		this.HTMLelements.leftPaddle.style.height = '15%';
+		this.HTMLelements.leftPaddle.style.background = 'white';
+		this.HTMLelements.leftPaddle.style.position = 'absolute';
+		this.HTMLelements.leftPaddle.style.left = '2%';
+		this.HTMLelements.leftPaddle.style.top = '50%';
+		this.HTMLelements.leftPaddle.style.transform = 'translateY(-50%)';
+
+		this.HTMLelements.rightPaddle.style.width = '2%';
+		this.HTMLelements.rightPaddle.style.height = '15%';
+		this.HTMLelements.rightPaddle.style.background = 'white';
+		this.HTMLelements.rightPaddle.style.position = 'absolute';
+		this.HTMLelements.rightPaddle.style.right = '2%';
+		this.HTMLelements.rightPaddle.style.top = '50%';
+		this.HTMLelements.rightPaddle.style.transform = 'translateY(-50%)';
+
+		// ✅ STYLES DE LA BALLE
+		this.HTMLelements.ball.style.width = '2%';
+		this.HTMLelements.ball.style.height = '2%';
+		this.HTMLelements.ball.style.background = 'white';
+		this.HTMLelements.ball.style.position = 'absolute';
+		this.HTMLelements.ball.style.left = '50%';
+		this.HTMLelements.ball.style.top = '50%';
+		this.HTMLelements.ball.style.transform = 'translate(-50%, -50%)';
+		this.HTMLelements.ball.style.borderRadius = '50%';
 	}
 
 	private setOpacity(opacity: string): void
@@ -85,116 +227,17 @@ class GameClient
 		this.HTMLelements.ball.style.opacity = opacity;
 		this.HTMLelements.scoreLeft.style.opacity = opacity;
 		this.HTMLelements.scoreRight.style.opacity = opacity;
-		this.HTMLelements.game.style.borderColor = `rgba(${GameClient.COLOR}, ${opacity})`;
-	}
-
-	private launchCountdown(): void
-	{
-		let count = GameClient.COUNTDOWN_TIME;
-		this.HTMLelements.countdownElement.style.display = 'block';
-		this.HTMLelements.countdownElement.textContent = count.toString();
-
-		const countdownInterval = setInterval(() =>
-		{
-			count--;
-			if (count > 0)
-			{
-				this.HTMLelements.countdownElement.textContent = count.toString();
-			}
-			else
-			{
-				this.HTMLelements.net.style.display = 'block';
-				this.HTMLelements.ball.style.display = 'block';
-				clearInterval(countdownInterval);
-				this.HTMLelements.countdownElement.style.display = 'none';
-				this.setupEventListeners();
-				this.gameLoop();
-			}
-		}, GameClient.COUNTDOWN_INTERVAL);
-	}
-
-	private setupEventListeners(): void
-	{
-		document.addEventListener('keydown', this.keydownHandler);
-		document.addEventListener('keyup', this.keyupHandler);
-	}
-
-	private keydownHandler = (event: KeyboardEvent): void =>
-	{
-		if (!this.end)
-		{
-			this.keysPressed.add(event.key);
-			{
-				this.spacePressed = true;
-				this.pauseGame = !this.pauseGame;
-				this.setOpacity(this.pauseGame ? GameClient.BACKGROUND_OPACITY : '1');
-				this.HTMLelements.pauseMessage.textContent = GameClient.PAUSE_MSG;
-				this.HTMLelements.pauseMessage.style.display = this.pauseGame ? 'block' : 'none';
-				this.HTMLelements.continueMessage.textContent = GameClient.RESUME_MSG;
-				this.HTMLelements.continueMessage.style.display = this.pauseGame ? 'block' : 'none';
-			}
-			{
-				this.socket.send(JSON.stringify({ key: event.key, type: 'keydown' }));
-			}
-		}
-		else if (event.key === GameClient.PLAY_AGAIN_KEY)
-		{
-			this.destroy();
-			new GameClient();
-		}
-	}
-
-	private keyupHandler = (event: KeyboardEvent): void =>
-	{
-		if (!this.end)
-		{
-			if (event.key === GameClient.PAUSE_KEY)
-			{
-				this.spacePressed = false;
-			}
-
-			this.keysPressed.delete(event.key);
-		}
-	}
-
-	public destroy(): void
-	{
-		this.end = true;
-		document.removeEventListener('keydown', this.keydownHandler);
-		document.removeEventListener('keyup', this.keyupHandler);
-		this.keysPressed.clear();
-	}
-
-	private gameLoop = (): void =>
-	{
-		if (!this.end)
-		{
-			if (!this.pauseGame)
-			{
-			}
-
-			requestAnimationFrame(this.gameLoop);
-		}
-	}
-
-	private connectToServer(): void
-	{
-		this.socket = new WebSocket('ws://localhost:8443/game');
-
-		this.socket.onmessage = (event: MessageEvent) =>
-		{
-			this.gameState = JSON.parse(event.data);
-		};
+		this.HTMLelements.game.style.borderColor = `rgba(255, 255, 255, ${opacity})`;
 	}
 
 	private showWinner(winner: number): void
 	{
-		this.setOpacity(GameClient.BACKGROUND_OPACITY);
+		// this.setOpacity(GameClient.BACKGROUND_OPACITY);
 		this.HTMLelements.net.style.display = 'none';
 		this.HTMLelements.ball.style.display = 'none';
 		this.HTMLelements.winner.textContent = `Player ${winner} wins !`;
 		this.HTMLelements.winner.style.display = 'block';
-		this.HTMLelements.playAgain.textContent = GameClient.PLAY_AGAIN_MSG;
+		// this.HTMLelements.playAgain.textContent = GameClient.PLAY_AGAIN_MSG;
 		this.HTMLelements.playAgain.style.display = 'block';
 	}
-};
+}

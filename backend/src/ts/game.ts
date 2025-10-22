@@ -1,20 +1,20 @@
 import { fastify, FastifyInstance } from 'fastify';
-import websocket from '@fastify/websocket';
+import cors from '@fastify/cors';
 
-class GameServer
+class GameInstance
 {
 	/* GAME CONSTANTS */
 	private static readonly PADDLE_SPEED: number = 1.2;
 	private static readonly PADDLE_HEIGHT: number = 15;
 	private static readonly PADDLE_WIDTH: number = 2;
 	private static readonly PADDLE_PADDING: number = 2;
-	private static readonly MIN_Y_PADDLE: number = GameServer.PADDLE_HEIGHT / 2;
-	private static readonly MAX_Y_PADDLE: number = 100 - GameServer.MIN_Y_PADDLE;
+	private static readonly MIN_Y_PADDLE: number = GameInstance.PADDLE_HEIGHT / 2;
+	private static readonly MAX_Y_PADDLE: number = 100 - GameInstance.MIN_Y_PADDLE;
 	private static readonly BALL_SIZE: number = 2;
-	private static readonly MIN_Y_BALL: number = GameServer.BALL_SIZE;
-	private static readonly MAX_Y_BALL: number = 100 - GameServer.MIN_Y_BALL;
-	private static readonly MIN_X_BALL: number = GameServer.PADDLE_PADDING + GameServer.PADDLE_WIDTH + GameServer.MIN_Y_BALL;
-	private static readonly MAX_X_BALL: number = 100 - GameServer.MIN_X_BALL;
+	private static readonly MIN_Y_BALL: number = GameInstance.BALL_SIZE;
+	private static readonly MAX_Y_BALL: number = 100 - GameInstance.MIN_Y_BALL;
+	private static readonly MIN_X_BALL: number = GameInstance.PADDLE_PADDING + GameInstance.PADDLE_WIDTH + GameInstance.MIN_Y_BALL;
+	private static readonly MAX_X_BALL: number = 100 - GameInstance.MIN_X_BALL;
 	private static readonly MAX_ANGLE: number = 0.75;
 	private static readonly SPEED: number = 1.0;
 	private static readonly SPEED_INCREMENT: number = 0.0;
@@ -24,13 +24,13 @@ class GameServer
 	private static readonly PLAYER2_UP_KEY: string = 'ArrowUp';
 	private static readonly PLAYER2_DOWN_KEY: string = 'ArrowDown';
 	private static readonly FPS: number = 60;
-	private static readonly FRAME_TIME: number = 1000 / GameServer.FPS;
+	private static readonly FRAME_TIME: number = 1000 / GameInstance.FPS;
 
 	/* GAME STATE */
-	private players: Map<any, string> = new Map();
 	private keysPressed: Set<string> = new Set();
+	private currentGameState: string = '';
 
-	private gameState: any = 
+	gameState: any = 
 	{
 		leftPaddleY: 50,
 		rightPaddleY: 50,
@@ -38,7 +38,7 @@ class GameServer
 		ballY: 50,
 		player1Score: 0,
 		player2Score: 0,
-		speed: GameServer.SPEED,
+		speed: GameInstance.SPEED,
 		end: false,
 		ballSpeedX: (Math.random() < 0.5) ? 0.5 : -0.5,
 		ballSpeedY: (Math.random() - 0.5) * 2,
@@ -46,75 +46,49 @@ class GameServer
 
 	constructor()
 	{
-		this.setupServer();
 		this.gameLoop();
-	}
-
-	private setupServer(): void
-	{
-		const server = fastify();
-		server.register(websocket);
-
-		server.register(async (fastify) =>
-		{
-			fastify.get('/game', { websocket: true } as any, (connection: any, req: any) =>
-			{
-				this.players.set(connection.socket, `player`);
-
-				connection.socket.on('message', (message: Buffer) =>
-				{
-					const data = JSON.parse(message.toString());
-					this.handleClientInput(connection.socket, data);
-				});
-
-				connection.socket.on('close', () =>
-				{
-					this.players.delete(connection.socket);
-				});
-			});
-		});
-	}
-
-	private handleClientInput(socket: any, data: any): void
-	{
-		if (data.type === 'keydown')
-		{
-			this.keysPressed.add(data.key);
-		}
-		else if (data.type === 'keyup')
-		{
-			this.keysPressed.delete(data.key);
-		}
 	}
 
 	private gameLoop = (): void =>
 	{
 		setInterval(() =>
 		{
-			if (!this.gameState.end && this.players.size === 2)
+			if (!this.gameState.end)
 			{
 				this.movePaddle();
 				this.moveBall();
 				this.broadcastGameState();
 			}
-		}, GameServer.FRAME_TIME);
+		}, GameInstance.FRAME_TIME);
 	}
 
 	private broadcastGameState(): void
 	{
-		const message = JSON.stringify(
+		this.currentGameState = JSON.stringify(
 		{
 			type: 'gameState',
 			state: this.gameState,
 		});
+	}
 
-		this.players.forEach((_, socket) =>
+	public getCurrentGameState(): any
+	{
+		return {
+			type: 'gameState',
+			state: this.gameState,
+		};
+	}
+
+	public handleAction(body: any): void
+	{
+		if (body.type === 'keydown')
 		{
-			if (socket.readyState === 1)
-			{
-				socket.send(message);
-			}
-		});
+			this.keysPressed.add(body.key);
+		}
+		else if (body.type === 'keyup')
+		{
+			this.keysPressed.delete(body.key);
+		}
 	}
 
 	private normalizeSpeed(): void
@@ -168,7 +142,7 @@ class GameServer
 			this.gameState.ballSpeedX = -0.5;
 		}
 
-		if (newScore >= GameServer.POINTS_TO_WIN)
+		if (newScore >= GameInstance.POINTS_TO_WIN)
 		{
 			this.gameState.end = true;
 		}
@@ -176,7 +150,7 @@ class GameServer
 
 	private resetBall(): void
 	{
-		this.gameState.speed = GameServer.SPEED;
+		this.gameState.speed = GameInstance.SPEED;
 		this.gameState.ballSpeedY = (Math.random() - 0.5) * 2;
 		this.normalizeSpeed();
 		this.gameState.ballX = 50;
@@ -185,48 +159,132 @@ class GameServer
 
 	private collidePaddleLeft(): boolean
 	{
-		return (this.gameState.ballX <= GameServer.MIN_X_BALL
-			&& this.gameState.ballY >= this.gameState.leftPaddleY - GameServer.MIN_Y_PADDLE
-			&& this.gameState.ballY <= this.gameState.leftPaddleY + GameServer.MIN_Y_PADDLE);
+		return (this.gameState.ballX <= GameInstance.MIN_X_BALL
+			&& this.gameState.ballY >= this.gameState.leftPaddleY - GameInstance.MIN_Y_PADDLE
+			&& this.gameState.ballY <= this.gameState.leftPaddleY + GameInstance.MIN_Y_PADDLE);
 	}
 
 	private collidePaddleRight(): boolean
 	{
-		return (this.gameState.ballX >= GameServer.MAX_X_BALL
-			&& this.gameState.ballY >= this.gameState.rightPaddleY - GameServer.MIN_Y_PADDLE
-			&& this.gameState.ballY <= this.gameState.rightPaddleY + GameServer.MIN_Y_PADDLE);
+		return (this.gameState.ballX >= GameInstance.MAX_X_BALL
+			&& this.gameState.ballY >= this.gameState.rightPaddleY - GameInstance.MIN_Y_PADDLE
+			&& this.gameState.ballY <= this.gameState.rightPaddleY + GameInstance.MIN_Y_PADDLE);
 	}
 
 	private bounce(paddleY: number, mult: number): void
 	{
-		this.gameState.speed += GameServer.SPEED_INCREMENT;
+		this.gameState.speed += GameInstance.SPEED_INCREMENT;
 		this.gameState.ballSpeedX = mult * Math.abs(this.gameState.ballSpeedX);
-		this.gameState.ballSpeedY = (this.gameState.ballY - paddleY) / GameServer.MIN_Y_PADDLE * GameServer.MAX_ANGLE;
+		this.gameState.ballSpeedY = (this.gameState.ballY - paddleY) / GameInstance.MIN_Y_PADDLE * GameInstance.MAX_ANGLE;
 		this.normalizeSpeed();
 	}
 
 	private collideWall(): boolean
 	{
-		return (this.gameState.ballY <= GameServer.MIN_Y_BALL || this.gameState.ballY >= GameServer.MAX_Y_BALL);
+		return (this.gameState.ballY <= GameInstance.MIN_Y_BALL || this.gameState.ballY >= GameInstance.MAX_Y_BALL);
 	}
 
 	private movePaddle(): void
 	{
-		if (this.keysPressed.has(GameServer.PLAYER1_UP_KEY))
+		if (this.keysPressed.has(GameInstance.PLAYER1_UP_KEY))
 		{
-			this.gameState.leftPaddleY = Math.max(GameServer.MIN_Y_PADDLE, this.gameState.leftPaddleY - GameServer.PADDLE_SPEED);
+			this.gameState.leftPaddleY = Math.max(GameInstance.MIN_Y_PADDLE, this.gameState.leftPaddleY - GameInstance.PADDLE_SPEED);
 		}
-		if (this.keysPressed.has(GameServer.PLAYER1_DOWN_KEY))
+		if (this.keysPressed.has(GameInstance.PLAYER1_DOWN_KEY))
 		{
-			this.gameState.leftPaddleY = Math.min(GameServer.MAX_Y_PADDLE, this.gameState.leftPaddleY + GameServer.PADDLE_SPEED);
+			this.gameState.leftPaddleY = Math.min(GameInstance.MAX_Y_PADDLE, this.gameState.leftPaddleY + GameInstance.PADDLE_SPEED);
 		}
-		if (this.keysPressed.has(GameServer.PLAYER2_UP_KEY))
+		if (this.keysPressed.has(GameInstance.PLAYER2_UP_KEY))
 		{
-			this.gameState.rightPaddleY = Math.max(GameServer.MIN_Y_PADDLE, this.gameState.rightPaddleY - GameServer.PADDLE_SPEED);
+			this.gameState.rightPaddleY = Math.max(GameInstance.MIN_Y_PADDLE, this.gameState.rightPaddleY - GameInstance.PADDLE_SPEED);
 		}
-		if (this.keysPressed.has(GameServer.PLAYER2_DOWN_KEY))
+		if (this.keysPressed.has(GameInstance.PLAYER2_DOWN_KEY))
 		{
-			this.gameState.rightPaddleY = Math.min(GameServer.MAX_Y_PADDLE, this.gameState.rightPaddleY + GameServer.PADDLE_SPEED);
+			this.gameState.rightPaddleY = Math.min(GameInstance.MAX_Y_PADDLE, this.gameState.rightPaddleY + GameInstance.PADDLE_SPEED);
 		}
 	}
 }
+
+class GameServer
+{
+	private activeGames: Map<string, GameInstance> = new Map();
+	private server: FastifyInstance;
+
+	constructor()
+	{
+		this.start();
+	}
+
+	private async start(): Promise<void>
+	{
+		this.server = fastify();
+
+		try
+		{
+			await this.launchServer();
+		}
+		catch (error)
+		{
+			console.error('❌ Error starting server:', error);
+		}
+	}
+
+	private async launchServer(): Promise<void>
+	{
+		await this.server.register(cors, { origin: true });
+
+		this.server.post('/create-game', (request, reply) =>
+		{
+			const gameId = this.generateGameId();
+			this.activeGames.set(gameId, new GameInstance());
+			reply.send({ gameId: gameId });
+		});
+
+		this.server.get('/game-state/:gameId', (request, reply) =>
+		{
+			const { gameId } = request.params as any;
+			const game = this.activeGames.get(gameId);
+			
+			if (game)
+			{
+				reply.send(game.getCurrentGameState());
+			}
+			else
+			{
+				reply.status(404).send({ error: 'Game not found' });
+			}
+		});
+
+		this.server.post('/game-action/:gameId', (request, reply) =>
+		{
+			const { gameId } = request.params as any;
+			const body = request.body as any;
+			const game = this.activeGames.get(gameId);
+			
+			if (game)
+			{
+				game.handleAction(body);
+				reply.send({ success: true });
+			}
+			else
+			{
+				reply.status(404).send( { error: 'Game not found' } );
+			}
+		});
+
+		this.server.get('/active-games', (request, reply) =>
+		{
+			const games = Array.from(this.activeGames.keys());
+			reply.send({ games: games });
+		});
+
+		await this.server.listen({ port: 3000, host: '0.0.0.0' });
+	}
+
+	private generateGameId(): string
+	{
+		return Math.random().toString(36).substring(2, 8);
+	}
+}
+
+new GameServer();

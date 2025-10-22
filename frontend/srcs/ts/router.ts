@@ -1,76 +1,83 @@
+import { GameClient } from './game.js';
+
 class Router
 {
 	private static readonly EXIT_KEY: string = 'Escape';
 
 	currentPage: string;
-	pages: { [key: string]: HTMLDivElement };
-	gameInstance: any = null;
+	pages: Map<string, HTMLDivElement> = new Map();
+	gameInstance: GameClient | null;
 
 	constructor()
 	{
-		this.currentPage = 'home';
-		this.pages =
-		{
-			home: document.querySelector('.home') as HTMLDivElement,
-			game: document.querySelector('.game') as HTMLDivElement,
-		};
-		this.init();
+		this.loadPages();
+		this.setupEventListeners();
+		this.showPage(this.currentPage);
 	}
 
-	init()
+	private loadPages(): void
+	{
+		const pageElements = document.querySelectorAll<HTMLDivElement>('section');
+
+		pageElements.forEach(element =>
+		{
+			const pageName = element.getAttribute('class');
+			if (pageName)
+			{
+				this.pages.set(pageName, element);
+			}
+		});
+
+		this.currentPage = 'home';
+	}
+
+	private setupEventListeners(): void
 	{
 		window.addEventListener('popstate', (e) =>
 		{
 			const page = e.state?.page || 'home';
-			this.showPage(page, false);
+			this.showPage(page);
 		});
 
 		window.addEventListener('keydown', (e) =>
 		{
-			if (e.key === Router.EXIT_KEY && this.currentPage === 'game')
+			if (e.key === Router.EXIT_KEY && this.currentPage !== 'home')
 			{
-				this.showPage('home', false);
+				this.showPage('home');
 			}
 		});
-
-		this.showPage(this.currentPage, false);
 	}
 
-	navigateTo(page: string, data = {})
+	private clearPages(): void
 	{
-		history.pushState({ page, ...data }, '', `#${page}`);
-		this.showPage(page, data);
-	}
-
-	showPage(page: string, data = {})
-	{
-		this.onPageChange(page, data);
-		for (const key in this.pages)
-		{
-			if (this.pages.hasOwnProperty(key))
-			{
-				this.pages[key].style.display = 'none';
-			}
-		}
-
-		if (this.pages[page])
-		{
-			this.pages[page].style.display = 'flex';
-			this.currentPage = page;
-		}
-	}
-
-	onPageChange(page: string, data: any)
-	{
-		if (this.currentPage === 'game' && page !== 'game' && this.gameInstance)
+		if (this.gameInstance)
 		{
 			this.gameInstance.destroy();
-			this.gameInstance = null;
 		}
+
+		for (const element of this.pages.values())
+		{
+			element.style.display = 'none';
+		}
+	}
+
+	private showPage(page: string)
+	{
+		this.clearPages();
+
+		this.pages.get(page)!.style.display = 'flex';
+		this.currentPage = page;
+
 		if (page === 'game')
 		{
 			this.gameInstance = new GameClient();
 		}
+	}
+
+	public navigateTo(page: string): void
+	{
+		history.pushState({page: page}, '', `#${page}`);
+		this.showPage(page);
 	}
 };
 
@@ -78,10 +85,9 @@ const router = new Router();
 
 document.getElementById('1player')?.addEventListener('click', () =>
 {
-	router.navigateTo('game', { mode: 1 });
 });
 
 document.getElementById('2player')?.addEventListener('click', () =>
 {
-	router.navigateTo('game', { mode: 2 });
+	router.navigateTo('game');
 });

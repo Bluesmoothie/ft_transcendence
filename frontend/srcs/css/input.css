@@ -15,7 +15,7 @@
 	.text			{ @apply relative text-white font-bold rounded-lg text-center; font-family: 'Orbitron', 'Courier New', monospace; }
 	.animation		{ @apply animate-pulse duration-500; }
 	.centered		{ @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2; }
-	.paddle			{ @apply absolute top-1/2 transform -translate-y-1/2 bg-white }
+	.paddle			{ @apply absolute top-1/2 transform -translate-y-1/2 bg-white; }
 
 	/* HOMEPAGE */
 	.home			{ @apply relative flex flex-col gap-[5vh]; }
