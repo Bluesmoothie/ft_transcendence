@@ -53,22 +53,42 @@ function dbPost(sql:string, arg:any) : number
 	return 200;
 }
 
-
 fastify.post('/api/add_friend', (request:any, reply:any) => {
 
-	const { user_id, friend_name } = request.body;
+	var { user_id, friend_name } = request.body;
 
+	var sql = 'SELECT id FROM users WHERE name = ?';
+	db.get(sql, [friend_name], function(err:any, row:any)
+	{
+		if (err)
+		{
+			console.log(`database error: ${err}`);
+			return reply.code(500).send({ error: `database error` });
+		}
+		if (!row)
+			return reply.code(404).send({ message: `profile not found` });
+		else
+		{
+			var friend_id = row.id;
+			if (user_id > friend_id)
+			{
+				const tmp = user_id;
+				user_id = friend_id;
+				friend_id = tmp;
+			}
 
-	var friend_id;
+			console.log(user_id);
+			console.log(friend_id);
+			sql = 'INSERT INTO friends (user_id, friend_id, is_accepted) VALUES (?, ?, ?)';
 
+			const code = dbPost(sql, [user_id, friend_id, "0"]);
+			if (code == 500)
+				return reply.code(500).send({ message: `database error` })
+			else
+				return reply.code(200).send({ message: `Success`});
+		}
+	});
 
-	const sql = 'INSERT INTO friends (user_id, friend_id, is_accepted) VALUES (?, ?, ?)';
-	
-	const code = dbPost(sql, [user_id, friend_id, "0"]);
-	if (code == 500)
-		return reply.code(500).send({ message: `database error` })
-	else
-		return reply.code(200).send({ message: `Success`});
 })
 
 fastify.post('/api/login', (request:any, reply:any) => {
@@ -92,23 +112,74 @@ fastify.post('/api/login', (request:any, reply:any) => {
 	})
 })
 
-interface GetProfileQuerystring {
-	profile_name: string;
-}
+fastify.get<{ Querystring: { user_id: string } }>
+(
+	'/api/get_friends',
+	{
+		schema: {
+			querystring: {
+				type: 'object',
+				properties: {
+					user_id: { type: 'string' }
+				},
+				required: ['user_id']
+			}
+		},
+	handler: (request, reply) =>
+	{
+		const { user_id } = request.query;
+		const sql = "select * FROM friends where user_id = ? or friend_id = ?;";
+		
+		db.all(sql, [user_id, user_id], function(err, rows) {
+			if (err)
+				return reply.code(500).send({ message: `database error ${err}` });
+			if (!rows)
+				return reply.code(404).send({ message: `no friend found :(` });
+			console.log(rows);
+			return reply.code(200).send(rows);
+		})
+	}
+})
 
-fastify.route<{
-	Querystring: GetProfileQuerystring
-}>({
-	method: 'GET',
-	url: '/api/get_profile',
-	schema: {
-		querystring: {
-			type: 'object',
-			properties: {
-				profile_name: { type: 'string' }
-			},
-			required: ['profile_name']
-		}
+fastify.get<{ Querystring: { user_id: string } }>
+(
+	'/api/get_profile_id',
+		{
+			schema: {
+				querystring: {
+				type: 'object',
+				properties: {
+					user_id: { type: 'string' }
+				},
+				required: ['user_id']
+			}
+	},
+	handler: (request, reply) => {
+		const { user_id }  = request.query;
+		const sql = 'SELECT id, name, profile_picture FROM users WHERE id = ?';
+		db.get(sql, [user_id], function (err: any, row: any) {
+			if (err)
+				return reply.code(500).send({ message: `database error: ${err.message}` });
+			else if (!row)
+				return reply.code(404).send({ message: "profile not found" });
+			else
+				return reply.code(200).send(row);
+		})
+	}
+})
+
+fastify.get<{ Querystring: { profile_name: string } }>
+(
+	'/api/get_profile_name',
+		{
+			schema: {
+				querystring: {
+				type: 'object',
+				properties: {
+					profile_name: { type: 'string' }
+				},
+				required: ['profile_name']
+			}
 	},
 	handler: (request, reply) => {
 		const { profile_name }  = request.query;
@@ -123,6 +194,7 @@ fastify.route<{
 		})
 	}
 })
+
 fastify.post('/api/create_user', (request:any, reply:any) => {
 	const { email, passw, username } = request.body;
 	const sql = 'INSERT INTO users (name, email, passw, profile_picture) VALUES (?, ?, ?, ?)';

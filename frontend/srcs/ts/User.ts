@@ -1,11 +1,15 @@
 export class User
 {
+	/* public vars */
+	public name:			string;
+
+	/* private vars */
 	private m_id:			number;
 
 	private m_email:		string;
 	private m_avatarPath:	string;
-
-	public name:			string;
+	
+	private m_friends:		User[];
 
 
 	constructor(id:number, name:string, email:string, avatar: string)
@@ -16,9 +20,28 @@ export class User
 		this.m_avatarPath = avatar;
 	}
 
+	public addFriend(friend:User)
+	{
+		if (!friend)
+		{
+			console.error("friend is null");
+			return ;
+		}
+		this.m_friends.push(friend);
+	}
+
+	public getFriends() : User[]
+	{
+		return this.m_friends;
+	}
+
+	public getId() : number
+	{
+		return this.m_id;
+	}
+
 	public getAvatarPath() : string
 	{
-		// console.log(this.m_avatarPath + "?" + new Date().getTime());
 		return this.m_avatarPath + "?" + new Date().getTime();
 	}
 
@@ -50,6 +73,13 @@ export class User
 
 }
 
+export enum UserElementType
+{
+	MAIN = 0,
+	STANDARD,
+	FRIEND
+}
+
 export class UserElement
 {
 	private	m_user:				User;
@@ -58,7 +88,12 @@ export class UserElement
 	private m_htmlName:			HTMLElement;
 	private m_htmlContainer:	HTMLElement;
 
-	constructor(user:User, parent:HTMLElement)
+	private m_htmlBtnContainer:	HTMLElement;
+	private m_htmlLogoutBtn:	HTMLButtonElement;
+	private m_htmlSettingsBtn:	HTMLButtonElement;
+	private m_htmlFriendBtn:	HTMLButtonElement;
+
+	constructor(user:User, parent:HTMLElement, type:UserElementType)
 	{
 		this.m_user = user;
 
@@ -71,12 +106,37 @@ export class UserElement
 
 		this.m_htmlName = document.createElement("h3")
 
+		this.m_htmlBtnContainer = document.createElement("div");
+		this.m_htmlLogoutBtn = document.createElement("button");
+		this.m_htmlLogoutBtn.innerText = "logout";
+		this.m_htmlSettingsBtn = document.createElement("button");
+		this.m_htmlSettingsBtn.innerText = "settings";
+		this.m_htmlFriendBtn = document.createElement("button");
+		this.m_htmlFriendBtn.innerText = "remove";
+
+		this.m_htmlContainer.prepend(this.m_htmlBtnContainer);
 		this.m_htmlContainer.prepend(this.m_htmlName);
 		this.m_htmlContainer.prepend(this.m_htmlAvatar);
 
 		parent.prepend(this.m_htmlContainer);
 
+		this.setType(type);
 		this.updateHtml(user);
+	}
+
+
+	public setType(type: UserElementType)
+	{
+		switch (type) {
+			case UserElementType.MAIN:
+				this.m_htmlBtnContainer.prepend(this.m_htmlSettingsBtn);	
+				this.m_htmlBtnContainer.prepend(this.m_htmlLogoutBtn);	
+				break;
+			case UserElementType.FRIEND:
+				this.m_htmlBtnContainer.prepend(this.m_htmlFriendBtn);	
+			default:
+				break;
+		}
 	}
 
 	public updateHtml(user:User) : void

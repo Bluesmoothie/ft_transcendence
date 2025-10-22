@@ -10,11 +10,11 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS friends (
-	user_id					INTEGER,
-	friend_id				INTEGER,
-	is_accepted				INTEGER,
+	user_id			INTEGER NOT NULL,
+	friend_id		INTEGER NOT NULL,
+	is_accepted		INTEGER NOT NULL,
 
-    PRIMARY KEY (user_id, friend_id),
+    PRIMARY KEY (user_id, friend_id) ,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (friend_id) REFERENCES users(id),
 
