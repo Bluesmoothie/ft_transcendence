@@ -1,27 +1,60 @@
 export class GameClient
 {
-	private HTMLelements: { [key: string]: HTMLDivElement };
+	private HTMLelements: Map<string, HTMLDivElement> = new Map();
 	private keysPressed: Set<string> = new Set();
-	private countdownInterval: any;
-	private gameId: string | null = null;
-	private pollingInterval: any;
+	private countdownInterval: any | null = null;
+	private parameters: any = null;
+	private pollingInterval: any | null = null;
 
-	constructor()
+	constructor(mode: string)
 	{
-		this.initElements();
-		this.setStyles();
-		this.setOpacity('1');
-		this.createGame();
-		this.launchCountdown();
+		this.initHTMLelements();
+		this.hideElements();
+		this.createGame(mode).then(() =>
+		{
+			this.setColor('1');
+			this.showElements();
+			this.launchCountdown();
+		});
 	}
 
-	private async createGame(): Promise<void>
+	private initHTMLelements(): void
+	{
+		const section = document.querySelector('.game');
+		this.HTMLelements.set('game', section as HTMLDivElement);
+		Array.from(section.children).forEach((child) =>
+		{
+			this.HTMLelements.set(child.classList[0], child as HTMLDivElement);
+		});
+	}
+
+	private hideElements(): void
+	{
+		this.HTMLelements.get('net')!.style.display = 'none';
+		this.HTMLelements.get('ball')!.style.display = 'none';
+		this.HTMLelements.get('paddle-left')!.style.display = 'none';
+		this.HTMLelements.get('paddle-right')!.style.display = 'none';
+		this.HTMLelements.get('score-left')!.style.display = 'none';
+		this.HTMLelements.get('score-right')!.style.display = 'none';
+		this.HTMLelements.get('pause-msg')!.style.display = 'none';
+		this.HTMLelements.get('continue-msg')!.style.display = 'none';
+		this.HTMLelements.get('winner-msg')!.style.display = 'none';
+		this.HTMLelements.get('play-again-msg')!.style.display = 'none';
+	}
+
+	private async createGame(mode: string): Promise<void>
 	{
 		try
 		{
-			const response = await fetch('http://localhost:3000/create-game', { method: 'POST' });
+			const response = await fetch('http://localhost:3000/create-game',
+			{
+				method: 'POST', body: JSON.stringify(
+				{
+					mode: mode, playerId: Math.random().toString(36).substring(2)
+				}),
+			});
 			const data = await response.json();
-			this.gameId = data.gameId;
+			this.parameters = data;
 		}
 		catch (error)
 		{
@@ -29,13 +62,87 @@ export class GameClient
 		}
 	}
 
+	private setColor(opacity: string): void
+	{
+		this.HTMLelements.get('game')!.style.borderBlockColor = `rgba(${this.parameters.color}, ${opacity})`;
+		for (const element of this.HTMLelements.values())
+		{
+			if (element.tagName === 'DIV' && element != this.HTMLelements.get('net'))
+			{
+				element.style.backgroundColor = `rgba(${this.parameters.color}, ${opacity})`;
+			}
+			else if (element)
+			{
+				element.style.color = `rgba(${this.parameters.color}, ${opacity})`;
+			}
+		}
+	}
+
+	private showElements(): void
+	{
+		this.HTMLelements.get('paddle-left')!.style.height = this.parameters.paddleHeight + '%';
+		this.HTMLelements.get('paddle-right')!.style.height = this.parameters.paddleHeight + '%';
+		this.HTMLelements.get('paddle-left')!.style.width = this.parameters.paddleWidth + '%';
+		this.HTMLelements.get('paddle-right')!.style.width = this.parameters.paddleWidth + '%';
+		this.HTMLelements.get('paddle-left')!.style.left = this.parameters.paddlePadding + '%';
+		this.HTMLelements.get('paddle-right')!.style.right = this.parameters.paddlePadding + '%';
+		this.HTMLelements.get('ball')!.style.width = this.parameters.ballSize + '%';
+		this.HTMLelements.get('score-left')!.textContent = '0';
+		this.HTMLelements.get('score-right')!.textContent = '0';
+		this.HTMLelements.get('paddle-left')!.style.display = 'block';
+		this.HTMLelements.get('paddle-right')!.style.display = 'block';
+		this.HTMLelements.get('score-left')!.style.display = 'block';
+		this.HTMLelements.get('score-right')!.style.display = 'block';
+	}
+
+	private launchCountdown(): void
+	{
+		let count = this.parameters.countdownStart;
+		this.HTMLelements.get('countdown')!.style.display = 'block';
+		this.HTMLelements.get('countdown')!.textContent = count.toString();
+
+		this.countdownInterval = setInterval(() =>
+		{
+			if (--count > 0)
+			{
+				this.HTMLelements.get('countdown')!.textContent = count.toString();
+			}
+			else
+			{
+				clearInterval(this.countdownInterval);
+				this.startGame();
+			}
+		}, (count > 0) ? 1000 : 0);
+	}
+
+	private async startGame(): Promise<void>
+	{
+		this.HTMLelements.get('countdown')!.style.display = 'none';
+		this.HTMLelements.get('net')!.style.display = 'block';
+		this.HTMLelements.get('ball')!.style.display = 'block';
+		this.setupEventListeners();
+		this.startPolling();
+
+		try
+		{
+			await fetch(`http://localhost:3000/ready/${this.parameters.gameId}`,
+			{
+				method: 'POST',
+			});
+		}
+		catch (error)
+		{
+			console.error('Failed to send start action:', error);
+		}
+	}
+
 	private async fetchGameState(): Promise<void>
 	{
-		if (this.gameId)
+		if (this.parameters)
 		{
 			try
 			{
-				const response = await fetch(`http://localhost:3000/game-state/${this.gameId}`);
+				const response = await fetch(`http://localhost:3000/game-state/${this.parameters.gameId}`);
 				const gameState = await response.json();
 				this.updateDisplay(gameState.state);
 			}
@@ -50,7 +157,7 @@ export class GameClient
 	{
 		try
 		{
-			await fetch(`http://localhost:3000/game-action/${this.gameId}`,
+			await fetch(`http://localhost:3000/game-action/${this.parameters.gameId}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', },
@@ -65,18 +172,38 @@ export class GameClient
 
 	private updateDisplay(gameState: any): void
 	{
-		this.HTMLelements.leftPaddle.style.top = gameState.leftPaddleY + '%';
-		this.HTMLelements.rightPaddle.style.top = gameState.rightPaddleY + '%';
-		this.HTMLelements.ball.style.left = gameState.ballX + '%';
-		this.HTMLelements.ball.style.top = gameState.ballY + '%';
-		this.HTMLelements.scoreLeft.textContent = gameState.player1Score.toString();
-		this.HTMLelements.scoreRight.textContent = gameState.player2Score.toString();
+		this.HTMLelements.get('paddle-left')!.style.top = gameState.leftPaddleY + '%';
+		this.HTMLelements.get('paddle-right')!.style.top = gameState.rightPaddleY + '%';
+		this.HTMLelements.get('ball')!.style.left = gameState.ballX + '%';
+		this.HTMLelements.get('ball')!.style.top = gameState.ballY + '%';
+		this.HTMLelements.get('score-left')!.textContent = gameState.player1Score.toString();
+		this.HTMLelements.get('score-right')!.textContent = gameState.player2Score.toString();
 
-		if (gameState.end)
+		if (gameState.winner)
 		{
-			this.showWinner(gameState.player1Score > gameState.player2Score ? 1 : 2);
+			this.showWinner(gameState.winner);
 			this.stopPolling();
 		}
+	}
+
+	private startPolling(): void
+	{
+		this.pollingInterval = setInterval(() =>
+			{ this.fetchGameState() }, 1000 / this.parameters.fps);
+	}
+
+	private stopPolling(): void
+	{
+		if (this.pollingInterval)
+		{
+			clearInterval(this.pollingInterval);
+		}
+	}
+
+	private setupEventListeners(): void
+	{
+		document.addEventListener('keydown', this.keydownHandler);
+		document.addEventListener('keyup', this.keyupHandler);
 	}
 
 	private keydownHandler = (event: KeyboardEvent): void =>
@@ -91,48 +218,15 @@ export class GameClient
 		this.sendAction('keyup', event.key);
 	}
 
-	private startPolling(): void
+	private showWinner(winner: string): void
 	{
-		this.pollingInterval = setInterval(() => { this.fetchGameState(); }, 16);
-	}
-
-	private stopPolling(): void
-	{
-		if (this.pollingInterval)
-		{
-			clearInterval(this.pollingInterval);
-		}
-	}
-
-	private launchCountdown(): void
-	{
-		let count = 3;
-		this.HTMLelements.countdownElement.style.display = 'block';
-		this.HTMLelements.countdownElement.textContent = count.toString();
-
-		this.countdownInterval = setInterval(() =>
-		{
-			count--;
-			if (count > 0)
-			{
-				this.HTMLelements.countdownElement.textContent = count.toString();
-			}
-			else
-			{
-				this.HTMLelements.net.style.display = 'block';
-				this.HTMLelements.ball.style.display = 'block';
-				clearInterval(this.countdownInterval);
-				this.HTMLelements.countdownElement.style.display = 'none';
-				this.setupEventListeners();
-				this.startPolling();
-			}
-		}, 1000);
-	}
-
-	private setupEventListeners(): void
-	{
-		document.addEventListener('keydown', this.keydownHandler);
-		document.addEventListener('keyup', this.keyupHandler);
+		this.setColor(this.parameters.backgroundOpacity);
+		this.HTMLelements.get('net')!.style.display = 'none';
+		this.HTMLelements.get('ball')!.style.display = 'none';
+		this.HTMLelements.get('winner-msg')!.textContent = `${winner}\nwins !`;
+		this.HTMLelements.get('winner-msg')!.style.display = 'block';
+		this.HTMLelements.get('play-again-msg')!.textContent = this.parameters.playAgainMsg;
+		this.HTMLelements.get('play-again-msg')!.style.display = 'block';
 	}
 
 	public destroy(): void
@@ -149,84 +243,5 @@ export class GameClient
 		document.removeEventListener('keydown', this.keydownHandler);
 		document.removeEventListener('keyup', this.keyupHandler);
 		this.keysPressed.clear();
-	}
-
-	private initElements(): void
-	{
-		this.HTMLelements =
-		{
-			game: document.querySelector('.game') as HTMLDivElement,
-			leftPaddle: document.querySelector('.paddle-left') as HTMLDivElement,
-			rightPaddle: document.querySelector('.paddle-right') as HTMLDivElement,
-			net: document.querySelector('.net') as HTMLDivElement,
-			ball: document.querySelector('.ball') as HTMLDivElement,
-			scoreLeft: document.querySelector('.score-left') as HTMLDivElement,
-			scoreRight: document.querySelector('.score-right') as HTMLDivElement,
-			countdownElement: document.querySelector('.countdown') as HTMLDivElement,
-			pauseMessage: document.querySelector('.pause-msg') as HTMLDivElement,
-			continueMessage: document.querySelector('.continue-msg') as HTMLDivElement,
-			winner: document.querySelector('.winner-msg') as HTMLDivElement,
-			playAgain: document.querySelector('.play-again-msg') as HTMLDivElement,
-		};
-	}
-
-	private setStyles(): void
-	{
-		this.HTMLelements.net.style.display = 'none';
-		this.HTMLelements.ball.style.display = 'none';
-		this.HTMLelements.scoreLeft.textContent = '0';
-		this.HTMLelements.scoreRight.textContent = '0';
-		this.HTMLelements.pauseMessage.style.display = 'none';
-		this.HTMLelements.continueMessage.style.display = 'none';
-		this.HTMLelements.winner.style.display = 'none';
-		this.HTMLelements.playAgain.style.display = 'none';
-
-		this.HTMLelements.leftPaddle.style.width = '2%';
-		this.HTMLelements.leftPaddle.style.height = '15%';
-		this.HTMLelements.leftPaddle.style.background = 'white';
-		this.HTMLelements.leftPaddle.style.position = 'absolute';
-		this.HTMLelements.leftPaddle.style.left = '2%';
-		this.HTMLelements.leftPaddle.style.top = '50%';
-		this.HTMLelements.leftPaddle.style.transform = 'translateY(-50%)';
-
-		this.HTMLelements.rightPaddle.style.width = '2%';
-		this.HTMLelements.rightPaddle.style.height = '15%';
-		this.HTMLelements.rightPaddle.style.background = 'white';
-		this.HTMLelements.rightPaddle.style.position = 'absolute';
-		this.HTMLelements.rightPaddle.style.right = '2%';
-		this.HTMLelements.rightPaddle.style.top = '50%';
-		this.HTMLelements.rightPaddle.style.transform = 'translateY(-50%)';
-
-		this.HTMLelements.ball.style.width = '2%';
-		this.HTMLelements.ball.style.height = '2%';
-		this.HTMLelements.ball.style.background = 'white';
-		this.HTMLelements.ball.style.position = 'absolute';
-		this.HTMLelements.ball.style.left = '50%';
-		this.HTMLelements.ball.style.top = '50%';
-		this.HTMLelements.ball.style.transform = 'translate(-50%, -50%)';
-		this.HTMLelements.ball.style.borderRadius = '50%';
-		this.HTMLelements.ball.style.setProperty('aspect-ratio', '1 / 1');
-	}
-
-	private setOpacity(opacity: string): void
-	{
-		this.HTMLelements.leftPaddle.style.opacity = opacity;
-		this.HTMLelements.rightPaddle.style.opacity = opacity;
-		this.HTMLelements.net.style.opacity = opacity;
-		this.HTMLelements.ball.style.opacity = opacity;
-		this.HTMLelements.scoreLeft.style.opacity = opacity;
-		this.HTMLelements.scoreRight.style.opacity = opacity;
-		this.HTMLelements.game.style.borderColor = `rgba(255, 255, 255, ${opacity})`;
-	}
-
-	private showWinner(winner: number): void
-	{
-		// this.setOpacity(GameClient.BACKGROUND_OPACITY);
-		this.HTMLelements.net.style.display = 'none';
-		this.HTMLelements.ball.style.display = 'none';
-		this.HTMLelements.winner.textContent = `Player ${winner} wins !`;
-		this.HTMLelements.winner.style.display = 'block';
-		// this.HTMLelements.playAgain.textContent = GameClient.PLAY_AGAIN_MSG;
-		this.HTMLelements.playAgain.style.display = 'block';
 	}
 }

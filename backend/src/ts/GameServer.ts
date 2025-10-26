@@ -25,12 +25,15 @@ class GameInstance
 	private static readonly PLAYER2_DOWN_KEY: string = 'ArrowDown';
 	private static readonly FPS: number = 60;
 	private static readonly FRAME_TIME: number = 1000 / GameInstance.FPS;
+	private static readonly NAME_PLAYER1: string = 'player1';
+	private static readonly NAME_PLAYER2: string = 'player2';
 
 	/* GAME STATE */
 	private keysPressed: Set<string> = new Set();
 	private speed: number = GameInstance.SPEED;
 	private ballSpeedX: number = (Math.random() < 0.5) ? 0.5 : -0.5;
 	private ballSpeedY: number = (Math.random() - 0.5) * 2;
+	private isReady: boolean = false;
 
 	gameState: any =
 	{
@@ -41,7 +44,7 @@ class GameInstance
 		player1Score: 0,
 		player2Score: 0,
 		pause: false,
-		end: false,
+		winner: null,
 	};
 
 	constructor()
@@ -61,7 +64,7 @@ class GameInstance
 	{
 		setInterval(() =>
 		{
-			if (!this.gameState.end)
+			if (this.isReady && !this.gameState.winner)
 			{
 				this.moveBall();
 				this.movePaddle();
@@ -115,7 +118,7 @@ class GameInstance
 
 		if (newScore >= GameInstance.POINTS_TO_WIN)
 		{
-			this.gameState.end = true;
+			this.gameState.winner = (player === 1) ? GameInstance.NAME_PLAYER1 : GameInstance.NAME_PLAYER2;
 		}
 	}
 
@@ -150,7 +153,7 @@ class GameInstance
 	private bounce(paddleY: number, mult: number): void
 	{
 		this.speed += GameInstance.SPEED_INCREMENT;
-		this.ballSpeedX = mult * Math.abs(this.ballSpeedX);
+		this.ballSpeedX = -this.ballSpeedX;
 		this.ballSpeedY = (this.gameState.ballY - paddleY) / GameInstance.MIN_Y_PADDLE * GameInstance.MAX_ANGLE;
 		this.normalizeSpeed();
 	}
@@ -177,10 +180,7 @@ class GameInstance
 
 	public getCurrentGameState(): any
 	{
-		return {
-			type: 'gameState',
-			state: this.gameState,
-		};
+		return { type: 'gameState', state: this.gameState };
 	}
 
 	public handleKeyPress(body: any): void
@@ -194,10 +194,26 @@ class GameInstance
 			this.keysPressed.delete(body.key);
 		}
 	}
+
+	public setReady(isReady: boolean): void
+	{
+		this.isReady = isReady;
+	}
 }
 
 export class GameServer
 {
+	private static readonly PADDLE_HEIGHT: number = 15;
+	private static readonly PADDLE_WIDTH: number = 2;
+	private static readonly PADDLE_PADDING: number = 2;
+	private static readonly BALL_SIZE: number = 2;
+	private static readonly BACKGROUND_OPACITY: string = '0.2';
+	private static readonly PLAY_AGAIN_KEY: string = 'Enter';
+	private static readonly PLAY_AGAIN_MSG: string = `Press ${GameServer.PLAY_AGAIN_KEY} to play again`;
+	private static readonly FPS: number = 60;
+	private static readonly COLOR: string = '255, 255, 255';
+	private static readonly COUNTDOWN_START: number = 3;
+
 	private activeGames: Map<string, GameInstance> = new Map();
 	private server!: FastifyInstance;
 
@@ -223,40 +239,70 @@ export class GameServer
 	private async launchServer(): Promise<void>
 	{
 		await this.server.register(cors, { origin: true });
+		this.createGame();
+		this.ready();
+		this.sendGameState();
+		this.getAction();
+		await this.server.listen( { port: 3000, host: '0.0.0.0' } );
+	}
 
-		// this.server.post('/game-start/:gameId', (request, reply) =>
-		// {
-		// 	const { gameId } = request.params as any;
-		// 	const game = this.activeGames.get(gameId);
-
-		// 	if (game)
-		// 	{
-		// 		reply.send( { success: true } );
-		// 	}
-		// });
-
-		// this.server.get('/game-state/:gameId', (request, reply) =>
-		// {
-		// 	const { gameId } = request.params as any;
-		// 	const game = this.activeGames.get(gameId);
-
-		// 	if (game)
-		// 	{
-		// 		reply.send(game.getCurrentGameState());
-		// 	}
-		// 	else
-		// 	{
-		// 		reply.status(404).send( { error: 'Game not found' } );
-		// 	}
-		// });
-
+	private createGame(): void
+	{
 		this.server.post('/create-game', (request, reply) =>
 		{
-			const gameId = this.generateGameId();
-			this.activeGames.set(gameId, new GameInstance());
-			reply.send( { gameId: gameId } );
+			try
+			{
+				const body = request.body as any;
+				const mode = body.mode;
+				const playerId = body.playerId;
+				const gameId = crypto.randomUUID();
+				this.activeGames.set(gameId, new GameInstance());
+				reply.status(201).send(this.getParameters(playerId, gameId));
+			}
+			catch (error)
+			{
+				reply.status(500).send();
+			}
 		});
+	}
 
+	private ready(): void
+	{
+		this.server.post('/ready/:gameId', (request, reply) =>
+		{
+			const { gameId } = request.params as any;
+			const game = this.activeGames.get(gameId);
+
+			if (game)
+			{
+				game.setReady(true);
+				reply.status(200).send();
+			}
+			else
+			{
+				reply.status(404).send();
+			}
+		});
+	}
+
+	private getParameters(player: string, gameId: string): any
+	{
+		return {
+			gameId: gameId,
+			paddleHeight: GameServer.PADDLE_HEIGHT,
+			paddleWidth: GameServer.PADDLE_WIDTH,
+			paddlePadding: GameServer.PADDLE_PADDING,
+			ballSize: GameServer.BALL_SIZE,
+			backgroundOpacity: GameServer.BACKGROUND_OPACITY,
+			playAgainMsg: GameServer.PLAY_AGAIN_MSG,
+			countdownStart: GameServer.COUNTDOWN_START,
+			fps: GameServer.FPS,
+			color: GameServer.COLOR,
+		};
+	}
+
+	private sendGameState(): void
+	{
 		this.server.get('/game-state/:gameId', (request, reply) =>
 		{
 			const { gameId } = request.params as any;
@@ -264,14 +310,17 @@ export class GameServer
 
 			if (game)
 			{
-				reply.send(game.getCurrentGameState());
+				reply.status(200).send(game.getCurrentGameState());
 			}
 			else
 			{
-				reply.status(404).send( { error: 'Game not found' } );
+				reply.status(404).send();
 			}
 		});
+	}
 
+	private getAction(): void
+	{
 		this.server.post('/game-action/:gameId', (request, reply) =>
 		{
 			const { gameId } = request.params as any;
@@ -281,25 +330,12 @@ export class GameServer
 			if (game)
 			{
 				game.handleKeyPress(body);
-				reply.send( { success: true } );
+				reply.status(200).send();
 			}
 			else
 			{
-				reply.status(404).send( { error: 'Game not found' } );
+				reply.status(404).send();
 			}
 		});
-
-		this.server.get('/active-games', (request, reply) =>
-		{
-			const games = Array.from(this.activeGames.keys());
-			reply.send( { games: games } );
-		});
-
-		await this.server.listen( { port: 3000, host: '0.0.0.0' } );
-	}
-
-	private generateGameId(): string
-	{
-		return Math.random().toString(36).substring(2, 8);
 	}
 }

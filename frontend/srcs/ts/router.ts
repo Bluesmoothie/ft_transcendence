@@ -3,16 +3,21 @@ import { GameClient } from './GameClient.js';
 export class Router
 {
 	private static readonly EXIT_KEY: string = 'Escape';
+	private static readonly homeButton1: string = 'one player';
+	private static readonly homeButton2: string = 'two player';
+	private button1Element = document.getElementById('1player') as HTMLDivElement;
+	private button2Element = document.getElementById('2player') as HTMLDivElement;
 
 	currentPage: string = 'home';
 	pages: Map<string, HTMLDivElement> = new Map();
 	gameInstance: GameClient | null = null;
 
+
 	constructor()
 	{
 		this.loadPages();
 		this.setupEventListeners();
-		this.showPage(this.currentPage);
+		this.showPage(this.currentPage, null);
 	}
 
 	private loadPages(): void
@@ -34,47 +39,44 @@ export class Router
 		window.addEventListener('popstate', (e) =>
 		{
 			const page = e.state?.page || 'home';
-			this.showPage(page);
+			this.showPage(page, null);
 		});
 
 		window.addEventListener('keydown', (e) =>
 		{
-			if (e.key === Router.EXIT_KEY && this.currentPage !== 'home')
+			if (e.key === Router.EXIT_KEY)
 			{
-				this.showPage('home');
+				history.back();
 			}
 		});
 	}
 
-	private clearPages(): void
+	private showPage(page: string, mode: string): void
 	{
 		if (this.gameInstance)
 		{
 			this.gameInstance.destroy();
 		}
 
-		for (const element of this.pages.values())
-		{
-			element.style.display = 'none';
-		}
-	}
-
-	private showPage(page: string)
-	{
-		this.clearPages();
+		this.pages.get(this.currentPage)!.style.display = 'none';
 		this.pages.get(page)!.style.display = 'flex';
 		this.currentPage = page;
 
+		if (page === 'home')
+		{
+			this.button1Element.textContent = Router.homeButton1;
+			this.button2Element.textContent = Router.homeButton2;
+		}
 		if (page === 'game')
 		{
-			this.gameInstance = new GameClient();
+			this.gameInstance = new GameClient(mode);
 		}
 	}
 
-	public navigateTo(page: string): void
+	public navigateTo(page: string, mode: string): void
 	{
 		history.pushState({page: page}, '', `#${page}`);
-		this.showPage(page);
+		this.showPage(page, mode);
 	}
 };
 
@@ -82,9 +84,10 @@ const router = new Router();
 
 document.getElementById('1player')?.addEventListener('click', () =>
 {
+	router.navigateTo('game', '1player');
 });
 
 document.getElementById('2player')?.addEventListener('click', () =>
 {
-	router.navigateTo('game');
+	router.navigateTo('game', '2player');
 });
