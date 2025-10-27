@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import base32Decode from 'base32-decode';
-import base32Encode from 'base32-encode'
-import sqlite3 from "sqlite3";
+import base32Encode from 'base32-encode';
+import sqlite3 from 'sqlite3';
+import qrcode from 'qrcode';
 
 function generate_totp(seed: string, time: number): string
 {
@@ -30,16 +31,24 @@ export function check_totp(seed: string, totp: string): boolean
 export function new_totp(request: any, reply: any, db: sqlite3.Database)
 {
 	console.log("Received request for new totp");
-	const { user_id } = request.body;
+	const { user_id, email } = request.body;
 	const sql = "UPDATE users SET totp_seed = ? WHERE id = ?";
 
 	const seed = base32Encode(crypto.randomBytes(20), 'RFC4648');
-	db.get(sql, [seed, user_id], function (err:any)
+	const otpauth = "otpauth://totp/Transcendence:" + email + "?secret=" + seed + "&issuer=Transcendence";
+	db.get(sql, [seed, user_id], function (err:any, row:any)
 	{
 		if (err)
 			reply.code(500).send({ message: `database error: ${err.message}` });
 		else
-			reply.code(200).send({ seed: `${seed}` });
+		{
+			qrcode.toDataURL(otpauth, function (err: any, url: any){
+				if(err)
+					reply.code(500).send({ message: `qrcode error: ${err.message}` });
+				else
+					reply.code(200).send({ qrcode: `${url}` });
+			})
+		}
 	})
 }
 

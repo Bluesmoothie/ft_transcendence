@@ -134,13 +134,22 @@ async function login()
 
 async function new_totp()
 {
-	const { status, otpauth } = await user.newTotp();
-	if (!otpauth)
+	const { status, data } = await user.newTotp();
+	var qrcode = data.qrcode;
+	if (!qrcode)
 	{
 		setPlaceholderTxt("you need to login first");
 		return ;
 	}
-	addLog(status, otpauth);
+	else
+	{
+		const img = document.createElement('img');
+		img.id = "qrcode_img"
+		img.src = qrcode;
+		img.alt = "TOTP qrcode";
+		document.getElementById('qrcode_holder').appendChild(img);
+	}
+	addLog(status, JSON.stringify(data));
 }
 
 async function del_totp()
@@ -174,6 +183,9 @@ async function validate_totp()
 	{
 		case 200:
 			setPlaceholderTxt("Totp validated");
+			const img = document.getElementById("qrcode_img");
+			if (img)
+				img.remove();
 			break;
 		case 500:
 			setPlaceholderTxt("Database error");
