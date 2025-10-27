@@ -399,7 +399,24 @@ export class MainUser extends User
 			})
 			
 		});
-		var data = await response.json();
+
+		return response.status;
+	}
+
+	public async validateTotp(totp: string) : Promise<number>
+	{
+		if (this.getId() == -1)
+			return 404;
+
+		var response = await fetch("/api/totp/validate", {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				user_id: this.getId().toString(),
+				totp: totp,
+			})
+			
+		});
 
 		return response.status;
 	}

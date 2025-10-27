@@ -56,3 +56,28 @@ export function del_totp(request: any, reply: any, db: sqlite3.Database)
 			reply.code(200).send({ message: "ok"});
 	})
 }
+
+export function validate_totp(request: any, reply: any, db: sqlite3.Database)
+{
+	const { user_id, totp } = request.body;
+	const sql = "SELECT totp_seed FROM users WHERE id = ?";
+
+	db.get(sql, user_id, function (err:any, row: any)
+	{
+		if (err)
+			reply.code(500).send({ message: `database error: ${err.message}` });
+		else if (check_totp(row.totp_seed, totp))
+		{
+			const sql = "UPDATE users SET totp_enable = 1 WHERE id = ?";
+			db.get(sql, [user_id], function (err:any)
+			{
+				if (err)
+					reply.code(500).send({ message: `database error: ${err.message}` });
+				else
+					reply.code(200).send({ message: "ok, totp fully enabled"});
+			})
+		}
+		else
+			reply.code(404).send({ message: "failed to validate totp" });
+	})
+}

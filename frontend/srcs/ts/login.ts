@@ -8,6 +8,7 @@ document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendI
 document.getElementById("refresh_btn")?.addEventListener("click", () => user.refreshSelf());
 document.getElementById("new_totp")?.addEventListener("click", new_totp);
 document.getElementById("del_totp")?.addEventListener("click", del_totp);
+document.getElementById("totp_check_send")?.addEventListener("click", validate_totp);
 
 var user:MainUser = new MainUser(document.body, document.getElementById("user-list"));
 
@@ -150,6 +151,29 @@ async function del_totp()
 	{
 		case 200:
 			setPlaceholderTxt("Totp removed");
+			break;
+		case 500:
+			setPlaceholderTxt("Database error");
+			break;
+		case 404:
+			setPlaceholderTxt("you need to login first");
+			break;
+		default:
+			setPlaceholderTxt("Unknow error");
+			break;
+	}
+}
+
+async function validate_totp()
+{
+	var totp = document.getElementById("totp_check") as HTMLInputElement;
+
+	const status = await user.validateTotp(totp.value);
+
+	switch(status)
+	{
+		case 200:
+			setPlaceholderTxt("Totp validated");
 			break;
 		case 500:
 			setPlaceholderTxt("Database error");
