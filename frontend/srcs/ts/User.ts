@@ -366,7 +366,7 @@ export class MainUser extends User
 		return status;
 	}
 
-	public async newTotp() : Promise<string>
+	public async newTotp() : Promise<{status: number, otpauth: string}>
 	{
 		if (this.getId() == -1)
 			return null;
@@ -383,6 +383,24 @@ export class MainUser extends User
 
 		var otpauth = "otpauth://totp/Transcendence:" + this.getEmail() + "?secret=" + data.seed + "&issuer=Transcendence";
 
-		return otpauth;
+		return { status: response.status, otpauth: otpauth };
+	}
+
+	public async delTotp() : Promise<number>
+	{
+		if (this.getId() == -1)
+			return 404;
+
+		var response = await fetch("/api/totp/remove", {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				user_id: this.getId().toString(),
+			})
+			
+		});
+		var data = await response.json();
+
+		return response.status;
 	}
 }

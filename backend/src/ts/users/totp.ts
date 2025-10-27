@@ -24,9 +24,6 @@ function transform_totp_code(hmac: Buffer): string
 export function check_totp(seed: string, totp: string): boolean
 {
 	const expected = transform_totp_code(Buffer.from(generate_totp(seed, Math.floor(Date.now() / 1000)), 'hex'));
-	console.log("Time: " + Date.now());
-	console.log("Expected totp: " + expected);
-	console.log("Actual totp: " + totp);
 	return totp === expected;
 }
 
@@ -34,7 +31,7 @@ export function new_totp(request: any, reply: any, db: sqlite3.Database)
 {
 	console.log("Received request for new totp");
 	const { user_id } = request.body;
-	const sql = "UPDATE users SET totp_seed = ?, totp_enable = true WHERE id = ?";
+	const sql = "UPDATE users SET totp_seed = ? WHERE id = ?";
 
 	const seed = base32Encode(crypto.randomBytes(20), 'RFC4648');
 	db.get(sql, [seed, user_id], function (err:any)
@@ -43,5 +40,19 @@ export function new_totp(request: any, reply: any, db: sqlite3.Database)
 			reply.code(500).send({ message: `database error: ${err.message}` });
 		else
 			reply.code(200).send({ seed: `${seed}` });
+	})
+}
+
+export function del_totp(request: any, reply: any, db: sqlite3.Database)
+{
+	const { user_id } = request.body;
+	const sql = "UPDATE users SET totp_seed = 0, totp_enable = 0 WHERE id = ?";
+
+	db.get(sql, user_id, function (err:any)
+	{
+		if (err)
+			reply.code(500).send({ message: `database error: ${err.message}` });
+		else
+			reply.code(200).send({ message: "ok"});
 	})
 }

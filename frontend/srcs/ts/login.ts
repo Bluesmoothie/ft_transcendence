@@ -7,6 +7,7 @@ document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAv
 document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);
 document.getElementById("refresh_btn")?.addEventListener("click", () => user.refreshSelf());
 document.getElementById("new_totp")?.addEventListener("click", new_totp);
+document.getElementById("del_totp")?.addEventListener("click", del_totp);
 
 var user:MainUser = new MainUser(document.body, document.getElementById("user-list"));
 
@@ -132,13 +133,34 @@ async function login()
 
 async function new_totp()
 {
-	const otpauth: string = await user.newTotp();
+	const { status, otpauth } = await user.newTotp();
 	if (!otpauth)
 	{
 		setPlaceholderTxt("you need to login first");
 		return ;
 	}
-	addLog(200, otpauth);
+	addLog(status, otpauth);
+}
+
+async function del_totp()
+{
+	const status = await user.delTotp();
+
+	switch(status)
+	{
+		case 200:
+			setPlaceholderTxt("Totp removed");
+			break;
+		case 500:
+			setPlaceholderTxt("Database error");
+			break;
+		case 404:
+			setPlaceholderTxt("you need to login first");
+			break;
+		default:
+			setPlaceholderTxt("Unknow error");
+			break;
+	}
 }
 
 const intervalId = setInterval(() => user.refreshSelf(), 10000);
