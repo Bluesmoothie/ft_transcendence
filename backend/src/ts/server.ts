@@ -6,6 +6,7 @@ import sqlite3 from 'sqlite3';
 import { login_user as loginUser, create_user, logout_user, set_user_status as setUserStatus, uploadAvatar } from './users/userManagment.js';
 import { getFriends, getUserById, getUserByName } from './users/user.js';
 import { addFriend, removeFriend, acceptFriend } from './users/friends.js';
+import { chatSocket } from './chat.js'
 
 /* directory of avatars */
 export const uploadDir : string = "/var/www/avatars/"
@@ -103,7 +104,9 @@ fastify.get<{ Querystring: { profile_name: string } }>
 			}
 	},
 	handler: (request, reply) => {
-		return getUserByName(request, reply, db);
+		getUserByName(request, reply, db);
+		// const [ code, msg ] = getUserByName(request.query[0], db);
+		// return reply.code(code).send(msg);
 	}
 })
 
@@ -131,6 +134,16 @@ fastify.post('/api/upload/avatar', async (request, reply) => {
 })
 
 //
+// Chat
+//
+fastify.register(async function (fastify) {
+    fastify.get('/api/chat', { websocket: true }, (connection, request) => {
+		chatSocket(connection, request);
+    });
+});
+
+
+//
 // fastify
 //
 const start = async () => {
@@ -142,6 +155,8 @@ const start = async () => {
 		process.exit(1)
 	}
 }
+
+export function getDB() { return db; }
 
 function shutdownDb()
 {
@@ -164,62 +179,5 @@ signals.forEach(signal => {
 	});
 });
 
-// to move in chat.ts
-const connections = new Set();
-fastify.register(async function (fastify) {
-    fastify.get('/api/chat', { websocket: true }, (connection, request) => {
-		const clientIp = request.socket.remoteAddress;
-        console.log(`Client connected from: ${clientIp}`);
-		connection.send(JSON.stringify({ username: "<server>", message: "welcome to room chat!" }));
-
-		connections.add(connection);
-		broadcast(JSON.stringify({ username: "<server>", message: `${clientIp}: has joined the room!`}), connection);
-        connection.on('message', (message: any) => {
-			try
-			{
-				const msg = message.toString();
-				console.log(`${clientIp}: ${msg}`);
-				broadcast(msg, connection);
-
-				if (connection.readyState === connection.OPEN)
-				{
-					connection.send(`[server]: ${msg}`);
-				}
-			}
-			catch (err)
-			{
-				console.log(`failed to process message: ${err}`);
-			}
-        });
-
-		connection.on('error', (error: any) => {
-			console.error(`${clientIp}: websocket error: ${error}`);
-		})
-
-        connection.on('close', (code: any, reason: any) => {
-			connections.delete(connection);
-			broadcast(JSON.stringify({ username: "<server>", message: `${clientIp}: has left the room` }), connection);
-            console.log(`${clientIp}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
-        });
-    });
-});
-
-function broadcast(message: any, sender = null)
-{
-	connections.forEach((conn: any) => {
-		if (conn !== sender && conn.readyState === conn.OPEN)
-		{
-			try
-			{
-				conn.send(message);
-			}
-			catch (err: any)
-			{
-				console.error(`Broadcast error: ${err}`);
-				connections.delete(conn);
-			}
-		}
-	})
-}
 
 start()

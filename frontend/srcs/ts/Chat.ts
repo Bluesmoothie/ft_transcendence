@@ -23,16 +23,18 @@ class Message
 		this.m_sender = sender;
 		this.m_msg = msg;
 
-		this.m_isCmd = false; // TODO: handle cmd
+		this.m_isCmd = msg.charAt(0) === '/' ? true : false; // TODO: handle cmd
 	}
 
 	public getSender() : User	{ return this.m_sender; }
 	public getMsg() : string	{ return this.m_msg; }
 	public isCmd() : boolean	{ return this.m_isCmd; }
 
-	public sendToAll(ws: WebSocket)
+	public async sendToAll(ws: WebSocket, chatbox: HTMLElement)
 	{
-		const packet = { username: this.m_sender.name, message: this.m_msg };
+		if (this.m_isCmd && await this.execLocalCommand(chatbox) === true) return;
+
+		const packet = { username: this.m_sender.name, message: this.m_msg, isCmd: this.m_isCmd };
 		ws.send(JSON.stringify(packet));
 	}
 
@@ -54,9 +56,19 @@ class Message
 		return container;
 	}
 
-	public execCommand()
+	public async execLocalCommand(chatbox: HTMLElement) : Promise<boolean>
 	{
-		// handle command
+		if (!this.m_isCmd) return false;
+
+		const args: string[] = this.m_msg.split(/\s+/);
+		console.log(args);
+		switch (args[0])
+		{
+			case "/clear":
+				chatbox.innerHTML = "";
+				return true;
+		}
+		return false; // command is not local
 	}
 };
 
@@ -91,7 +103,7 @@ export class Chat
 
 	private sendMsgFromInput(event:any)
 	{
-		if (event.key == 'Enter')
+		if (event.key == 'Enter' && this.m_chatInput.value != "")
 		{
 			this.sendMsg(this.m_user, this.m_chatInput.value);
 			this.m_chatInput.value = "";
@@ -100,7 +112,9 @@ export class Chat
 
 	private receiveMessage(event:any)
 	{
+		console.log(event.data);
 		const json = JSON.parse(event.data);
+		console.log(`${json}`);
 		const username = json.username;
 		const message = json.message;
 
@@ -113,19 +127,13 @@ export class Chat
 	}
 
 
-	public sendMsg(sender: User, msg: string)
+	public async sendMsg(sender: User, msg: string)
 	{
 		var newMsg = new Message(sender, msg);
-		if (newMsg.isCmd())
-		{
-			newMsg.execCommand();
-			return ;
-		}
 
-		newMsg.sendToAll(this.m_ws);
 		this.m_chatbox.prepend(newMsg.toHtml("user-msg"));
+		await newMsg.sendToAll(this.m_ws, this.m_chatbox);
 		this.m_chatlog.push(newMsg);
 	}
 }
-
 

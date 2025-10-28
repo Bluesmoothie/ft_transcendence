@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3'
 
-export function removeFriend(request: any, reply: any, db: sqlite3.Database)
+export async function removeFriend(request: any, reply: any, db: sqlite3.Database)
 {
 	var { user1, user2 } = request.params as {
 		user1: number,
@@ -15,7 +15,7 @@ export function removeFriend(request: any, reply: any, db: sqlite3.Database)
 	}
 
 	const sql = "DELETE from friends WHERE user1_id = ? and user2_id = ?";
-	db.run(sql, [user1.toString(), user2.toString()], function(err) {
+	await db.run(sql, [user1.toString(), user2.toString()], function(err) {
 		if (err)
 			return reply.code(500).send({ message: `database error: ${err}` });
 		else

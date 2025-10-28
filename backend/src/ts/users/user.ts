@@ -43,3 +43,16 @@ export function getUserByName(request: any, reply: any, db: sqlite3.Database)
 			return reply.code(200).send(row);
 	})
 }
+// export function getUserByName(profile_name: string, db: sqlite3.Database)
+// {
+// 	const sql = 'SELECT id, name, profile_picture, elo, status, is_login FROM users WHERE name = ?';
+//
+// 	db.get(sql, [profile_name], function (err: any, row: any) {
+// 		if (err)
+// 			return [ 500, { message: `database error: ${err.message}` } ];
+// 		else if (!row)
+// 			return [ 404, { message: `profile not found` } ];
+// 		else
+// 			return [ 200, row ];
+// 	})
+// }
