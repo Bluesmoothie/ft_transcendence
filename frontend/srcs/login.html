@@ -43,14 +43,38 @@
 		</div>
 
 		<div style="margin-top: 50px;">
-			<p>&lt;debug box&gt;</p>
-			<div id="debug-box" class="debug-box">
+			<p>&lt;chat&gt;</p>
+			<div id="chatbox" class="debug-box">
 			</div>
+			<input id="chat_input" placeholder="enter msg...">
+			<button id="chat_send_btn">send</button>
 		</div>
 	</body>
 
 
 	<style>
+
+	.user-msg
+	{
+		display: flex;
+		justify-content: left;
+		gap: 10px;
+		padding-top: 20px;
+	}
+
+	.user-msg h1
+	{
+		margin: 0;
+		font-size: medium;
+	}
+
+	.user-msg p
+	{
+		margin: 0;
+		font-size: medium;
+		color: white;
+	}
+
 	.user-avatar
 	{
 		width: 52px;
@@ -99,7 +123,7 @@
 		overflow:auto;
 
 		display: flex;
-		flex-direction: column;
+		flex-direction: column-reverse;
 
 	}
 
@@ -128,4 +152,5 @@
 
 	<script>var exports = {};</script>
 	<script type="module" src="./dist/login.js"></script>
+	<script type="module" src="./dist/Chat.js"></script>
 </html>

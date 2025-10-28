@@ -1,8 +1,8 @@
 {
 	"compilerOptions":
 	{
-		"target": "ES2015",
-		"lib": ["ES2015", "DOM"],
+		"target": "ES2017",
+		"lib": ["ES2017", "DOM"],
 		"outDir": "dist",
 		"rootDir": "ts",
 		"strict": false,

@@ -3,12 +3,10 @@ import { UserElement, UserElementType } from './UserElement.js';
 
 // *********************** TODO *********************** //
 // Add settings page									//
-// friends request										//
 // view user profile									//
 // match history										//
 // stats (win loses, winrate, etc)						//
 // default avatar										//
-// When ctrl-c all user be logout						//
 // **************************************************** //
 
 export enum UserStatus
@@ -62,7 +60,7 @@ export class User
 	{
 		this.setUser(
 			-1,
-			"",
+			"Guest",
 			"",
 			"", // TODO: add default avatar
 			UserStatus.UNKNOW
@@ -224,7 +222,7 @@ export class MainUser extends User
 		this.m_friendsElements = [];
 		this.m_pndgFriendsElements = [];
 
-		this.m_userElement.getLogoutBtn().addEventListener("click", () => this.logout());
+		this.m_userElement.getBtn2().addEventListener("click", () => this.logout());
 		this.m_userElement.getStatusSelect().addEventListener("change", () => this.updateStatus(this.m_userElement.getStatusSelect().value, this, this.m_userElement));
 	}
 
@@ -309,7 +307,7 @@ export class MainUser extends User
 		return 0;
 	}
 
-	public async removeFriends(user: User) : Promise<Response>
+	public async removeFriend(user: User) : Promise<Response>
 	{
 		const url = `/api/remove_friend/${this.getId()}/${user.getId()}`;
 		const response = await fetch(url, { method: "DELETE" });
@@ -339,21 +337,22 @@ export class MainUser extends User
 		container.innerHTML = ""; // destroy all child
 		for (let i = 0; i < friends.length; i++)
 		{
-			const elt:UserElement = new UserElement(friends[i], container, UserElementType.FRIEND);
+			const elt:UserElement = new UserElement(friends[i], container, pending ? UserElementType.FRIEND_PNDG : UserElementType.FRIEND);
 			elements.push(elt);
 			
 			if (pending)
 			{
-				elt.getFriendBtn().innerText = "accept request";
-				elt.getFriendBtn().addEventListener('click', () => { // to move in update
+				elt.getBtn1().addEventListener('click', () => { // to move in update
 					this.acceptFriend(friends[i]);
+				})
+				elt.getBtn2().addEventListener('click', () => { // to move in update
+					this.removeFriend(friends[i]);
 				})
 			}
 			else
 			{
-				elt.getFriendBtn().innerText = "remove friend";
-				elt.getFriendBtn().addEventListener('click', () => { // to move in update
-					this.removeFriends(friends[i]);
+				elt.getBtn1().addEventListener('click', () => { // to move in update
+					this.removeFriend(friends[i]);
 				})
 			}
 		}

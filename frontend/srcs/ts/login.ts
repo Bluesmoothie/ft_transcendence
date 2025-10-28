@@ -1,13 +1,6 @@
 import { hashString } from './sha256.js'
+import { Chat } from './Chat.js'
 import { MainUser } from './User.js';
-
-document.getElementById("create_btn")?.addEventListener("click", submitNewUser);
-document.getElementById("login_btn")?.addEventListener('click', login);
-document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAvatar);
-document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);
-document.getElementById("refresh_btn")?.addEventListener("click", () => user.refreshSelf());
-
-var user:MainUser = new MainUser(document.body, document.getElementById("friends_list"), document.getElementById("friends_pndg_list"));
 
 
 async function sendFriendInvite()
@@ -128,10 +121,16 @@ async function login()
 		setPlaceholderTxt("connected !");
 }
 
-var intervalId: any;
-try {
-	 intervalId = setInterval(() => user.refreshSelf(), 10000);
-} catch (error) {
-	console.log(error);
-	clearInterval(intervalId);
-}
+
+var user: MainUser = new MainUser(document.body, document.getElementById("friends_list"), document.getElementById("friends_pndg_list"));
+const chatInput: HTMLInputElement = document.getElementById("chat_input") as HTMLInputElement;
+const chat = new Chat(user, document.getElementById("chatbox"), chatInput);
+
+document.getElementById("create_btn")?.addEventListener("click", submitNewUser);
+document.getElementById("login_btn")?.addEventListener('click', login);
+document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAvatar);
+document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);
+document.getElementById("refresh_btn")?.addEventListener("click", () => user.refreshSelf());
+document.getElementById("chat_send_btn")?.addEventListener("click", () => chat.sendMsg(user, chatInput.value));
+
+setInterval(() => user.refreshSelf(), 10000);

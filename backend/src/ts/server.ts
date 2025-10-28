@@ -1,4 +1,5 @@
 import fastifyStatic from '@fastify/static';
+import cors from '@fastify/cors';
 import Fastify from "fastify";
 import sqlite3 from 'sqlite3';
 
@@ -14,8 +15,11 @@ export const uploadDir : string = "/var/www/avatars/"
 // setup dependencies
 //
 /* setup fastify */
-const fastify = Fastify({ logger: true })
+const fastify = Fastify({ logger: false })
 await fastify.register(import('@fastify/multipart'));
+await fastify.register(import('@fastify/websocket'));
+await fastify.register(cors, { origin: true });
+
 
 /* setup sqlite3 */
 const db = new sqlite3.Database('/var/lib/sqlite/app.sqlite', sqlite3.OPEN_READWRITE, (err) => {
@@ -159,5 +163,63 @@ signals.forEach(signal => {
 		shutdownDb();
 	});
 });
+
+// to move in chat.ts
+const connections = new Set();
+fastify.register(async function (fastify) {
+    fastify.get('/api/chat', { websocket: true }, (connection, request) => {
+		const clientIp = request.socket.remoteAddress;
+        console.log(`Client connected from: ${clientIp}`);
+		connection.send(JSON.stringify({ username: "<server>", message: "welcome to room chat!" }));
+
+		connections.add(connection);
+		broadcast(JSON.stringify({ username: "<server>", message: `${clientIp}: has joined the room!`}), connection);
+        connection.on('message', (message: any) => {
+			try
+			{
+				const msg = message.toString();
+				console.log(`${clientIp}: ${msg}`);
+				broadcast(msg, connection);
+
+				if (connection.readyState === connection.OPEN)
+				{
+					connection.send(`[server]: ${msg}`);
+				}
+			}
+			catch (err)
+			{
+				console.log(`failed to process message: ${err}`);
+			}
+        });
+
+		connection.on('error', (error: any) => {
+			console.error(`${clientIp}: websocket error: ${error}`);
+		})
+
+        connection.on('close', (code: any, reason: any) => {
+			connections.delete(connection);
+			broadcast(JSON.stringify({ username: "<server>", message: `${clientIp}: has left the room` }), connection);
+            console.log(`${clientIp}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
+        });
+    });
+});
+
+function broadcast(message: any, sender = null)
+{
+	connections.forEach((conn: any) => {
+		if (conn !== sender && conn.readyState === conn.OPEN)
+		{
+			try
+			{
+				conn.send(message);
+			}
+			catch (err: any)
+			{
+				console.error(`Broadcast error: ${err}`);
+				connections.delete(conn);
+			}
+		}
+	})
+}
 
 start()

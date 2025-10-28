@@ -4,7 +4,8 @@ export enum UserElementType
 {
 	MAIN = 0,			// enable logout / settings btn
 	STANDARD,			//
-	FRIEND				// enable remove / accept btn
+	FRIEND,				// enable remove btn
+	FRIEND_PNDG,		// enable remove / accept btn
 }
 
 function newOption(optionName: string) : HTMLOptionElement
@@ -25,9 +26,9 @@ export class UserElement
 	private m_htmlContainer:	HTMLElement;
 
 	private m_htmlBtnContainer:	HTMLElement;
-	private m_htmlLogoutBtn:	HTMLButtonElement;
-	private m_htmlSettingsBtn:	HTMLButtonElement;
-	private m_htmlFriendBtn:	HTMLButtonElement;
+	private m_htmlBtn1:			HTMLButtonElement;
+	private m_htmlBtn2:			HTMLButtonElement;
+	private m_htmlBtn3:			HTMLButtonElement;
 	private m_htmlStatusSelect:	HTMLSelectElement;
 
 	constructor(user:User, parent:HTMLElement, type:UserElementType)
@@ -51,12 +52,9 @@ export class UserElement
 		this.m_htmlStatusSelect.prepend(newOption("in_game"));
 
 		this.m_htmlBtnContainer = document.createElement("div");
-		this.m_htmlLogoutBtn = document.createElement("button");
-		this.m_htmlLogoutBtn.innerText = "logout";
-		this.m_htmlSettingsBtn = document.createElement("button");
-		this.m_htmlSettingsBtn.innerText = "settings";
-		this.m_htmlFriendBtn = document.createElement("button");
-		this.m_htmlFriendBtn.innerText = "remove";
+		this.m_htmlBtn1 = document.createElement("button");
+		this.m_htmlBtn2 = document.createElement("button");
+		this.m_htmlBtn3 = document.createElement("button");
 
 		this.m_htmlContainer.prepend(this.m_htmlStatusImg);
 		this.m_htmlContainer.prepend(this.m_htmlBtnContainer);
@@ -69,9 +67,9 @@ export class UserElement
 		this.updateHtml(user);
 	}
 
-	public getLogoutBtn():		HTMLButtonElement { return this.m_htmlLogoutBtn; }
-	public getSettingsBtn():	HTMLButtonElement { return this.m_htmlSettingsBtn; }
-	public getFriendBtn():		HTMLButtonElement { return this.m_htmlFriendBtn; }
+	public getBtn1():			HTMLButtonElement { return this.m_htmlBtn1; }
+	public getBtn2():			HTMLButtonElement { return this.m_htmlBtn2; }
+	public getBtn3():			HTMLButtonElement { return this.m_htmlBtn3; }
 	public getStatusSelect():	HTMLSelectElement { return this.m_htmlStatusSelect; }
 
 	public setType(type: UserElementType)
@@ -79,11 +77,21 @@ export class UserElement
 		switch (type) {
 			case UserElementType.MAIN:
 				this.m_htmlBtnContainer.prepend(this.m_htmlStatusSelect);
-				this.m_htmlBtnContainer.prepend(this.m_htmlSettingsBtn);	
-				this.m_htmlBtnContainer.prepend(this.m_htmlLogoutBtn);	
+				this.m_htmlBtnContainer.prepend(this.m_htmlBtn1);	
+				this.m_htmlBtn1.innerText = "settings";
+				this.m_htmlBtnContainer.prepend(this.m_htmlBtn2);	
+				this.m_htmlBtn2.innerText = "logout";
 				break;
 			case UserElementType.FRIEND:
-				this.m_htmlBtnContainer.prepend(this.m_htmlFriendBtn);	
+				this.m_htmlBtnContainer.prepend(this.m_htmlBtn1);	
+				this.m_htmlBtn1.innerText = "Remove Friend";
+				break;
+			case UserElementType.FRIEND_PNDG:
+				this.m_htmlBtnContainer.prepend(this.m_htmlBtn1);	
+				this.m_htmlBtn1.innerText = "Y";
+				this.m_htmlBtnContainer.prepend(this.m_htmlBtn2);	
+				this.m_htmlBtn2.innerText = "N";
+				break;
 			default:
 				break;
 		}

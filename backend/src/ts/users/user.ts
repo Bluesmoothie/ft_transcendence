@@ -10,7 +10,6 @@ export function getFriends(request: any, reply: any, db: sqlite3.Database)
 			return reply.code(500).send({ message: `database error ${err}` });
 		if (!rows)
 			return reply.code(404).send({ message: `no friend found :(` });
-		console.log(rows);
 		return reply.code(200).send(rows);
 	})
 }
