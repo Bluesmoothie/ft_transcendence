@@ -5,7 +5,7 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite'
 
 import { login_user as loginUser, create_user, logout_user, set_user_status as setUserStatus, uploadAvatar } from './users/userManagment.js';
-import { getFriends, getUserById, getUserByName, getUserHistoryByName } from './users/user.js';
+import { addGameToHistReq, getFriends, getUserById, getUserByNameReq, getUserHistByName } from './users/user.js';
 import { addFriend, removeFriend, acceptFriend } from './users/friends.js';
 import { chatSocket } from './chat.js'
 
@@ -22,17 +22,11 @@ await fastify.register(import('@fastify/multipart'));
 await fastify.register(import('@fastify/websocket'));
 await fastify.register(cors, { origin: true });
 
-
 /* setup sqlite3 */
 const db = await open({
 	filename: '/var/lib/sqlite/app.sqlite',
 	driver: sqlite3.Database
 });
-// const db = new sqlite.Database('/var/lib/sqlite/app.sqlite', sqlite.OPEN_READWRITE, (err) => {
-// 	if (err) {
-// 		return console.error('Failed to connect:', err.message);
-// 	}
-// });
 
 /* root to access avatars */
 fastify.register(fastifyStatic, {
@@ -60,7 +54,11 @@ fastify.post('/api/add_friend', (request:any, reply:any) => {
 // Users
 //
 fastify.get('/api/get_history_name/:username', async (request: FastifyRequest, reply: FastifyReply) => {
-	return await getUserHistoryByName(request, reply, db);
+	return await getUserHistByName(request, reply, db);
+})
+
+fastify.post('/api/add_game_history', async (request: FastifyRequest, reply: FastifyReply) => {
+	return await addGameToHistReq(request, reply, db);
 })
 
 fastify.get<{ Querystring: { user_id: string } }>
@@ -113,9 +111,7 @@ fastify.get<{ Querystring: { profile_name: string } }>
 			}
 	},
 	handler: (request, reply) => {
-		getUserByName(request, reply, db);
-		// const [ code, msg ] = getUserByName(request.query[0], db);
-		// return reply.code(code).send(msg);
+		getUserByNameReq(request, reply, db);
 	}
 })
 

@@ -1,17 +1,20 @@
+import { getDB } from './server.js';
+import { getUserByName, getUserStats } from './users/user.js';
 const connections = new Set();
 
 async function handleCommand(str: string, connection) : Promise<string>
 {
 	const args: string[] = str.split(/\s+/);
 	console.log(args);
+	var response: any;
 	switch (args[0])
 	{
 		case "/inspect":
-			const query = { profile_name: args[1] };
-			const queryString = new URLSearchParams(query).toString();
-			var response = await fetch(`http://localhost:3000/api/get_profile_name?${queryString}`);
-			var data = await response.json();
-			return JSON.stringify(data);
+			response = await getUserByName(args[1], getDB());
+			return JSON.stringify(response.data);
+		case "/stats":
+			response = await getUserStats(args[1], getDB());
+			return JSON.stringify(response[1]);
 		case "/ping":
 			return "pong";
 		default:

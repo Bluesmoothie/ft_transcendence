@@ -54,7 +54,7 @@ export async function create_user(request: any, reply: any, db: Database)
 
 	try {
 		const result = await db.run(sql, [username, email, passw, "", 0, 0]);
-		console.log(`Inserted row with id ${result.changes}`);
+		console.log(`Inserted row with id ${result.lastID}`);
 		return reply.code(200).send({ message: `Success`});;
 	}
 	catch (err) {

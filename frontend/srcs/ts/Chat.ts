@@ -6,6 +6,21 @@ function applyMsgStyle(msg: string) : string
 	return `[${msg}]`;
 }
 
+function helpMsg() : string
+{
+	const msg: string = ` -- help --
+	/test                 test connection to server
+	/clear                clear chat
+	/inspect {username}   show info of user
+	/stats {username}     show stats of user
+    /addFriend {username} send friend request to user
+	/getHist {username}   show matchs history of user
+
+	/addGame {user1 user2, score1, score2}	add game to history
+	`;
+	return msg;
+}
+
 function serverReply(msg: string) : Message
 {
 	const user = new User();
@@ -68,12 +83,17 @@ class Message
 			case "/clear":
 				chat.getChatbox().innerHTML = "";
 				return true;
+			case "/help":
+				chat.displayMessage(serverReply(helpMsg()))
+				return true;
 			case "/addFriend":
+				if (args.length != 2) return ;
 				code = await chat.getUser()?.addFriend(args[1]);
 				if (code == 404) chat.displayMessage(serverReply("user not found"))
 				if (code == 200) chat.displayMessage(serverReply("request sent"))
 				return true;
-			case "/getGameHistory":
+			case "/getHist":
+				if (args.length != 2) return ;
 				var response = await fetch(`/api/get_history_name/${args[1]}`, { method : "GET" })
 				console.log(response);
 				var data = await response.json();
@@ -82,7 +102,24 @@ class Message
 				if (code == 404) chat.displayMessage(serverReply("no history"))
 				if (code == 200) chat.displayMessage(serverReply(JSON.stringify(data)));
 				return true;
-			// case "/addGame":
+			case "/addGame":
+				if (args.length != 5) return ;
+				var response = await fetch(`/api/add_game_history`, {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						user1_name: args[1],
+						user2_name: args[2],
+						user1_score: args[3],
+						user2_score: args[4]
+					})
+				});
+				console.log(response);
+				var data = await response.json();
+				console.log(data);
+				code = response.status;
+				chat.displayMessage(serverReply(JSON.stringify(data)))
+				return true;
 		}
 		return false; // command is not local
 	}

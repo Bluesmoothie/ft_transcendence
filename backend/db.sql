@@ -7,10 +7,9 @@ CREATE TABLE IF NOT EXISTS users (
 	is_login		INTEGER NOT NULL, -- if false => override status
 	status			INTEGER NOT NULL, -- (un)avalaible - buzy - silent
 
-	elo				INTEGER NOT NULL DEFAULT 500,
+	elo				INTEGER NOT NULL DEFAULT 1000,
 	wins			INTEGER NOT NULL DEFAULT 0,
-	losses			INTEGER NOT NULL DEFAULT 0,
-	game_played		INTEGER NOT NULL DEFAULT 0,
+	games_played	INTEGER NOT NULL DEFAULT 0,
 
 	profile_picture	STRING  NOT NULL DEFAULT ""
 );
@@ -33,9 +32,9 @@ CREATE TABLE IF NOT EXISTS games (
 	id				INTEGER PRIMARY KEY AUTOINCREMENT,
 
 	user1_id		INTEGER NOT NULL,
-	user2_id		INTEGER,
-	user1_score		INTEGER,
-	user2_score		INTEGER,
+	user2_id		INTEGER NOT NULL,
+	user1_score		INTEGER NOT NULL,
+	user2_score		INTEGER NOT NULL,
 
     FOREIGN KEY (user1_id) REFERENCES users(id),
     FOREIGN KEY (user2_id) REFERENCES users(id),
