@@ -57,6 +57,7 @@ export async function login_user(request: any, reply: any, db: Database)
 export async function create_user(request: any, reply: any, db: Database)
 {
 	const { email, passw, username } = request.body;
+	console.log(`pass: ${passw}`);
 	const sql = 'INSERT INTO users (name, email, passw, profile_picture, status, is_login) VALUES (?, ?, ?, ?, ?, ?)';
 
 	if (!validate_email(email))

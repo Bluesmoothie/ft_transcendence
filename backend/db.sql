@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS games (
 	user1_score		INTEGER NOT NULL,
 	user2_score		INTEGER NOT NULL,
 
+	created_at		DATE NOT NULL,
+
     FOREIGN KEY (user1_id) REFERENCES users(id),
     FOREIGN KEY (user2_id) REFERENCES users(id),
 

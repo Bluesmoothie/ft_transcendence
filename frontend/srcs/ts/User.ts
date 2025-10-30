@@ -238,7 +238,7 @@ export class MainUser extends User
 			},
 			body: JSON.stringify({
 				email: email,
-				passw: hashString(passw),
+				passw: await hashString(passw),
 			})
 		});
 		const data = await response.json();

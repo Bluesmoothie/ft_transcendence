@@ -1,12 +1,10 @@
 import { getDB } from './server.js';
 import { getUserByName, getUserStats } from './users/user.js';
-import { updateUser, UserUpdate } from './users/userManagment.js';
 const connections = new Set();
 
 async function handleCommand(str: string, connection) : Promise<string>
 {
 	const args: string[] = str.split(/\s+/);
-	console.log(args);
 	var response: any;
 	switch (args[0])
 	{
@@ -16,16 +14,6 @@ async function handleCommand(str: string, connection) : Promise<string>
 		case "/stats":
 			response = await getUserStats(args[1], getDB());
 			return JSON.stringify(response[1]);
-		// case "/UpdateMe":
-		// 	const userUpdate: UserUpdate = {
-		// 		oldName: args[1],
-		// 		oldPassw: args[2],
-		// 		name: args[3],
-		// 		passw: args[4],
-		// 		email: args[5]
-		// 	};
-		// 	response = await updateUser(userUpdate, getDB());
-		// 	return JSON.stringify(response[1]);
 		case "/ping":
 			return "pong";
 		default:
@@ -43,7 +31,7 @@ async function onMessage(message: any, connection: any, clientIp: any)
 			{
 				const result = await handleCommand(json.message, connection);
 				const str = JSON.stringify({
-					username: "<server>",
+					username: "<SERVER>",
 					message: result
 				});
 				console.log(str);
@@ -55,7 +43,7 @@ async function onMessage(message: any, connection: any, clientIp: any)
 		}
 	catch (err)
 	{
-			console.log(`failed to process message: ${err}`);
+		console.log(`failed to process message: ${err}`);
 	}
 }
 
@@ -63,10 +51,10 @@ export function chatSocket(connection: any, request: any)
 {
 	const clientIp = request.socket.remoteAddress;
 	console.log(`Client connected from: ${clientIp}`);
-	connection.send(JSON.stringify({ username: "<server>", message: "welcome to room chat!" }));
+	connection.send(JSON.stringify({ username: "<SERVER>", message: "welcome to room chat!" }));
 
 	connections.add(connection);
-	broadcast(JSON.stringify({ username: "<server>", message: `${clientIp}: has joined the room!`}), connection);
+	broadcast(JSON.stringify({ username: "<SERVER>", message: `${clientIp}: has joined the room!`}), connection);
 	connection.on('message', async (message: any) => onMessage(message, connection, clientIp));
 
 	connection.on('error', (error: any) => {
@@ -75,7 +63,7 @@ export function chatSocket(connection: any, request: any)
 
 	connection.on('close', (code: any, reason: any) => {
 		connections.delete(connection);
-		broadcast(JSON.stringify({ username: "<server>", message: `${clientIp}: has left the room` }), connection);
+		broadcast(JSON.stringify({ username: "<SERVER>", message: `${clientIp}: has left the room` }), connection);
 		console.log(`${clientIp}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
 	});
 }

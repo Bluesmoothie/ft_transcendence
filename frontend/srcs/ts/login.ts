@@ -83,7 +83,7 @@ async function submitNewUser()
 		},
 		body: JSON.stringify({
 			email: email,
-			passw: hashString(passw),
+			passw: await hashString(passw),
 			username: username,
 		})
 	});

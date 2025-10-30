@@ -24,7 +24,7 @@ function helpMsg() : string
 function serverReply(msg: string) : Message
 {
 	const user = new User();
-	user.setUser(-1, "<server>", "", "", UserStatus.UNKNOW);
+	user.setUser(-1, "<SERVER>", "", "", UserStatus.UNKNOW);
 	return new Message(user, msg);
 }
 
@@ -123,10 +123,10 @@ class Message
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({
 						oldName: args[1],
-						oldPassw: hashString(args[2]),
+						oldPassw: await hashString(args[2]),
 						name: args[3],
 						email: args[4],
-						passw: hashString(args[5])
+						passw: await hashString(args[5])
 					})
 				});
 				var data = await response.json();

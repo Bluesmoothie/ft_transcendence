@@ -1,23 +1,18 @@
-class sha256
-{
-	constructor(parameters)
-	{
-		
-	}
-}
 
 // Todo: change using sha256
-export function hashString(name: string)
+export async function hashString(msg: string)
 {
-	let hash = 0;
+	const msgBuf = new TextEncoder().encode(msg);
+	const hashBuf = await crypto.subtle.digest('SHA-256', msgBuf);
 
-	for	(let i = 0; i < name.length; i++)
-	{
-		let c = name.charCodeAt(i);
-		hash = ((hash << 5) - hash) + c;
-		hash = hash & hash;
-	}
-	return hash;
+	const hashArr = Array.from(new Uint8Array(hashBuf));
+	const hashHex = hashArr.map(b => ('00' + b.toString(16)).slice(-2)).join('');
+
+	// console.log(`msg buf: ${msgBuf}`);
+	// console.log(`hash buf: ${hashBuf}`);
+	// console.log(`hash arr: ${hashArr}`);
+	// console.log(`hash hex: ${hashHex}`);
+	return hashHex.toString();
 }
 
 export function strToCol (str: string)

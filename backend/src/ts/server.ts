@@ -17,7 +17,6 @@ export interface DbResponse {
 /* directory of avatars */
 export const uploadDir : string = "/var/www/avatars/"
 
-
 //
 // setup dependencies
 //

@@ -50,10 +50,11 @@ export async function addGameToHist(game: GameRes, db: Database) : Promise<numbe
 		[res1, res2] = [res2, res1];
 		[game.user1_score, game.user2_score] = [game.user2_score, game.user1_score];
 	}
-	const sql = "INSERT INTO games (user1_id, user2_id, user1_score, user2_score) VALUES(?, ?, ? ,?);";
+	const sql = "INSERT INTO games (user1_id, user2_id, user1_score, user2_score, created_at) VALUES(?, ?, ?, ?, ?);";
+	const date = new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Paris"})).toISOString().slice(0, 19).replace('T', ' ');
 	try {
-		const response = await db.run(sql, [res1.data.id, res2.data.id, game.user1_score, game.user2_score]);
-		console.log(`added game to history: ${response.changes}`);
+		const response = await db.run(sql, [res1.data.id, res2.data.id, game.user1_score, game.user2_score, date]);
+		console.log(`added game to history. id: ${response.lastID}`);
 		await updateUserStats(res1.data, game.user1_score > game.user2_score, db);
 		await updateUserStats(res2.data, game.user2_score > game.user1_score, db);
 
