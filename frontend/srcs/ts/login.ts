@@ -1,6 +1,7 @@
 import { hashString } from './sha256.js'
 import { Chat } from './Chat.js'
 import { MainUser } from './User.js';
+import { setCookie, getUrlVar } from './utils.js';
 
 
 async function sendFriendInvite()
@@ -134,3 +135,12 @@ document.getElementById("refresh_btn")?.addEventListener("click", () => user.ref
 document.getElementById("chat_send_btn")?.addEventListener("click", () => chat.sendMsg(user, chatInput.value));
 
 setInterval(() => user.refreshSelf(), 10000);
+
+// for OAth
+if (getUrlVar()["Access_token"])
+{
+	setCookie("google_access_token", getUrlVar()["Access_token"][1], 1);
+	console.log("login successful");
+}
+
+
