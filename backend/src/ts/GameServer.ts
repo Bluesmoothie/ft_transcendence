@@ -1,5 +1,4 @@
 import Fastify, { FastifyInstance } from 'fastify';
-import cors from '@fastify/cors';
 
 class GameInstance
 {
@@ -19,7 +18,7 @@ class GameInstance
 	private static readonly SPEED: number = 0.8;
 	private static readonly SPEED_INCREMENT: number = 0.0;
 	private static readonly POINTS_TO_WIN: number = 1;
-	private static readonly PLAYER1_UP_KEY: string = 'w';
+	private static readonly PLAYER1_UP_KEY: string = 'z';
 	private static readonly PLAYER1_DOWN_KEY: string = 's';
 	private static readonly PLAYER2_UP_KEY: string = 'ArrowUp';
 	private static readonly PLAYER2_DOWN_KEY: string = 'ArrowDown';
@@ -200,11 +199,30 @@ class GameInstance
 	{
 		if (body.type === 'keydown')
 		{
-			this.keysPressed.add(body.key);
+			this.handleKeyPressPlayer1(body);
+			this.handleKeyPressPlayer2(body);
 		}
 		else if (body.type === 'keyup')
 		{
 			this.keysPressed.delete(body.key);
+		}
+	}
+
+	public handleKeyPressPlayer1(body: any): void
+	{
+		if (body.key == GameInstance.PLAYER1_UP_KEY
+			|| body.key == GameInstance.PLAYER1_DOWN_KEY)
+		{
+			this.keysPressed.add(body.key);
+		}
+	}
+
+	public handleKeyPressPlayer2(body: any): void
+	{
+		if (body.key == GameInstance.PLAYER2_UP_KEY
+			|| body.key == GameInstance.PLAYER2_DOWN_KEY)
+		{
+			this.keysPressed.add(body.key);
 		}
 	}
 
@@ -233,7 +251,7 @@ export class GameServer
 	private static readonly COUNTDOWN_START: number = 3;
 
 	private activeGames: Map<string, [string, string, GameInstance]> = new Map();
-	// private activeGames: Map<string, GameInstance> = new Map();
+	private playerWaiting: { reply: any, playerName: string } | null = null;
 	private server!: FastifyInstance;
 
 	constructor()
@@ -270,30 +288,28 @@ export class GameServer
 			try
 			{
 				const body = request.body as any;
-				let gameFound = false;
 
 				if (body.mode === '1player')
 				{
-					for (const [gameId, gameData] of this.activeGames)
+					if (this.playerWaiting)
 					{
-						let [player1Name, player2Name, gameInstance] = gameData;
-						if (!player2Name)
-						{
-							player2Name = body.playerName;
-							this.activeGames.set(gameId, [player1Name, player2Name, gameInstance]);
-							reply.status(201).send(this.getParameters(body.playerName, gameId, player1Name));
-							gameFound = true;
-							break;
-						}
+						const gameId = crypto.randomUUID();
+						this.activeGames.set(gameId, [this.playerWaiting.playerName, body.playerName, new GameInstance(body.mode)]);
+						this.playerWaiting.reply.status(201).send(this.getParameters(this.playerWaiting.playerName, gameId, body.playerName));
+						reply.status(201).send(this.getParameters(body.playerName, gameId, this.playerWaiting.playerName));
+						this.playerWaiting = null;
+					}
+					else
+					{
+						this.playerWaiting = { reply, playerName: body.playerName };
 					}
 				}
-				if (!gameFound)
+				else
 				{
 					const gameId = crypto.randomUUID();
 					this.activeGames.set(gameId, [body.playerName, null, new GameInstance(body.mode)]);
 					reply.status(201).send(this.getParameters(body.playerName, gameId, null));
 				}
-
 			}
 			catch (error)
 			{
@@ -311,8 +327,7 @@ export class GameServer
 
 			if (gameData)
 			{
-				const [player1Name, player2Name, gameInstance] = gameData;
-				gameInstance.setReady(true);
+				gameData[2].setReady(true);
 				reply.status(200).send();
 			}
 			else
@@ -348,8 +363,13 @@ export class GameServer
 
 			if (gameData)
 			{
-				const [player1Name, player2Name, gameInstance] = gameData;
+				const gameInstance = gameData[2];
 				reply.status(200).send(gameInstance.getCurrentGameState());
+
+				if (gameInstance.getCurrentGameState().isGameOver)
+				{
+					this.activeGames.delete(gameId);
+				}
 			}
 			else
 			{
@@ -369,8 +389,21 @@ export class GameServer
 			if (gameData)
 			{
 				const [player1Name, player2Name, gameInstance] = gameData;
-				gameInstance.handleKeyPress(body);
-				reply.status(200).send();
+				if (gameInstance.getMode() === '2player')
+				{
+					gameInstance.handleKeyPress(body);
+					reply.status(200).send();
+				}
+				else if (body.player === player1Name)
+				{
+					gameInstance.handleKeyPressPlayer1(body);
+					reply.status(200).send();
+				}
+				else if (body.player === player2Name)
+				{
+					gameInstance.handleKeyPressPlayer2(body);
+					reply.status(200).send();
+				}
 			}
 			else
 			{

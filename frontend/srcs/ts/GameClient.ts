@@ -112,6 +112,7 @@ export class GameClient
 	private launchCountdown(): void
 	{
 		let count = this.parameters.countdownStart;
+		const countdownIntervalTime =  (count > 0) ? 1000 : 0;
 		this.HTMLelements.get('countdown')!.style.display = 'block';
 		this.HTMLelements.get('countdown')!.textContent = count.toString();
 
@@ -126,7 +127,7 @@ export class GameClient
 				clearInterval(this.countdownInterval);
 				this.startGame();
 			}
-		}, (count > 0) ? 1000 : 0);
+		}, countdownIntervalTime);
 	}
 
 	private async startGame(): Promise<void>
@@ -175,7 +176,7 @@ export class GameClient
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', },
-				body: JSON.stringify({ type: type, key: key })
+				body: JSON.stringify({ type: type, key: key, player: this.playerName })
 			});
 		}
 		catch (error)
