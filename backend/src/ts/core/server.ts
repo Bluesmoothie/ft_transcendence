@@ -8,6 +8,9 @@ import { login_user as loginUser, create_user, logout_user, set_user_status as s
 import { addGameToHistReq, getFriends, getUserById, getUserByNameReq, getUserHistByName } from 'modules/users/user.js';
 import { addFriend, removeFriend, acceptFriend } from '@modules/users/friends.js';
 import { chatSocket } from '@modules/chat/chat.js';
+import { registerCorsProvider } from 'providers/cors.js';
+import { registerOAuth2GoogleProvider } from 'providers/oauth2.js';
+import { googleOAuth2Routes } from '@modules/oauth2/google.route.js';
 
 export interface DbResponse {
 	code:	number;
@@ -24,7 +27,12 @@ export const uploadDir : string = "/var/www/avatars/"
 const fastify = Fastify({ logger: false })
 await fastify.register(import('@fastify/multipart'));
 await fastify.register(import('@fastify/websocket'));
-await fastify.register(cors, { origin: true });
+
+// google
+registerOAuth2GoogleProvider(fastify);
+fastify.register(googleOAuth2Routes);
+
+registerCorsProvider(fastify);
 
 /* setup sqlite3 */
 const db = await open({
@@ -37,7 +45,6 @@ fastify.register(fastifyStatic, {
   root: uploadDir,
   prefix: '/api/images/',
 });
-
 
 //
 // Friends
