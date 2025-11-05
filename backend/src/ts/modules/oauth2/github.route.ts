@@ -9,8 +9,7 @@ export function githubOAuth2Routes (
 	done: () => void,
 )
 {
-
-	fastify.get('/api/oauth2/github/callback', function(request, reply) {
+	fastify.get('/github/callback', function(request, reply) {
 		
 		fastify.GithubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request, async (err, result) => {
 			if (err)

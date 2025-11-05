@@ -98,7 +98,7 @@ export class User
 		this.m_status = status;
 		console.log(`settings status to: ${status}`);
 
-		var response = await fetch("/api/set_status", {
+		var response = await fetch("/api/user/set_status", {
 			method: "POST",
 			headers: {
 				'content-type': 'application/json'
@@ -114,7 +114,7 @@ export class User
 
 	public async logoutDB()
 	{
-		const response = await fetch("/api/logout_user", {
+		const response = await fetch("/api/user/logout_user", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
@@ -132,7 +132,7 @@ export class User
 
 		const params = { user_id: this.getId().toString() };
 		const queryString = new URLSearchParams(params).toString();
-		var response = await fetch(`/api/get_friends?${queryString}`);
+		var response = await fetch(`/api/friends/get?${queryString}`);
 		var data = await response.json();
 
 		for (let i = 0; i < data.length; i++)
@@ -168,7 +168,7 @@ export class User
 
 	protected async addFriendToDB(friend_name: string) : Promise<number>
 	{
-		var response = await fetch("/api/add_friend", {
+		var response = await fetch("/api/friends/send_request", {
 			method: "POST",
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
@@ -187,7 +187,7 @@ export class User
 
 		formData.append("file", file, file.name);
 
-		var response = await fetch("/api/upload/avatar", {
+		var response = await fetch("/api/user/upload/avatar", {
 			method: "POST",
 			headers: {
 				'id': this.m_id.toString(),
@@ -257,7 +257,7 @@ export class MainUser extends User
 		if (this.getId() != -1)
 			return { status: -1, data: null };
 
-		const response = await fetch("/api/login", {
+		const response = await fetch("/api/user/login", {
 			method: "POST",
 			headers: {
 				'content-type': 'application/json'
@@ -335,7 +335,7 @@ export class MainUser extends User
 
 	public async removeFriend(user: User) : Promise<Response>
 	{
-		const url = `/api/remove_friend/${this.getId()}/${user.getId()}`;
+		const url = `/api/friends/remove/${this.getId()}/${user.getId()}`;
 		const response = await fetch(url, { method: "DELETE" });
 
 		await this.updateSelf();
@@ -346,7 +346,7 @@ export class MainUser extends User
 
 	public async acceptFriend(user: User) : Promise<Response>
 	{
-		const url = `/api/accept_friend/${this.getId()}/${user.getId()}`;
+		const url = `/api/friends/accept/${this.getId()}/${user.getId()}`;
 		const response = await fetch(url, { method: "POST" });
 
 		await this.updateSelf();

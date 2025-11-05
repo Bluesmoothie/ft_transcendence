@@ -36,16 +36,6 @@ function hash_string(name: string)
 	return hash;
 }
 
-export async function loginOAuth2Req(request: FastifyRequest, reply: FastifyReply, db: Database) {
-	const { id, source } = request.body as {
-		id: string,
-		source: number,
-	}
-	console.log(request.body, id, source);
-	const res = await loginOAuth2(id, source, db);
-	return reply.code(res.code).send(res.data);
-}
-
 export async function loginOAuth2(id: string, source: number, db: Database) : Promise<DbResponse>
 {
 	var sql = 'UPDATE users SET is_login = 1 WHERE oauth_id = ? AND source = ? RETURNING *';
@@ -59,23 +49,6 @@ export async function loginOAuth2(id: string, source: number, db: Database) : Pr
 	catch (err) {
 		console.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error: ${err}` }};
-	}
-}
-
-export async function login_user(request: any, reply: any, db: Database)
-{
-	const { email, passw } = request.body;
-	var sql = 'UPDATE users SET is_login = 1 WHERE email = ? AND passw = ? RETURNING *';
-
-	try {
-		const row = await db.get(sql, [email, passw]);
-		if (!row)
-			reply.code(404).send({ message: "email or password invalid" });
-		reply.code(200).send(row);
-	}
-	catch (err) {
-		console.error(`database err: ${err}`);
-		return reply.code(500).send({ message: `database error ${err}` });
 	}
 }
 
@@ -111,18 +84,6 @@ export async function createUser(email: string, passw: string, username: string,
 	}
 }
 
-export async function createUserReq(request: FastifyRequest, reply: FastifyReply, db: Database)
-{
-	const { email, passw, username } = request.body as {
-		email: string,
-		passw: string,
-		username: string
-	};
-	const res = await createUser(email, passw, username, 0, db);
-	return reply.code(res.code).send(res.data);
-
-}
-
 export async function updateUser(update: UserUpdate, db: Database) : Promise<DbResponse>
 {
 	console.log(update);
@@ -140,6 +101,35 @@ export async function updateUser(update: UserUpdate, db: Database) : Promise<DbR
 	}
 }
 
+export async function logoutUser(user_id: string, db: Database) : Promise<DbResponse>
+{
+	const sql = "UPDATE users SET is_login = 0 WHERE id = ?";
+
+	try {
+		const result = await db.run(sql, [user_id]);
+		console.log(`Inserted row with id ${result.changes}`);
+		return { code: 200, data: { message: "Success" }};
+	}
+	catch (err) {
+		console.error(`database err: ${err}`);
+		return { code: 500, data: { message: `database error ${err}` }};
+	}
+}
+
+export async function setUserStatus(user_id: string, newStatus: string, db: Database) : Promise<DbResponse>
+{
+	const sql = "UPDATE users SET status = ? WHERE id = ?;";
+	try {
+		const result = await db.run(sql, [newStatus, user_id]);
+		console.log(`Inserted row with id ${result.changes}`);
+		return { code: 200, data: { message: "Success" }};
+	}
+	catch (err) {
+		console.error(`database err: ${err}`);
+		return { code: 500, data: { message: `database error ${err}` }};
+	}
+}
+
 export async function updateUserReq(request: FastifyRequest, reply: FastifyReply, db: Database)
 {
 	const { oldName, oldPassw, name, email, passw } = request.body as {
@@ -153,38 +143,6 @@ export async function updateUserReq(request: FastifyRequest, reply: FastifyReply
 	console.log(update);
 	const result = await updateUser(update, db);
 	return reply.code(result.code).send(result.data);
-}
-
-export async function logout_user(request: any, reply:any, db: Database)
-{
-	const { user_id } = request.body;
-	const sql = "UPDATE users SET is_login = 0 WHERE id = ?";
-
-	try {
-		const result = await db.run(sql, [user_id]);
-		console.log(`Inserted row with id ${result.changes}`);
-		return reply.code(200).send({ message: "Success" });
-	}
-	catch (err) {
-		console.error(`database err: ${err}`);
-		return reply.code(500).send({ message: `database error ${err}` });
-	}
-}
-
-export async function set_user_status(request: any, reply: any, db: Database)
-{
-	const { user_id, newStatus } = request.body;
-
-	const sql = "UPDATE users SET status = ? WHERE id = ?;";
-	try {
-		const result = await db.run(sql, [newStatus, user_id]);
-		console.log(`Inserted row with id ${result.changes}`);
-		return reply.code(200).send({ message: "Success" });
-	}
-	catch (err) {
-		console.error(`database err: ${err}`);
-		return reply.code(500).send({ message: `database error ${err}` });
-	}
 }
 
 export async function uploadAvatar(request: any, reply: any, db: Database)

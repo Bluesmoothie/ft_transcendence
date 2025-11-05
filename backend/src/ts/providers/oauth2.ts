@@ -27,7 +27,7 @@ const googleOAuth2Options : any = {
 		},
 		auth: OAuth2.GOOGLE_CONFIGURATION
 	},
-	startRedirectPath: '/api/login/google',
+	startRedirectPath: '/api/oauth2/google',
 	callbackUri: `https://${process.env.HOST}:8081/login.html`
 };
 

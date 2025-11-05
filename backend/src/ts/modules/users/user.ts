@@ -119,23 +119,6 @@ export async function getUserHistByName(request: FastifyRequest, reply: FastifyR
 	}
 }
 
-export async function getFriends(request: any, reply: any, db: Database)
-{
-	const { user_id } = request.query;
-	const sql = "select * FROM friends where user1_id = ? or user2_id = ?;";
-
-	try {
-		const rows = await db.all(sql, [user_id, user_id]);
-		if (!rows)
-			return reply.code(404).send({ message: `no friend found :(` });
-		return reply.code(200).send(rows);
-	}
-	catch (err) {
-		console.error(`database err: ${err}`);
-		return reply.code(500).send({ message: `database error ${err}` });
-	}
-}
-
 export async function getUserById(request: any, reply: any, db: Database)
 {
 	const { user_id }  = request.query;

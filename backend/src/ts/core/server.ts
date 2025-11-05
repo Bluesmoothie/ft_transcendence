@@ -3,14 +3,14 @@ import Fastify, { FastifyRequest, FastifyReply } from "fastify";
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite'
 
-import { login_user as loginUser, createUserReq, logout_user, set_user_status as setUserStatus, uploadAvatar, updateUserReq, loginOAuth2Req } from '@modules/users/userManagment.js';
-import { addGameToHistReq, getFriends, getUserById, getUserByNameReq, getUserHistByName } from 'modules/users/user.js';
-import { addFriend, removeFriend, acceptFriend } from '@modules/users/friends.js';
+import { addGameToHistReq, getUserById, getUserByNameReq, getUserHistByName } from 'modules/users/user.js';
 import { chatSocket } from '@modules/chat/chat.js';
 import { registerCorsProvider } from 'providers/cors.js';
 import { registerOAuth2Providers } from 'providers/oauth2.js';
-import { fortyTwoOAuth2Routes } from '@modules/oauth2/fortyTwo.route.js';
-import { githubOAuth2Routes } from '@modules/oauth2/github.route.js';
+
+import { userManagmentRoutes } from '@modules/users/userManagment.route.js'
+import { OAuthRoutes } from '@modules/oauth2/routes.js'
+import { friendsRoutes } from '@modules/users/friends.route.js';
 
 export interface DbResponse {
 	code:	number;
@@ -28,8 +28,10 @@ await fastify.register(import('@fastify/multipart'));
 await fastify.register(import('@fastify/websocket'));
 
 await registerOAuth2Providers(fastify); // oauth2 for google
-await fastify.register(fortyTwoOAuth2Routes);
-await fastify.register(githubOAuth2Routes);
+
+await fastify.register(OAuthRoutes, { prefix: '/api/oauth2'});
+await fastify.register(userManagmentRoutes, { prefix: '/api/user'});
+await fastify.register(friendsRoutes, { prefix: '/api/friends'});
 
 registerCorsProvider(fastify);
 
@@ -46,21 +48,6 @@ fastify.register(fastifyStatic, {
 });
 
 //
-// Friends
-//
-fastify.delete('/api/remove_friend/:user1/:user2', (request, reply) => {
-	return removeFriend(request, reply, db);
-})
-
-fastify.post('/api/accept_friend/:user1/:user2', (request: any, reply: any) => {
-	return acceptFriend(request, reply, db);
-})
-
-fastify.post('/api/add_friend', (request:any, reply:any) => {
-	return addFriend(request, reply, db);
-})
-
-//
 // Users
 //
 fastify.get('/api/get_history_name/:username', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -69,28 +56,6 @@ fastify.get('/api/get_history_name/:username', async (request: FastifyRequest, r
 
 fastify.post('/api/add_game_history', async (request: FastifyRequest, reply: FastifyReply) => {
 	return await addGameToHistReq(request, reply, db);
-})
-
-fastify.post('/api/update_user', async (request: FastifyRequest, reply: FastifyReply) => {
-	return await updateUserReq(request, reply, db);
-})
-
-fastify.get<{ Querystring: { user_id: string } }>
-(
-	'/api/get_friends',
-	{
-		schema: {
-			querystring: {
-				type: 'object',
-				properties: {
-					user_id: { type: 'string' }
-				},
-				required: ['user_id']
-			}
-		},
-	handler: (request, reply) => {
-		return getFriends(request, reply, db);
-	}
 })
 
 fastify.get<{ Querystring: { user_id: string } }>
@@ -127,33 +92,6 @@ fastify.get<{ Querystring: { profile_name: string } }>
 	handler: (request, reply) => {
 		getUserByNameReq(request, reply, db);
 	}
-})
-
-//
-// User managment
-//
-fastify.post('/api/create_user', (request: any, reply: any) => {
-	return createUserReq(request, reply, db);
-})
-
-fastify.post('/api/oauth2/login', (request: any, reply: any) => {
-	return loginOAuth2Req(request, reply, db);
-})
-
-fastify.post('/api/login', (request:any, reply:any) => {
-	return loginUser(request, reply, db);
-})
-
-fastify.post('/api/logout_user', (request: any, reply: any) => {
-	return logout_user(request, reply, db);
-})
-
-fastify.post('/api/set_status', (request:any, reply:any) => {
-	return setUserStatus(request, reply, db);
-})
-
-fastify.post('/api/upload/avatar', async (request, reply) => {
-	return uploadAvatar(request, reply, db);
 })
 
 //

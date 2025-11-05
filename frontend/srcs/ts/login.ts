@@ -77,7 +77,7 @@ async function submitNewUser()
 		return ;
 	}
 
-	const response = await fetch("/api/create_user", {
+	const response = await fetch("/api/user/create_user", {
 		method: "POST",
 		headers: {
 			'content-type': 'application/json'
