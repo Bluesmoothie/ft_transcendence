@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
 	id				INTEGER PRIMARY KEY AUTOINCREMENT,
 	name			STRING NOT NULL UNIQUE,
-	email			STRING NOT NULL UNIQUE,
+	email			STRING UNIQUE,
 	passw			STRING NOT NULL DEFAULT "",
 
 	is_login		INTEGER NOT NULL DEFAULT 0, -- if false => override status

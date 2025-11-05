@@ -6,10 +6,14 @@ declare module 'fastify' {
 		GoogleOAuth2: OAuth2Namespace;
 	}
 }
-
 declare module 'fastify' {
 	interface FastifyInstance {
 		FortyTwoOAuth2: OAuth2Namespace;
+	}
+}
+declare module 'fastify' {
+	interface FastifyInstance {
+		GithubOAuth2: OAuth2Namespace;
 	}
 }
 
@@ -27,6 +31,19 @@ const googleOAuth2Options : any = {
 	callbackUri: 'https://localhost:8081/login.html'
 };
 
+const githubOAuth2Options : any = {
+	name: 'GithubOAuth2',
+	credentials: {
+		client: {
+			id: "Ov23liAV1lK69SZX4VDR",
+			secret: "18af33ba955ee9b17748529fcffd3842b78da187"
+		},
+		auth: OAuth2.GITHUB_CONFIGURATION
+	},
+	startRedirectPath: '/api/oauth2/github',
+	callbackUri: 'https://localhost:8081/api/oauth2/github/callback'
+};
+
 const fortyTwoOAuth2Options : any = {
 	name: 'FortyTwoOAuth2',
 	credentials: {
@@ -41,12 +58,14 @@ const fortyTwoOAuth2Options : any = {
 			tokenPath: '/oauth/token'
 		}
 	},
-	startRedirectPath: '/api/login/forty_two',
-	callbackUri: 'https://localhost:8081/login.html',
-	  scope: 'public'
+	startRedirectPath: '/api/oauth2/forty_two',
+	callbackUri: 'https://localhost:8081/api/oauth2/forty_two/callback',
+	scope: 'public'
 };
 
 export async function registerOAuth2Providers(fastify: FastifyInstance) {
 	await fastify.register(OAuth2, fortyTwoOAuth2Options);
+	await fastify.register(OAuth2, googleOAuth2Options);
+	await fastify.register(OAuth2, githubOAuth2Options);
 }
 

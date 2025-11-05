@@ -9,8 +9,8 @@ import { addFriend, removeFriend, acceptFriend } from '@modules/users/friends.js
 import { chatSocket } from '@modules/chat/chat.js';
 import { registerCorsProvider } from 'providers/cors.js';
 import { registerOAuth2Providers } from 'providers/oauth2.js';
-import { googleOAuth2Routes } from '@modules/oauth2/google.route.js';
-import { fortyTwoOAuth2Routes } from '@modules/oauth2/42oauth.route.js';
+import { fortyTwoOAuth2Routes } from '@modules/oauth2/fortyTwo.route.js';
+import { githubOAuth2Routes } from '@modules/oauth2/github.route.js';
 
 export interface DbResponse {
 	code:	number;
@@ -28,8 +28,8 @@ await fastify.register(import('@fastify/multipart'));
 await fastify.register(import('@fastify/websocket'));
 
 await registerOAuth2Providers(fastify); // oauth2 for google
-// await fastify.register(googleOAuth2Routes);
 await fastify.register(fortyTwoOAuth2Routes);
+await fastify.register(githubOAuth2Routes);
 
 registerCorsProvider(fastify);
 

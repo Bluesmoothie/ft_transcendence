@@ -36,11 +36,11 @@ function hash_string(name: string)
 	return hash;
 }
 
-export async function loginOAuth2(id: string, email: string, source: number, db: Database) : Promise<DbResponse>
+export async function loginOAuth2(id: string, source: number, db: Database) : Promise<DbResponse>
 {
-	var sql = 'UPDATE users SET is_login = 1 WHERE oauth_id = ? AND email = ? AND source = ? RETURNING *';
+	var sql = 'UPDATE users SET is_login = 1 WHERE oauth_id = ? AND source = ? RETURNING *';
 	try {
-		const row = await db.get(sql, [id, email, source]);
+		const row = await db.get(sql, [id, source]);
 		if (!row)
 			return { code: 404, data: {message: "user not found" }};
 		console.log(row);
@@ -72,10 +72,6 @@ export async function login_user(request: any, reply: any, db: Database)
 export async function createUserOAuth2(email: string, name: string, id: string, source: number, avatar: string, db: Database) : Promise<DbResponse>
 {
 	const sql = 'INSERT INTO users (name, email, oauth_id, source, avatar) VALUES (?, ?, ?, ?, ?)';
-
-	
-	if (!validate_email(email))
-		return { code: 403, data: { message: "error: email not valid" }};
 
 	try {
 		const result = await db.run(sql, [name, email, id, source, avatar]);

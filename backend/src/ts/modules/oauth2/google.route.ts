@@ -1,11 +1,7 @@
-import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { createUser, createUserOAuth2, loginOAuth2 } from '@modules/users/userManagment.js';
+import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { createUserOAuth2, loginOAuth2 } from '@modules/users/userManagment.js';
 import { getDB } from '@core/server.js';
-
-export enum AuthSource {
-	INTERNAL = 0,
-	GOOGLE,
-};
+import { AuthSource } from '@modules/oauth2/routes.js'
 
 export function googleOAuth2Routes (
 	fastify: FastifyInstance,
@@ -43,11 +39,10 @@ export function googleOAuth2Routes (
 				picture: string,
 			};
 
-			console.log(id, email, name, picture);
 			var res = await createUserOAuth2(email, name, id, AuthSource.GOOGLE, picture, getDB());
 			if (res.code == 200 || res.code == 500)
 			{
-				res = await loginOAuth2(id, email, AuthSource.GOOGLE, getDB());
+				res = await loginOAuth2(id, AuthSource.GOOGLE, getDB());
 				console.log(res.code);
 				console.log(res.data);
 				return reply.code(res.code).send(res.data);
