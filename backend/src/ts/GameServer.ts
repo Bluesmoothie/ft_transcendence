@@ -22,6 +22,21 @@ class GameState
 
 	get stateBuffer(): Buffer		{ return Buffer.from(this.buffer); }
 
+	get reversedStateBuffer(): Buffer
+	{
+		const reversedBuffer = new ArrayBuffer(24);
+		const reversedFloatView = new Float32Array(reversedBuffer, 0, 4);
+		const reversedIntView = new Uint8Array(reversedBuffer, 16, 2);
+		reversedFloatView[0] = this.floatView[1];
+		reversedFloatView[1] = this.floatView[0];
+		reversedFloatView[2] = 100 - this.floatView[2];
+		reversedFloatView[3] = this.floatView[3];
+		reversedIntView[0] = this.intView[1];
+		reversedIntView[1] = this.intView[0];
+		
+		return Buffer.from(reversedBuffer);
+	}
+
 	get leftPaddleY(): number		{ return this.floatView[0]; }
 	get rightPaddleY(): number		{ return this.floatView[1]; }
 	get ballX(): number				{ return this.floatView[2]; }
@@ -54,8 +69,8 @@ class GameInstance
 	private static readonly MAX_ANGLE: number = 0.5;
 	private static readonly SPEED: number = 0.8;
 	private static readonly SPEED_INCREMENT: number = 0.0;
-	private static readonly POINTS_TO_WIN: number = 2;
-	private static readonly PLAYER1_UP_KEY: string = 'z';
+	private static readonly POINTS_TO_WIN: number = 11;
+	private static readonly PLAYER1_UP_KEY: string = 'w';
 	private static readonly PLAYER1_DOWN_KEY: string = 's';
 	private static readonly PLAYER2_UP_KEY: string = 'ArrowUp';
 	private static readonly PLAYER2_DOWN_KEY: string = 'ArrowDown';
@@ -73,11 +88,11 @@ class GameInstance
 	private namePlayer1: string | null = null;
 	private namePlayer2: string | null = null;
 	private winner: string | null = null;
-	private mode: string | null = null;
+	private gameMode: string | null = null;
 
-	constructor(mode: string, namePlayer1: string, namePlayer2: string)
+	constructor(gameMode: string, namePlayer1: string, namePlayer2: string)
 	{
-		this.mode = mode;
+		this.gameMode = gameMode;
 		this.namePlayer1 = namePlayer1;
 		this.namePlayer2 = namePlayer2;
 		this.normalizeSpeed();
@@ -219,14 +234,44 @@ class GameInstance
 		return (this.gameState.stateBuffer);
 	}
 
-	public handleKeyPress(keysPressed: string[]): void
+	get reversedState(): Buffer
+	{
+		return (this.gameState.reversedStateBuffer);
+	}
+
+	get mode(): string | null
+	{
+		return (this.gameMode);
+	}
+
+	public handleKeyPress(keysPressed: string[], playerId: string): void
 	{
 		this.keysPressed.clear();
-		keysPressed.forEach(key =>this.keysPressed.add(key));
-		if (this.keysPressed.has(' ') && this.mode === '2player')
+		keysPressed.forEach(key =>
 		{
-			this.running = !this.isRunning;
-		}
+			if (playerId === '0')
+			{
+				this.keysPressed.add(key);
+			}
+			else if (playerId === '1')
+			{
+				if (key === 'w' || key === 's')
+				{
+					this.keysPressed.add(key);
+				}
+			}
+			else if (playerId === '2')
+			{
+				if (key === 'w')
+				{
+					this.keysPressed.add('ArrowUp');
+				}
+				else if (key === 's')
+				{
+					this.keysPressed.add('ArrowDown');
+				}
+			}
+		});
 	}
 
 	set running(isRunning: boolean)
@@ -274,7 +319,7 @@ export class GameServer
 		}
 		catch (error)
 		{
-			console.error('❌ Error starting server:', error);
+			console.error('Error starting server:', error);
 		}
 	}
 
@@ -365,9 +410,17 @@ export class GameServer
 				{
 					connection.send(JSON.stringify({ type: 'winner', winner: game.winnerName }));
 				}
-				else
+				else if (playerId == '1')
 				{
 					connection.send(game.state);
+				}
+				else if (playerId == '2')
+				{
+					connection.send(game.reversedState);
+				}
+				else
+				{
+					connection.status(404).send({ error: 'PlayerId not found' });
 				}
 			};
 
@@ -380,7 +433,7 @@ export class GameServer
 					const data = JSON.parse(message.toString());
 					if (data.keysPressed)
 					{
-						game.handleKeyPress(data.keysPressed);
+						game.handleKeyPress(data.keysPressed, game.mode == '1player' ? playerId : '0');
 					}
 				}
 				catch (error)

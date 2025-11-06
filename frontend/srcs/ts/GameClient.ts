@@ -13,6 +13,12 @@ export class GameClient
 	private static readonly PLAY_AGAIN_MSG: string = `Press ${GameClient.PLAY_AGAIN_KEY} to play again`;
 	private static readonly COLOR: string = '255, 255, 255';
 	private static readonly COUNTDOWN_START: number = 3;
+	private static readonly PLAYER1_UP_KEY: string = 'w';
+	private static readonly PLAYER1_DOWN_KEY: string = 's';
+	private static readonly PLAYER2_UP_KEY: string = 'ArrowUp';
+	private static readonly PLAYER2_DOWN_KEY: string = 'ArrowDown';
+	private static readonly DEFAULT_UP_KEY: string = 'ArrowUp';
+	private static readonly DEFAULT_DOWN_KEY: string = 'ArrowDown';
 
 	private gameId: string | null = null;
 	private socket : WebSocket | null = null;
@@ -243,7 +249,17 @@ export class GameClient
 
 	private keydownHandler = (event: KeyboardEvent): void =>
 	{
-		this.keysPressed.add(event.key);
+		if (this.mode == '1player'
+			&& (event.key === GameClient.DEFAULT_UP_KEY || event.key === GameClient.DEFAULT_DOWN_KEY))
+		{
+			this.keysPressed.add(event.key);
+		}
+		else if (this.mode == '2player'
+			&& (event.key === GameClient.PLAYER1_UP_KEY || event.key === GameClient.PLAYER1_DOWN_KEY
+			|| event.key === GameClient.PLAYER2_UP_KEY || event.key === GameClient.PLAYER2_DOWN_KEY))
+		{
+			this.keysPressed.add(event.key);
+		}
 
 		if (event.key === GameClient.PLAY_AGAIN_KEY && this.end)
 		{
