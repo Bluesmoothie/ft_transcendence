@@ -7,7 +7,7 @@ import * as mgmt from '@modules/users/userManagment.js'
 //
 export async function userManagmentRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
-	fastify.post('/create_user', async (request: any, reply: any) => {
+	fastify.post('/create', async (request: any, reply: any) => {
 		const { email, passw, username } = request.body as {
 			email: string,
 			passw: string,
@@ -24,8 +24,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		try {
 			const row = await getDB().get(sql, [email, passw]);
 			if (!row)
-				reply.code(404).send({ message: "email or password invalid" });
-			reply.code(200).send(row);
+				return reply.code(404).send({ message: "email or password invalid" });
+			console.log(row);
+			return reply.code(200).send(row);
 		}
 		catch (err) {
 			console.error(`database err: ${err}`);
@@ -33,7 +34,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		}
 	})
 
-	fastify.post('/logout_user', async (request: any, reply: any) => {
+	fastify.post('/logout', async (request: any, reply: any) => {
 		const { user_id } = request.body;
 
 		const res = await mgmt.logoutUser(user_id, getDB());
@@ -51,7 +52,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		return mgmt.uploadAvatar(request, reply, getDB());
 	})
 
-	fastify.post('/update_user', async (request: FastifyRequest, reply: FastifyReply) => {
+	fastify.post('/update', async (request: FastifyRequest, reply: FastifyReply) => {
 		return await mgmt.updateUserReq(request, reply, getDB());
 	})
 }

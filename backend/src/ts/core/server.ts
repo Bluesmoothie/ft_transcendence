@@ -3,27 +3,35 @@ import Fastify, { FastifyRequest, FastifyReply } from "fastify";
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite'
 
-import { addGameToHistReq, getUserById, getUserByNameReq, getUserHistByName } from 'modules/users/user.js';
 import { chatSocket } from '@modules/chat/chat.js';
 import { registerCorsProvider } from 'providers/cors.js';
 import { registerOAuth2Providers } from 'providers/oauth2.js';
 
-import { userManagmentRoutes } from '@modules/users/userManagment.route.js'
-import { OAuthRoutes } from '@modules/oauth2/routes.js'
+import { userManagmentRoutes } from '@modules/users/userManagment.route.js';
+import { OAuthRoutes } from '@modules/oauth2/routes.js';
 import { friendsRoutes } from '@modules/users/friends.route.js';
+import { userRoutes } from '@modules/users/user.route.js';
+
+import { loadConfig } from '@core/init.js';
 
 export interface DbResponse {
 	code:	number;
-	data:	any; // will be an error string if code != 200
+	data:	any;
 }
 
-/* directory of avatars */
+/* setup sqlite3 */
+const db = await open({
+	filename: '/var/lib/sqlite/app.sqlite',
+	driver: sqlite3.Database
+});
+const fastify = Fastify({ logger: false })
+await loadConfig("/config.json", db);
+
+// directory of avatars
 export const uploadDir : string = "/var/www/avatars/"
 
-//
 // setup dependencies
-//
-const fastify = Fastify({ logger: false })
+
 await fastify.register(import('@fastify/multipart'));
 await fastify.register(import('@fastify/websocket'));
 
@@ -32,67 +40,15 @@ await registerOAuth2Providers(fastify); // oauth2 for google
 await fastify.register(OAuthRoutes, { prefix: '/api/oauth2'});
 await fastify.register(userManagmentRoutes, { prefix: '/api/user'});
 await fastify.register(friendsRoutes, { prefix: '/api/friends'});
-
+await fastify.register(userRoutes, { prefix: '/api/user'});
 registerCorsProvider(fastify);
 
-/* setup sqlite3 */
-const db = await open({
-	filename: '/var/lib/sqlite/app.sqlite',
-	driver: sqlite3.Database
-});
 
 /* root to access avatars */
 fastify.register(fastifyStatic, {
   root: uploadDir,
   prefix: '/api/images/',
 });
-
-//
-// Users
-//
-fastify.get('/api/get_history_name/:username', async (request: FastifyRequest, reply: FastifyReply) => {
-	return await getUserHistByName(request, reply, db);
-})
-
-fastify.post('/api/add_game_history', async (request: FastifyRequest, reply: FastifyReply) => {
-	return await addGameToHistReq(request, reply, db);
-})
-
-fastify.get<{ Querystring: { user_id: string } }>
-(
-	'/api/get_profile_id',
-		{
-			schema: {
-				querystring: {
-				type: 'object',
-				properties: {
-					user_id: { type: 'string' }
-				},
-				required: ['user_id']
-			}
-	},
-	handler: (request, reply) => {
-		return getUserById(request, reply, db);
-	}
-})
-
-fastify.get<{ Querystring: { profile_name: string } }>
-(
-	'/api/get_profile_name',
-		{
-			schema: {
-				querystring: {
-				type: 'object',
-				properties: {
-					profile_name: { type: 'string' }
-				},
-				required: ['profile_name']
-			}
-	},
-	handler: (request, reply) => {
-		getUserByNameReq(request, reply, db);
-	}
-})
 
 //
 // Chat

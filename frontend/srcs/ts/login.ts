@@ -36,6 +36,12 @@ async function uploadAvatar()
 		setPlaceholderTxt("you need to login first");
 		return ;
 	}
+
+	else if (retval == 2)
+	{
+		setPlaceholderTxt("no file selected");
+		return ;
+	}
 }
 
 
@@ -77,7 +83,7 @@ async function submitNewUser()
 		return ;
 	}
 
-	const response = await fetch("/api/user/create_user", {
+	const response = await fetch("/api/user/create", {
 		method: "POST",
 		headers: {
 			'content-type': 'application/json'
@@ -150,9 +156,9 @@ function loginFortyTwo()
 	window.location.href = (`${url}/api/oauth2/forty_two`);
 }
 
-if (getUrlVar()["event"]) // 42api
+const vars = getUrlVar();
+if (vars && vars["event"]) // 42api
 {
-	const vars = getUrlVar();
 	const ev = vars["event"];
 	console.log(vars);
 	if (ev == "oauth_redir") {

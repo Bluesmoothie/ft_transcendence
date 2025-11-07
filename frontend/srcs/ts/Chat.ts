@@ -100,7 +100,7 @@ class Message
 				return true;
 			case "/getHist":
 				if (args.length != 2) return ;
-				var response = await fetch(`/api/get_history_name/${args[1]}`, { method : "GET" })
+				var response = await fetch(`/api/user/get_history_name/${args[1]}`, { method : "GET" })
 				console.log(response);
 				var data = await response.json();
 				console.log(data);
@@ -110,7 +110,7 @@ class Message
 				return true;
 			case "/addGame":
 				if (args.length != 5) return ;
-				var response = await fetch(`/api/add_game_history`, {
+				var response = await fetch(`/api/user/add_game_history`, {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({
@@ -125,7 +125,7 @@ class Message
 				return true;
 			case "/UpdateMe":
 				if (chat.getUser().getId() == -1) return true; // not login
-				var response = await fetch(`/api/update_user`, {
+				var response = await fetch(`/api/user/update`, {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({

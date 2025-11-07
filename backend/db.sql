@@ -13,9 +13,19 @@ CREATE TABLE IF NOT EXISTS users (
 
 	avatar			STRING  NOT NULL DEFAULT "",
 
-	-- 0 = internal; 1 == oauth google
+	-- 0=internal; 1=oauth google
 	source			INTEGER	NOT NULL DEFAULT 0,
-	oauth_id		STRING NOT NULL DEFAULT 0
+	oauth_id		STRING NOT NULL DEFAULT 0,
+	
+	-- 1=player 0=admin
+	rank			INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS user_link (
+	user1_id		INTEGER NOT NULL,
+	user2_id		INTEGER NOT NULL,
+
+	link			INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS friends (

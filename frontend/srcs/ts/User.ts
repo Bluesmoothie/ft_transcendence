@@ -9,8 +9,7 @@ import { UserElement, UserElementType } from './UserElement.js';
 // default avatar										//
 // **************************************************** //
 
-export enum UserStatus
-{
+export enum UserStatus {
 	UNKNOW = -2,
 	UNAVAILABLE = -1,
 	AVAILABLE = 0,			// user online
@@ -19,21 +18,19 @@ export enum UserStatus
 	IN_GAME,			// show when user in game
 }
 
-async function getUserInfoFromId(id:string) : Promise<Response>
-{
+async function getUserInfoFromId(id: string): Promise<Response> {
 	const params = { user_id: id };
 	const queryString = new URLSearchParams(params).toString();
-	var response = await fetch(`/api/get_profile_id?${queryString}`);
-
+	var response = await fetch(`/api/user/get_profile_id?${queryString}`);
+	
 	return response;
 }
 
-async function getUserFromId(id:string) : Promise<User>
-{
+async function getUserFromId(id: string): Promise<User> {
 	const response = await getUserInfoFromId(id);
 	if (response.status != 200)
 		return null
-	
+
 	const data = await response.json();
 	var user = new User();
 	var status = data.is_login ? data.status : UserStatus.UNAVAILABLE;
@@ -41,23 +38,21 @@ async function getUserFromId(id:string) : Promise<User>
 	return user;
 }
 
-export class User
-{
+export class User {
 	/* public vars */
-	public name:			string;
+	public name: string;
 
 	/* private vars */
-	private m_id:			number;
+	private m_id: number;
 
-	private m_email:		string;
-	private m_avatarPath:	string;
-	
-	private m_friends:		User[]; // accepted request
-	private m_pndgFriends:	User[]; // pending requests
-	private m_status:		UserStatus;
+	private m_email: string;
+	private m_avatarPath: string;
 
-	constructor()
-	{
+	private m_friends: User[]; // accepted request
+	private m_pndgFriends: User[]; // pending requests
+	private m_status: UserStatus;
+
+	constructor() {
 		this.setUser(
 			-1,
 			"Guest",
@@ -67,8 +62,7 @@ export class User
 		);
 	}
 
-	public setUser(id:number, name:string, email:string, avatar: string, status: UserStatus)
-	{
+	public setUser(id: number, name: string, email: string, avatar: string, status: UserStatus) {
 		this.m_id = id;
 		this.name = name;
 		this.m_email = email;
@@ -78,23 +72,14 @@ export class User
 		this.m_pndgFriends = [];
 	}
 
-	public getStatus() : UserStatus { return this.m_status; }
-	public getFriends() : User[] { return this.m_friends; }
-	public getPndgFriends() : User[] { return this.m_pndgFriends; }
-	public getId() : number { return this.m_id; }
+	public getStatus(): UserStatus { return this.m_status; }
+	public getFriends(): User[] { return this.m_friends; }
+	public getPndgFriends(): User[] { return this.m_pndgFriends; }
+	public getId(): number { return this.m_id; }
 	// public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
-	public getAvatarPath() : string { return this.m_avatarPath; }
-	public async getUserFromId(id:string) : Promise<Response>
-	{
-		const params = { user_id: id };
-		const queryString = new URLSearchParams(params).toString();
-		var response = await fetch(`/api/get_profile_id?${queryString}`);
+	public getAvatarPath(): string { return this.m_avatarPath; }
 
-		return response;
-	}
-
-	public async setStatus(status: UserStatus) : Promise<Response>
-	{
+	public async setStatus(status: UserStatus): Promise<Response> {
 		this.m_status = status;
 		console.log(`settings status to: ${status}`);
 
@@ -112,21 +97,19 @@ export class User
 	}
 
 
-	public async logoutDB()
-	{
-		const response = await fetch("/api/user/logout_user", {
+	public async logoutDB() {
+		const response = await fetch("/api/user/logout", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
 				user_id: this.getId().toString(),
 			})
 		});
-		this.setUser(-1, "", "", "", UserStatus.UNKNOW);
+		this.setUser(-1, "Guest", "", "", UserStatus.UNKNOW);
 		return response;
 	}
 
-	public async updateFriendList() : Promise<number>
-	{
+	public async updateFriendList(): Promise<number> {
 		this.m_friends = [];
 		this.m_pndgFriends = [];
 
@@ -135,8 +118,7 @@ export class User
 		var response = await fetch(`/api/friends/get?${queryString}`);
 		var data = await response.json();
 
-		for (let i = 0; i < data.length; i++)
-		{
+		for (let i = 0; i < data.length; i++) {
 			const element = data[i];
 
 			var id = element.user1_id == this.getId() ? element.user2_id : element.user1_id;
@@ -148,8 +130,7 @@ export class User
 		return 0;
 	}
 
-	public async updateSelf() : Promise<number>
-	{
+	public async updateSelf(): Promise<number> {
 		if (this.getId() == -1)
 			return 1;
 
@@ -158,6 +139,7 @@ export class User
 			return response.status;
 
 		var data = await response.json();
+		console.log(data);
 		this.name = data.name;
 		this.m_avatarPath = data.avatar;
 		this.m_status = data.status;
@@ -166,8 +148,7 @@ export class User
 		return response.status;
 	}
 
-	protected async addFriendToDB(friend_name: string) : Promise<number>
-	{
+	protected async addFriendToDB(friend_name: string): Promise<number> {
 		var response = await fetch("/api/friends/send_request", {
 			method: "POST",
 			headers: { 'content-type': 'application/json' },
@@ -179,11 +160,10 @@ export class User
 		return response.status;
 	}
 
-	public async uploadAvatar(file:File) : Promise<any>
-	{
+	public async uploadAvatar(file: File): Promise<any> {
 		const formData = new FormData();
 		if (!file)
-			return ;
+			return;
 
 		formData.append("file", file, file.name);
 
@@ -194,8 +174,8 @@ export class User
 				'email': this.m_email,
 				'prev_avatar': this.m_avatarPath,
 			},
-			body: formData, 
-			
+			body: formData,
+
 		});
 		var data = await response.json();
 		this.m_avatarPath = "/api/images/" + data.filename;
@@ -205,17 +185,15 @@ export class User
 }
 
 
-export class MainUser extends User
-{
-	private	m_htmlFriendContainer:		HTMLElement;
-	private	m_htmlPndgFriendContainer:	HTMLElement;
+export class MainUser extends User {
+	private m_htmlFriendContainer: HTMLElement;
+	private m_htmlPndgFriendContainer: HTMLElement;
 
-	private	m_userElement:				UserElement;
-	private m_friendsElements:			UserElement[];
-	private m_pndgFriendsElements:		UserElement[];
+	private m_userElement: UserElement;
+	private m_friendsElements: UserElement[];
+	private m_pndgFriendsElements: UserElement[];
 
-	constructor(parent: HTMLElement, friendsContainer: HTMLElement, pndgFriendsContainer: HTMLElement)
-	{
+	constructor(parent: HTMLElement, friendsContainer: HTMLElement, pndgFriendsContainer: HTMLElement) {
 		super()
 		this.m_htmlFriendContainer = friendsContainer;
 		this.m_htmlPndgFriendContainer = pndgFriendsContainer;
@@ -227,9 +205,7 @@ export class MainUser extends User
 		this.m_userElement.getStatusSelect().addEventListener("change", () => this.updateStatus(this.m_userElement.getStatusSelect().value, this, this.m_userElement));
 	}
 
-	public async oauth2Login(id: string, source: number)
-	{
-		console.log(id, source);
+	public async oauth2Login(id: string, source: number) {
 		var response = await fetch(`/api/oauth2/login`, {
 			method: "POST",
 			headers: { 'content-type': 'application/json' },
@@ -241,8 +217,7 @@ export class MainUser extends User
 		const data = await response.json();
 		console.log(data);
 
-		if (response.status == 200)
-		{
+		if (response.status == 200) {
 			var status = data.status;
 			this.setUser(data.id, data.name, data.email, data.avatar, status);
 			this.setStatus(this.getStatus());
@@ -252,8 +227,7 @@ export class MainUser extends User
 		return { status: response.status, data: data };
 	}
 
-	public async login(email:string, passw:string) : Promise<{status: number, data:any }>
-	{
+	public async login(email: string, passw: string): Promise<{ status: number, data: any }> {
 		if (this.getId() != -1)
 			return { status: -1, data: null };
 
@@ -269,8 +243,7 @@ export class MainUser extends User
 		});
 		const data = await response.json();
 
-		if (response.status == 200)
-		{
+		if (response.status == 200) {
 			var status = data.status;
 			this.setUser(data.id, data.name, data.email, data.avatar, status);
 			this.setStatus(this.getStatus());
@@ -291,7 +264,7 @@ export class MainUser extends User
 	public async refreshSelf()
 	{
 		if (this.getId() == -1)
-			return ;
+			return;
 		await this.updateSelf();
 		await this.updateFriendContainer();
 		this.m_userElement.updateHtml(this);
@@ -304,28 +277,30 @@ export class MainUser extends User
 				await user.setStatus(UserStatus.AVAILABLE);
 				break;
 			case "unavailable":
-				await user.setStatus(UserStatus.UNAVAILABLE);		
+				await user.setStatus(UserStatus.UNAVAILABLE);
 				break;
 			case "busy":
-				await user.setStatus(UserStatus.BUSY);		
+				await user.setStatus(UserStatus.BUSY);
 				break;
 			case "in_game":
-				await user.setStatus(UserStatus.IN_GAME);		
+				await user.setStatus(UserStatus.IN_GAME);
 				break;
 			case "debug":
-				await user.setStatus(UserStatus.UNKNOW);		
+				await user.setStatus(UserStatus.UNKNOW);
 				break;
 			default:
-				await user.setStatus(UserStatus.UNKNOW);		
+				await user.setStatus(UserStatus.UNKNOW);
 				break;
 		}
 		userHtml.updateHtml(user);
 	}
 
-	public async setAvatar(file: File) : Promise<number> // TODO: check si multipart upload ok
+	public async setAvatar(file: File): Promise<number> // TODO: check si multipart upload ok
 	{
-		if (this.getId() == -1 || !file)
+		if (this.getId() == -1)
 			return 1;
+		if (!file)
+			return 2;
 
 		await this.uploadAvatar(file);
 		this.m_userElement.updateHtml(this);
@@ -333,8 +308,7 @@ export class MainUser extends User
 		return 0;
 	}
 
-	public async removeFriend(user: User) : Promise<Response>
-	{
+	public async removeFriend(user: User): Promise<Response> {
 		const url = `/api/friends/remove/${this.getId()}/${user.getId()}`;
 		const response = await fetch(url, { method: "DELETE" });
 
@@ -344,8 +318,7 @@ export class MainUser extends User
 		return response;
 	}
 
-	public async acceptFriend(user: User) : Promise<Response>
-	{
+	public async acceptFriend(user: User): Promise<Response> {
 		const url = `/api/friends/accept/${this.getId()}/${user.getId()}`;
 		const response = await fetch(url, { method: "POST" });
 
@@ -357,17 +330,14 @@ export class MainUser extends User
 		return response;
 	}
 
-	private rebuildFriendContainer(friends: User[], container: HTMLElement, elements: UserElement[], pending: boolean)
-	{
+	private rebuildFriendContainer(friends: User[], container: HTMLElement, elements: UserElement[], pending: boolean) {
 		elements = [];
 		container.innerHTML = ""; // destroy all child
-		for (let i = 0; i < friends.length; i++)
-		{
-			const elt:UserElement = new UserElement(friends[i], container, pending ? UserElementType.FRIEND_PNDG : UserElementType.FRIEND);
+		for (let i = 0; i < friends.length; i++) {
+			const elt: UserElement = new UserElement(friends[i], container, pending ? UserElementType.FRIEND_PNDG : UserElementType.FRIEND);
 			elements.push(elt);
-			
-			if (pending)
-			{
+
+			if (pending) {
 				elt.getBtn1().addEventListener('click', () => { // to move in update
 					this.acceptFriend(friends[i]);
 				})
@@ -375,8 +345,7 @@ export class MainUser extends User
 					this.removeFriend(friends[i]);
 				})
 			}
-			else
-			{
+			else {
 				elt.getBtn1().addEventListener('click', () => { // to move in update
 					this.removeFriend(friends[i]);
 				})
@@ -385,8 +354,7 @@ export class MainUser extends User
 		return elements;
 	}
 
-	public async updateFriendContainer()
-	{
+	public async updateFriendContainer() {
 		await this.updateSelf();
 		var friends = this.getFriends();
 		var pndgFriends = this.getPndgFriends();
@@ -403,8 +371,7 @@ export class MainUser extends User
 			this.m_pndgFriendsElements[i].updateHtml(pndgFriends[i]);
 	}
 
-	public async addFriend(friend_name: string) : Promise<number>
-	{
+	public async addFriend(friend_name: string): Promise<number> {
 		if (!friend_name || friend_name == "")
 			return 1;
 		if (this.getId() == -1)

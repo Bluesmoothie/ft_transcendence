@@ -4,7 +4,8 @@ import { createWriteStream } from 'fs';
 import path from 'path';
 import { FastifyRequest, FastifyReply } from 'fastify';
 
-import { DbResponse, uploadDir } from "@core/server.js";
+import { DbResponse, uploadDir, getDB } from "@core/server.js";
+import { getUserById } from "./user.js";
 
 function validate_email(email:string)
 {
@@ -66,15 +67,25 @@ export async function createUserOAuth2(email: string, name: string, id: string, 
 		return { code: 500, data: { message: `database error: ${err}` }};
 	}
 }
+
+export async function updateUserRank(userId: number, newRank: number, login: string) : Promise<DbResponse>
+{
+	const res = await getUserById(userId, getDB());
+	if (res.code != 200) return res;
+
+	if (res.data.rank < newRank)
+		return { code: 403, data: { message: "permission denied" }}
+}
+
 export async function createUser(email: string, passw: string, username: string, source: number, db: Database) : Promise<DbResponse>
 {
-	const sql = 'INSERT INTO users (name, email, passw, avatar, status, is_login, source) VALUES (?, ?, ?, ?, ?, ?, ?)';
+	const sql = 'INSERT INTO users (name, email, passw, source) VALUES (?, ?, ?, ?)';
 
 	if (!validate_email(email))
 		return { code: 403, data: { message: "error: email not valid" }};
 
 	try {
-		const result = await db.run(sql, [username, email, passw, "", 0, 0, source]);
+		const result = await db.run(sql, [username, email, passw, source]);
 		console.log(`Inserted row with id ${result.lastID}`);
 		return { code: 200, data: { message: "Success" }};
 	}
