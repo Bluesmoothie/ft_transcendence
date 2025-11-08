@@ -1,3 +1,6 @@
+// @ts-ignore
+import { GameState } from './GameState.js';
+
 export class GameClient
 {
 	private HTMLelements: Map<string, HTMLDivElement> = new Map();
@@ -13,16 +16,18 @@ export class GameClient
 	private static readonly PLAY_AGAIN_MSG: string = `Press ${GameClient.PLAY_AGAIN_KEY} to play again`;
 	private static readonly COLOR: string = '255, 255, 255';
 	private static readonly COUNTDOWN_START: number = 3;
-	private static readonly PLAYER1_UP_KEY: string = 'w';
+	private static readonly PLAYER1_UP_KEY: string = 'z';
 	private static readonly PLAYER1_DOWN_KEY: string = 's';
 	private static readonly PLAYER2_UP_KEY: string = 'ArrowUp';
 	private static readonly PLAYER2_DOWN_KEY: string = 'ArrowDown';
 	private static readonly DEFAULT_UP_KEY: string = 'ArrowUp';
 	private static readonly DEFAULT_DOWN_KEY: string = 'ArrowDown';
+	private static readonly IPS: number = 60;
+	private static readonly IPS_INTERVAL: number = 1000 / GameClient.IPS;
 
 	private gameId: string | null = null;
 	private socket : WebSocket | null = null;
-	private interval: any;
+	private interval: any | null = null;
 	private opponentName: string | null = null;
 	private mode: string | null = null;
 	private end: boolean = false;
@@ -30,7 +35,7 @@ export class GameClient
 
 	constructor(mode: string)
 	{
-		if (mode)
+		if (mode && (mode === '1player' || mode === '2player'))
 		{
 			this.mode = mode;
 			this.init();
@@ -64,6 +69,8 @@ export class GameClient
 	{
 		try
 		{
+			window.addEventListener('beforeunload', () => { this.destroy(); });
+
 			const response = await fetch(`https://${window.location.host}/api/create-game`,
 			{
 				method: 'POST',
@@ -97,7 +104,8 @@ export class GameClient
 
 		this.socket.onopen = () =>
 		{
-			this.startGameLoop();
+			this.setupEventListeners();
+			this.interval = setInterval(() => { this.send(); }, GameClient.IPS_INTERVAL);
 		};
 
 		this.socket.onmessage = (event) =>
@@ -117,7 +125,7 @@ export class GameClient
 		};
 	}
 
-	private updateGameState(data: any): void
+	private updateGameState(data: string | ArrayBuffer): void
 	{
 		if (typeof data === 'string')
 		{
@@ -133,34 +141,51 @@ export class GameClient
 		}
 		else
 		{
-			const dataView = new DataView(data);
-			const gameState =
-			{
-				leftPaddleY: dataView.getFloat32(0, true),
-				rightPaddleY: dataView.getFloat32(4, true),
-				ballX: dataView.getFloat32(8, true),
-				ballY: dataView.getFloat32(12, true),
-				player1Score: dataView.getUint8(16),
-				player2Score: dataView.getUint8(17),
-			};
-
-			this.updateDisplay(gameState);
+			this.updateDisplay(new GameState(data));
 		}
 
 	}
 
-	private startGameLoop(): void
-	{
-		this.setupEventListeners();
-		this.interval = setInterval(() =>
-		{
-			this.send();
-		}, 1000 / 60);
-	}
-
 	private send(): void
 	{
-		this.socket.send(JSON.stringify({ keysPressed: Array.from(this.keysPressed) }));
+		let keysToSend = '';
+		if (this.mode === '1player')
+		{
+			this.keysPressed.forEach((key) =>
+			{
+				if (key === GameClient.DEFAULT_UP_KEY)
+				{
+					keysToSend += 'U';
+				}
+				else if (key === GameClient.DEFAULT_DOWN_KEY)
+				{
+					keysToSend += 'D';
+				}
+			});
+		}
+		else
+		{
+			this.keysPressed.forEach((key) =>
+			{
+				switch (key)
+				{
+					case GameClient.PLAYER1_UP_KEY:
+						keysToSend += '1U';
+						break ;
+					case GameClient.PLAYER2_UP_KEY:
+						keysToSend += '2U';
+						break ;
+					case GameClient.PLAYER1_DOWN_KEY:
+						keysToSend += '1D';
+						break ;
+					case GameClient.PLAYER2_DOWN_KEY:
+						keysToSend += '2D';
+						break ;
+				}
+			});
+		}
+
+		this.socket.send(keysToSend);
 	}
 
 	private stopGameLoop(): void
@@ -249,17 +274,7 @@ export class GameClient
 
 	private keydownHandler = (event: KeyboardEvent): void =>
 	{
-		if (this.mode == '1player'
-			&& (event.key === GameClient.DEFAULT_UP_KEY || event.key === GameClient.DEFAULT_DOWN_KEY))
-		{
-			this.keysPressed.add(event.key);
-		}
-		else if (this.mode == '2player'
-			&& (event.key === GameClient.PLAYER1_UP_KEY || event.key === GameClient.PLAYER1_DOWN_KEY
-			|| event.key === GameClient.PLAYER2_UP_KEY || event.key === GameClient.PLAYER2_DOWN_KEY))
-		{
-			this.keysPressed.add(event.key);
-		}
+		this.keysPressed.add(event.key);
 
 		if (event.key === GameClient.PLAY_AGAIN_KEY && this.end)
 		{
@@ -278,6 +293,8 @@ export class GameClient
 		this.setColor(GameClient.BACKGROUND_OPACITY);
 		this.HTMLelements.get('net')!.style.display = 'none';
 		this.HTMLelements.get('ball')!.style.display = 'none';
+		this.HTMLelements.get('paddle-left')!.style.display = 'none';
+		this.HTMLelements.get('paddle-right')!.style.display = 'none';
 		this.HTMLelements.get('winner-msg')!.innerHTML = `${winner}<br>wins !`;
 		this.HTMLelements.get('winner-msg')!.style.color = `rgba(${GameClient.COLOR}, 1)`;
 		this.HTMLelements.get('winner-msg')!.style.display = 'block';
@@ -295,6 +312,7 @@ export class GameClient
 
 		this.socket?.close();
 		this.stopGameLoop();
+		window.removeEventListener('beforeunload', () => { this.destroy(); });
 		document.removeEventListener('keydown', this.keydownHandler);
 		document.removeEventListener('keyup', this.keyupHandler);
 		this.keysPressed.clear();

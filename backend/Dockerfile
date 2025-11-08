@@ -9,8 +9,6 @@ COPY ./db.sql /db.sql
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-COPY src/ /var/www/server
-# COPY node_modules/ /var/www/server/node_modules
-# COPY package.json /var/www/server/package.json
+COPY srcs/ /var/www/server
 
-CMD ["bash", "/entrypoint.sh"] 
+CMD ["bash", "/entrypoint.sh"]

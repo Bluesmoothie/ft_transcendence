@@ -5,7 +5,6 @@
 		"target": "es2017",
 		"moduleResolution": "node",
 		"esModuleInterop": true,
-		"types": ["node"],
 		"outDir": "./dist",
 	},
 	"include": ["ts/*"],
