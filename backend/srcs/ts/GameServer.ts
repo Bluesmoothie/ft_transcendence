@@ -13,109 +13,24 @@ export class GameServer
 	private activeGames: Map<string, GameInstance> = new Map();
 	private playerPending: { reply: FastifyReply, name: string } | null = null;
 
-	constructor()
+	constructor(server: FastifyInstance)
 	{
-		this.start();
+		this.server = server;
 	}
 
-	private async start(): Promise<void>
+	public async init(): Promise<void>
 	{
 		try
 		{
-			this.server = Fastify()
-			await this.launchServer();
-			await this.server.listen({ port: 3000, host: '0.0.0.0' });
+			await this.server.register(websocket);
+			this.createGame();
+			this.startGame();
+			this.sendGameState();
 		}
 		catch (error)
 		{
 			console.error('Error starting server:', error);
 		}
-	}
-
-	private async launchServer(): Promise<void>
-	{
-		await this.server.register(websocket);
-		this.createGame();
-		this.startGame();
-
-		this.server.get('/api/game/:gameId/:playerId', { websocket: true }, (connection, request) =>
-		{
-			const { gameId } = request.params as { gameId: string };
-			const { playerId } = request.params as { playerId: string };
-			const game = this.activeGames.get(gameId);
-
-			if (!game)
-			{
-				console.error(`Game ${gameId} not found`);
-				connection.close();
-				return ;
-			}
-
-			const send = () =>
-			{
-				switch (playerId)
-				{
-					case '1':
-						connection.send(game.state);
-						break ;
-					case '2':
-						connection.send(game.reversedState);
-						break ;
-					default:
-						connection.close();
-				}
-
-				const winner = game?.winnerName;
-				if (winner)
-				{
-					connection.send(JSON.stringify({ type: 'winner', winner }));
-				}
-			};
-
-			const interval = setInterval(send, GameServer.FPS_INTERVAL);
-
-			connection.on('message', (message) =>
-			{
-				try
-				{
-					let keysPressed: Set<string>;
-					const msg = message.toString();
-
-					if (game.mode === '1player')
-					{
-						keysPressed = new Set(Array.from(msg).map(key => playerId + key));
-					}
-					else if (game.mode === '2player')
-					{
-						keysPressed = new Set(msg.match(/../g));
-					}
-
-					game.handleKeyPress(keysPressed);
-				}
-				catch (error)
-				{
-					console.error('Error parsing message:', error);
-				}
-			});
-
-			const closeConnection = (): void =>
-			{
-				clearInterval(interval);
-				game.destroy();
-				this.activeGames.delete(gameId);
-			};
-
-			connection.on('close', () =>
-			{
-				closeConnection();
-			});
-
-			connection.on('error', () =>
-			{
-				console.error(`Connection error for game ${gameId}`);
-				closeConnection();
-			});
-		});
 	}
 
 	private createGame(): void
@@ -159,7 +74,7 @@ export class GameServer
 			catch (error)
 			{
 				console.error('Error creating game:', error);
-				reply.status(500).send();
+				reply.status(500).send({ error });
 			}
 		});
 	}
@@ -173,19 +88,103 @@ export class GameServer
 				const { gameId } = request.params as { gameId: string };
 				const game = this.activeGames.get(gameId);
 
-				if (!game)
+				if (game)
+				{
+					game.running = true;
+					reply.status(200).send({ message: 'Game started' });
+				}
+				else
 				{
 					reply.status(404).send({ error: 'Game not found' });
-					return ;
 				}
-
-				game.running = true;
-				reply.status(200).send({ message: 'Game started' });
 			}
 			catch (error)
 			{
-				console.error('Error creating game:', error);
-				reply.status(500).send();
+				console.error('Error starting game:', error);
+				reply.status(500).send({ error });
+			}
+		});
+	}
+
+	private sendGameState(): void
+	{
+		this.server.get('/api/game/:gameId/:playerId', { websocket: true }, (connection, request) =>
+		{
+			try
+			{
+				const { gameId, playerId } = request.params as { gameId: string; playerId: string };
+				const game = this.activeGames.get(gameId);
+
+				if (!game)
+				{
+					throw new Error(`Game ${gameId} not found`);
+				}
+
+				const send = () =>
+				{
+					switch (playerId)
+					{
+						case '1':
+							connection.send(game.state);
+							break ;
+						case '2':
+							connection.send(game.reversedState);
+							break ;
+						default:
+							throw new Error('Invalid player ID');
+					}
+
+					const winner = game?.winnerName;
+					if (winner)
+					{
+						connection.send(JSON.stringify({ type: 'winner', winner }));
+					}
+				};
+
+				const interval = setInterval(send, GameServer.FPS_INTERVAL);
+
+				connection.on('message', (message) =>
+				{
+					let keysPressed: Set<string>;
+					const msg = message.toString();
+
+					switch (game.mode)
+					{
+						case '1player':
+							keysPressed = new Set(Array.from(msg).map(key => playerId + key));
+							break ;
+						case '2player':
+							keysPressed = new Set(msg.match(/../g));
+							break ;
+						default:
+							throw new Error('Invalid game mode');
+					}
+
+					game.handleKeyPress(keysPressed);
+				});
+
+				const closeConnection = (): void =>
+				{
+					clearInterval(interval);
+					game.destroy();
+					this.activeGames.delete(gameId);
+				};
+
+				connection.on('close', () =>
+				{
+					closeConnection();
+				});
+
+				connection.on('error', () =>
+				{
+					console.error(`Connection error for game ${gameId}`);
+					closeConnection();
+				});
+			}
+			catch (error)
+			{
+				console.error('Error in websocket connection:', error);
+				connection.close();
 			}
 		});
 	}

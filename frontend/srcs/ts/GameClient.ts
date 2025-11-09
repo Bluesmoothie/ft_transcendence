@@ -32,6 +32,7 @@ export class GameClient
 	private mode: string | null = null;
 	private end: boolean = false;
 	private playerId: string | null = null;
+	private keysToSend: string = '';
 
 	constructor(mode: string)
 	{
@@ -65,137 +66,6 @@ export class GameClient
 		this.HTMLelements.get('searching-msg')!.style.display = 'block';
 	}
 
-	private async createGame(): Promise<void>
-	{
-		try
-		{
-			window.addEventListener('beforeunload', () => { this.destroy(); });
-
-			const response = await fetch(`https://${window.location.host}/api/create-game`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(
-				{
-					mode: this.mode, playerName: this.playerName
-				}),
-			});
-
-			const data = await response.json();
-			this.gameId = data.gameId;
-			this.opponentName = data.opponentName;
-			this.playerId = data.playerId;
-		}
-		catch (error)
-		{
-			console.error('Failed to create game:', error);
-		}
-	}
-
-	async connect(): Promise<void>
-	{
-		await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
-		{
-			method: 'POST',
-		});
-
-		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerId}`);
-		this.socket.binaryType = 'arraybuffer';
-
-		this.socket.onopen = () =>
-		{
-			this.setupEventListeners();
-			this.interval = setInterval(() => { this.send(); }, GameClient.IPS_INTERVAL);
-		};
-
-		this.socket.onmessage = (event) =>
-		{
-			this.updateGameState(event.data);
-		};
-
-		this.socket.onclose = () =>
-		{
-			this.stopGameLoop();
-		};
-
-		this.socket.onerror = (error) =>
-		{
-			console.error('WebSocket error:', error);
-			this.stopGameLoop();
-		};
-	}
-
-	private updateGameState(data: string | ArrayBuffer): void
-	{
-		if (typeof data === 'string')
-		{
-			const message = JSON.parse(data);
-			if (message.type === 'winner')
-			{
-				this.showWinner(message.winner);
-			}
-
-			this.stopGameLoop();
-			this.socket?.close();
-			this.end = true;
-		}
-		else
-		{
-			this.updateDisplay(new GameState(data));
-		}
-
-	}
-
-	private send(): void
-	{
-		let keysToSend = '';
-		if (this.mode === '1player')
-		{
-			this.keysPressed.forEach((key) =>
-			{
-				if (key === GameClient.DEFAULT_UP_KEY)
-				{
-					keysToSend += 'U';
-				}
-				else if (key === GameClient.DEFAULT_DOWN_KEY)
-				{
-					keysToSend += 'D';
-				}
-			});
-		}
-		else
-		{
-			this.keysPressed.forEach((key) =>
-			{
-				switch (key)
-				{
-					case GameClient.PLAYER1_UP_KEY:
-						keysToSend += '1U';
-						break ;
-					case GameClient.PLAYER2_UP_KEY:
-						keysToSend += '2U';
-						break ;
-					case GameClient.PLAYER1_DOWN_KEY:
-						keysToSend += '1D';
-						break ;
-					case GameClient.PLAYER2_DOWN_KEY:
-						keysToSend += '2D';
-						break ;
-				}
-			});
-		}
-
-		this.socket.send(keysToSend);
-	}
-
-	private stopGameLoop(): void
-	{
-		if (this.interval)
-		{
-			clearInterval(this.interval);
-		}
-	}
-
 	private setColor(opacity: string): void
 	{
 		this.HTMLelements.get('game')!.style.borderBlockColor = `rgba(${GameClient.COLOR}, ${opacity})`;
@@ -209,6 +79,30 @@ export class GameClient
 			{
 				element.style.color = `rgba(${GameClient.COLOR}, ${opacity})`;
 			}
+		}
+	}
+
+	private async createGame(): Promise<void>
+	{
+		try
+		{
+			window.addEventListener('beforeunload', this.beforeUnloadHandler);
+
+			const response = await fetch(`https://${window.location.host}/api/create-game`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ mode: this.mode, playerName: this.playerName }),
+			});
+
+			const data = await response.json();
+			this.gameId = data.gameId;
+			this.opponentName = data.opponentName;
+			this.playerId = data.playerId;
+		}
+		catch (error)
+		{
+			console.error('Failed to create game:', error);
 		}
 	}
 
@@ -251,25 +145,53 @@ export class GameClient
 				this.HTMLelements.get('countdown')!.style.display = 'none';
 				this.HTMLelements.get('ball')!.style.display = 'block';
 				this.HTMLelements.get('net')!.style.display = 'block';
-				this.connect();
+				this.startGame();
 			}
 		}, countdownIntervalTime);
 	}
 
-	private updateDisplay(gameState: any): void
+	async startGame(): Promise<void>
 	{
-		this.HTMLelements.get('paddle-left')!.style.top = gameState.leftPaddleY + '%';
-		this.HTMLelements.get('paddle-right')!.style.top = gameState.rightPaddleY + '%';
-		this.HTMLelements.get('ball')!.style.left = gameState.ballX + '%';
-		this.HTMLelements.get('ball')!.style.top = gameState.ballY + '%';
-		this.HTMLelements.get('score-left')!.textContent = gameState.player1Score.toString();
-		this.HTMLelements.get('score-right')!.textContent = gameState.player2Score.toString();
+		await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
+		{
+			method: 'POST',
+		});
+
+		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerId}`);
+		this.socket.binaryType = 'arraybuffer';
+
+		this.socket.onopen = () =>
+		{
+			this.setupEventListeners();
+			this.interval = setInterval(() => { this.send(); }, GameClient.IPS_INTERVAL);
+		};
+
+		this.socket.onmessage = (event) =>
+		{
+			this.updateGameState(event.data);
+		};
+
+		this.socket.onclose = () =>
+		{
+			this.stopGameLoop();
+		};
+
+		this.socket.onerror = (error) =>
+		{
+			console.error('WebSocket error:', error);
+			this.stopGameLoop();
+		};
 	}
 
 	private setupEventListeners(): void
 	{
 		document.addEventListener('keydown', this.keydownHandler);
 		document.addEventListener('keyup', this.keyupHandler);
+	}
+
+	private beforeUnloadHandler = (): void =>
+	{
+		this.destroy();
 	}
 
 	private keydownHandler = (event: KeyboardEvent): void =>
@@ -286,6 +208,86 @@ export class GameClient
 	private keyupHandler = (event: KeyboardEvent): void =>
 	{
 		this.keysPressed.delete(event.key);
+	}
+
+	private send(): void
+	{
+		this.keysToSend = '';
+
+		if (this.mode === '1player')
+		{
+			this.keysPressed.forEach((key) => { this.getKeyToSend1Player(key); });
+		}
+		else
+		{
+			this.keysPressed.forEach((key) => { this.getKeyToSend2Player(key); });
+		}
+
+		this.socket.send(this.keysToSend);
+	}
+
+	private getKeyToSend1Player(key: string): void
+	{
+		switch (key)
+		{
+			case GameClient.DEFAULT_UP_KEY:
+				this.keysToSend += 'U';
+			case GameClient.DEFAULT_DOWN_KEY:
+				this.keysToSend += 'D';
+		}
+	}
+
+	private getKeyToSend2Player(key: string): void
+	{
+		switch (key)
+		{
+			case GameClient.PLAYER1_UP_KEY:
+				this.keysToSend += '1U';
+			case GameClient.PLAYER1_DOWN_KEY:
+				this.keysToSend += '1D';
+			case GameClient.PLAYER2_UP_KEY:
+				this.keysToSend += '2U';
+			case GameClient.PLAYER2_DOWN_KEY:
+				this.keysToSend += '2D';
+		}
+	}
+
+	private updateGameState(data: string | ArrayBuffer): void
+	{
+		if (typeof data === 'string')
+		{
+			const message = JSON.parse(data);
+			if (message.type === 'winner')
+			{
+				this.showWinner(message.winner);
+			}
+
+			this.stopGameLoop();
+			this.socket?.close();
+			this.end = true;
+		}
+		else
+		{
+			this.updateDisplay(new GameState(data));
+		}
+	}
+
+	private updateDisplay(gameState: any): void
+	{
+		this.HTMLelements.get('paddle-left')!.style.top = gameState.leftPaddleY + '%';
+		this.HTMLelements.get('paddle-right')!.style.top = gameState.rightPaddleY + '%';
+		this.HTMLelements.get('ball')!.style.left = gameState.ballX + '%';
+		this.HTMLelements.get('ball')!.style.top = gameState.ballY + '%';
+		this.HTMLelements.get('score-left')!.textContent = gameState.player1Score.toString();
+		this.HTMLelements.get('score-right')!.textContent = gameState.player2Score.toString();
+	}
+
+	private stopGameLoop(): void
+	{
+		if (this.interval)
+		{
+			clearInterval(this.interval);
+		}
 	}
 
 	private showWinner(winner: string): void
@@ -312,7 +314,7 @@ export class GameClient
 
 		this.socket?.close();
 		this.stopGameLoop();
-		window.removeEventListener('beforeunload', () => { this.destroy(); });
+		window.removeEventListener('beforeunload', this.beforeUnloadHandler);
 		document.removeEventListener('keydown', this.keydownHandler);
 		document.removeEventListener('keyup', this.keyupHandler);
 		this.keysPressed.clear();
