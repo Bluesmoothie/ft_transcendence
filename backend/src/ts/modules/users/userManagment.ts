@@ -205,6 +205,9 @@ export async function blockUser(user_id: number, loginToBlock: string, db: Datab
 	}
 	catch (err) {
 		console.log(`Database error: ${err}`);
+		if (err.code === "SQLITE_CONSTRAINT")
+			return { code: 500, data: { message: "user already blocked" }};
+
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }

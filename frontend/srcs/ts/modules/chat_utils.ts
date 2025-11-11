@@ -18,10 +18,13 @@ GAME MANAGMENT
 
 USER MANAGMENT
 	/updateMe {oldPassw, name, email, passw}	update your profile infos
-	/stats {username}							show stats of user
-	/inspect {username}							show info of user
-	/addFriend {username}						send friend request to user
-	/getHist {username}							show matchs history of user
+	/stats		{username}						show stats of user
+	/inspect	{username}						show info of user
+	/addFriend	{username}						send friend request to user
+	/getHist	{username}						show matchs history of user
+	/block		{username}						block a user
+	/unblock	{username}						block a user
+	/getblock									list blocked users
 `;
 
 	return msg;

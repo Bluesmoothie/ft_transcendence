@@ -1,13 +1,10 @@
 import { getDB } from '@core/server.js';
-import { getUserByName, getUserStats } from '@modules/users/user.js';
+import { getBlockedUsrById, getUserByName, getUserStats } from '@modules/users/user.js';
 import { WebSocket } from '@fastify/websocket';
+import * as utils from 'utils.js';
+import { FastifyRequest } from 'fastify';
 
-interface ChatConn {
-	ws:			WebSocket;
-	login:		string;
-}
-
-const connections = new Set<ChatConn>();
+const connections = new Map<WebSocket, number>(); // websocket => user login
 
 async function handleCommand(str: string, connection) : Promise<string>
 {
@@ -28,74 +25,112 @@ async function handleCommand(str: string, connection) : Promise<string>
 	}
 }
 
-async function newMessage(data: JSON, conn: ChatConn) : Promise<string>
-{
-	const res = await getUserByName(conn.login, getDB());
-	if (res.code != 200)
-		return "";
-}
-
-async function onMessage(message: any, connection: ChatConn, clientIp: any)
+async function onMessage(message: any, connection: WebSocket, clientIp: any)
 {
 	try
 	{
-			const msg = message.toString();
-			const json = JSON.parse(message);
-			if (json.isCmd === true)
-			{
-				const result = await handleCommand(json.message, connection);
-				const str = JSON.stringify({
-					username: "<SERVER>",
-					message: result
-				});
-				console.log(str);
-				connection.ws.send(str);
-				return ;
-			}
-			console.log(`${clientIp}: ${msg}`);
-			broadcast(msg, connection);
+		const msg = message.toString();
+		const json = JSON.parse(message);
+		if (json.isCmd === true)
+		{
+			const result = await handleCommand(json.message, connection);
+			const str = JSON.stringify({
+				username: "<SERVER>",
+				message: result
+			});
+			console.log(str);
+			connection.send(str);
+			return ;
 		}
+		console.log(`${clientIp}: ${msg}`);
+		await broadcast(msg, connection);
+	}
 	catch (err)
 	{
 		console.log(`failed to process message: ${err}`);
 	}
 }
 
-export function chatSocket(connection: WebSocket, request: any)
+export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 {
-	const clientIp = request.socket.remoteAddress;
-	console.log(`Client connected from: ${request.url}`);
-	connection.send(JSON.stringify({ username: "<SERVER>", message: "welcome to room chat!" }));
 
-	connections.add({ ws: connection, login: "Guest"});
-	broadcast(JSON.stringify({ username: "<SERVER>", message: `${clientIp}: has joined the room!`}), connection);
-	connection.on('message', async (message: any) => onMessage(message, connection, clientIp));
+	try {
+		const clientIp = request.socket.remoteAddress;
+		ws.send(JSON.stringify({ username: "<SERVER>", message: "welcome to room chat!" }));
 
-	connection.on('error', (error: any) => {
-		console.error(`${clientIp}: websocket error: ${error}`);
-	})
 
-	connection.on('close', (code: any, reason: any) => {
-		connections.delete(connection);
-		broadcast(JSON.stringify({ username: "<SERVER>", message: `${clientIp}: has left the room` }), connection);
-		console.log(`${clientIp}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
-	});
+		const login = utils.getUrlVar(request.url)["login"];
+		var res = await getUserByName(login, getDB());
+		var id = -1; // will stay at -1 if user is not login
+		if (res.code === 200)
+			id = res.data.id;
+		
+		connections.set(ws, id);
+		ws.on('message', async (message: any) => onMessage(message, ws, clientIp));
+
+		ws.on('error', (error: any) => {
+			console.error(`${clientIp}: websocket error: ${error}`);
+		})
+
+		ws.on('close', (code: any, reason: any) => {
+			connections.delete(ws);
+			broadcast(JSON.stringify({ username: "<SERVER>", message: `${clientIp}: has left the room` }), ws);
+			console.log(`${clientIp}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
+		});
+	}
+	catch (err)
+	{
+		console.log(err);
+	}
 }
 
-function broadcast(message: any, sender = null)
+async function getBlockUsr(userid: number)
 {
-	connections.forEach((conn: ChatConn) => {
-		if (conn.ws !== sender && conn.ws.readyState === conn.ws.OPEN)
+	var blockedUsr = [];
+	var res = await getBlockedUsrById(userid, getDB());
+	if (res.code == 200)
+		blockedUsr = res.data;
+	return blockedUsr;
+}
+
+async function isBlocked(blockedUsr: any, key: WebSocket, sender: WebSocket): Promise<number>
+{
+	for (let i = 0; i  < blockedUsr.length; i ++)
+	{
+ 		if (connections.get(key) == blockedUsr[i].user2_id)
 		{
-			try
+			console.log(connections.get(key), "is blocked by", connections.get(sender));
+			return 1;
+		}
+	}
+	return 0;
+}
+
+async function broadcast(message: any, sender: WebSocket = null)
+{
+
+	const blockedUsrSender = await getBlockUsr(connections.get(sender));
+	connections.forEach(async (id: number, conn: WebSocket) => {
+
+		if (conn === sender || conn.readyState !== conn.OPEN)
+			return ;
+		try
+		{
+			const blockedUsr = await getBlockUsr(id);
+			if (await isBlocked(blockedUsrSender, conn, sender) ||
+				await isBlocked(blockedUsr, sender, conn))
 			{
-				conn.ws.send(message);
+				const val = await JSON.parse(message);
+				val.message = "[REDACTED]";
+				message = JSON.stringify(val);
+				console.log(val);
 			}
-			catch (err: any)
-			{
-				console.error(`Broadcast error: ${err}`);
-				connections.delete(conn);
-			}
+			conn.send(message);
+		}
+		catch (err: any)
+		{
+			console.error(`Broadcast error: ${err}`);
+			connections.delete(conn);
 		}
 	})
 }

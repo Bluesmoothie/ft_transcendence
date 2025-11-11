@@ -21,7 +21,7 @@ const db = await open({
 	driver: sqlite3.Database
 });
 
-const fastify = Fastify({ logger: false })
+const fastify = Fastify({ logger: true})
 await loadConfig("/config.json", db);
 
 // setup dependencies

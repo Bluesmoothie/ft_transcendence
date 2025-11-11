@@ -10,9 +10,9 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 	})
 
 	fastify.get('/get_blocked_users/:userid', async (request: FastifyRequest, reply: FastifyReply) => {
-		const { user_id } = request.params as { user_id: number };
+		const { userid } = request.params as { userid: number };
 
-		const res = await user.getBlockedUsrById(user_id, getDB());
+		const res = await user.getBlockedUsrById(userid, getDB());
 		return reply.code(res.code).send(res.data);
 	})
 

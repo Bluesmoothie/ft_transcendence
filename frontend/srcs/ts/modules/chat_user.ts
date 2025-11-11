@@ -13,7 +13,7 @@ export async function block(id: number, username: string) : Promise<Message>
 export async function unblock(id: number, username: string) : Promise<Message>
 {
 	const url = `/api/user/unblock/${id}/${username}`;
-	const response = await fetch(url, { method: "POST" });
+	const response = await fetch(url, { method: "DELETE" });
 	const json = await response.json();
 
 	return utils.serverReply(JSON.stringify(json, null, 2));

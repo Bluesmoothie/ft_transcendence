@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS blocked_usr (
 	user1_id		INTEGER NOT NULL,
-	user2_id		INTEGER NOT NULL
+	user2_id		INTEGER NOT NULL,
+
+    PRIMARY KEY (user1_id, user2_id)
 );
 
 CREATE TABLE IF NOT EXISTS friends (
@@ -33,7 +35,7 @@ CREATE TABLE IF NOT EXISTS friends (
 	pending			INTEGER NOT NULL,
 	sender_id		INTERER NOT NULL,
 
-    PRIMARY KEY (user1_id, user2_id) ,
+    PRIMARY KEY (user1_id, user2_id),
     FOREIGN KEY (user1_id) REFERENCES users(id),
     FOREIGN KEY (user2_id) REFERENCES users(id),
 

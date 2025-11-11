@@ -58,7 +58,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 
 	fastify.post('/block/:id/:username', async (request: FastifyRequest, reply: FastifyReply) => {
 		const { id, username } = request.params as { id: number, username: string };
-		console.log(request.params, id, username);
 
 		const res = await mgmt.blockUser(id, username, getDB());
 		return reply.code(res.code).send(res.data);
