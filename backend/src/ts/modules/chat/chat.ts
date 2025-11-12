@@ -71,7 +71,6 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 {
 	try {
 		ws.send(serverMsg("welcome to room chat!"));
-		console.log(request.url);
 
 		const id = utils.getUrlVar(request.url)["userid"];
 		var res = await getUserById(id, core.db);
@@ -89,7 +88,7 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 		ws.on('close', (code: any, reason: any) => {
 			connections.delete(ws);
 			broadcast(serverMsg(`${login} has left the room`), ws);
-			console.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
+			// console.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
 		});
 
 		broadcast(serverMsg(`${login} has join the room`), ws);
@@ -125,7 +124,7 @@ async function isBlocked(blockedUsr: any, key: WebSocket, sender: WebSocket): Pr
 async function broadcast(message: any, sender: WebSocket = null)
 {
 
-	console.log("broadcasting: ", message);
+	// console.log("broadcasting: ", message);
 	const blockedUsrSender = await getBlockUsr(connections.get(sender));
 	connections.forEach(async (id: number, conn: WebSocket) => {
 

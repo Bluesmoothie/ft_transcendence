@@ -9,7 +9,7 @@ export function githubOAuth2Routes (
 	done: () => void,
 )
 {
-	fastify.get('/github/callback', function(request, reply) {
+	fastify.get('/github/callback', function(request: any, reply) {
 		
 		fastify.GithubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request, async (err, result) => {
 			if (err)
@@ -37,8 +37,11 @@ export function githubOAuth2Routes (
 			const email = data.email;
 			const avatar = data.avatar_url;
 
-			var res = await createUserOAuth2(email, name, id, AuthSource.GITHUB, avatar, core.db);
-			const url = `https://${process.env.HOST}:8081/login.html?event=oauth_redir&id=${id}&source=${AuthSource.GITHUB}`;
+			await createUserOAuth2(email, name, id, AuthSource.GITHUB, avatar, core.db);
+			const res = await loginOAuth2(id, AuthSource.GITHUB, core.db);
+			if (res.code == 200)
+				request.session.user = res.data.id;
+			const url = `https://${process.env.HOST}:8081/login.html`;
 			return reply.redirect(url);
 		})
 	})

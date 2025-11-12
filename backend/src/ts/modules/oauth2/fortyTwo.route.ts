@@ -9,7 +9,7 @@ export function fortyTwoOAuth2Routes (
 	done: () => void,
 )
 {
-	fastify.get('/forty_two/callback', function(request, reply) {
+	fastify.get('/forty_two/callback', function(request: any, reply) {
 
 		fastify.FortyTwoOAuth2.getAccessTokenFromAuthorizationCodeFlow(request, async (err, result) => {
 			if (err) {
@@ -36,10 +36,11 @@ export function fortyTwoOAuth2Routes (
 			const email = data.email;
 			const avatar = data.image.link;
 
-			var res = await createUserOAuth2(email, name, id, AuthSource.FORTY_TWO, avatar, core.db);
-			if (res.code == 200 || res.code == 500)
-				res = await loginOAuth2(id, AuthSource.FORTY_TWO, core.db);
-			const url = `https://${process.env.HOST}:8081/login.html?event=oauth_redir&id=${id}&source=${AuthSource.FORTY_TWO}`;
+			await createUserOAuth2(email, name, id, AuthSource.FORTY_TWO, avatar, core.db);
+			const res = await loginOAuth2(id, AuthSource.FORTY_TWO, core.db);
+			if (res.code == 200)
+				request.session.user = res.data.id;
+			const url = `https://${process.env.HOST}:8081/login.html`;
 			return reply.redirect(url);
 		})
 	})

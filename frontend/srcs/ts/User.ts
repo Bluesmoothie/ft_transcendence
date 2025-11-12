@@ -236,6 +236,22 @@ export class MainUser extends User {
 		return { status: response.status, data: data };
 	}
 
+	public async loginSession()
+	{
+		const response = await fetch("/api/user/get_session");
+		const data = await response.json();
+		console.log(response.status, data);
+
+		if (response.status == 200) {
+			var status = data.status;
+			this.setUser(data.id, data.name, data.email, data.avatar, status);
+			this.setStatus(this.getStatus());
+			await this.refreshSelf();
+
+			this.m_onLoginCb.forEach(cb => cb(this));
+		}
+	}
+
 	public async login(email: string, passw: string): Promise<{ status: number, data: any }> {
 		if (this.getId() != -1)
 			return { status: -1, data: null };
@@ -251,16 +267,7 @@ export class MainUser extends User {
 			})
 		});
 		const data = await response.json();
-
-		if (response.status == 200) {
-			var status = data.status;
-			this.setUser(data.id, data.name, data.email, data.avatar, status);
-			this.setStatus(this.getStatus());
-			await this.refreshSelf();
-
-			this.m_onLoginCb.forEach(cb => cb(this));
-		}
-
+		await this.loginSession();
 		return { status: response.status, data: data };
 	}
 

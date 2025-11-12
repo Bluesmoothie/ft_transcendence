@@ -2,6 +2,7 @@ import { Database } from "sqlite";
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite'
 import Fastify, { FastifyInstance } from "fastify";
+import '@fastify/session';
 import { randomBytes } from "crypto";
 
 export interface DbResponse {
@@ -15,6 +16,13 @@ export const uploadDir : string = "/var/www/avatars/"
 export var db:		Database		= null;
 export var fastify:	FastifyInstance = null;
 export var sessionKey: string;
+ 
+declare module '@fastify/session' {
+  interface SessionData {
+    auth?: boolean;
+    user?: any;
+  }
+}
 
 export async function createServer()
 {

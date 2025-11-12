@@ -7,6 +7,19 @@ import * as mgmt from '@modules/users/userManagment.js'
 //
 export async function userManagmentRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
+	fastify.get('/get_session', async (request: any, reply) => {
+		if (request.session.user) {
+			console.log("user is already auth");
+			const res = await mgmt.loginSession(request.session.user, core.db);
+			return reply.code(res.code).send(res.data);
+		}
+
+		else {
+			console.log("user not loggin");
+			return reply.code(404).send({ message: "user need to login" });
+		}
+	})
+
 	fastify.post('/create', async (request: any, reply: any) => {
 		const { email, passw, username } = request.body as {
 			email: string,
@@ -17,29 +30,23 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		return reply.code(res.code).send(res.data);
 	})
 
-	// TODO: store session in login
-	fastify.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
+	fastify.post('/login', async (request: any, reply: FastifyReply) => {
 		const { email, passw } = request.body as { email: string, passw: string };
-		var sql = 'UPDATE users SET is_login = 1 WHERE email = ? AND passw = ? RETURNING *';
-
-		try {
-			const row = await core.db.get(sql, [email, passw]);
-			if (!row)
-				return reply.code(404).send({ message: "email or password invalid" });
-			console.log(row);
-			// request.session.user = { row.name };
-			return reply.code(200).send(row);
+		const res = await mgmt.login(email, passw, core.db);
+		if (res.code == 200)
+		{
+			request.session.user = res.data.id;
+			return reply.code(200).send({ message: "Success" });
 		}
-		catch (err) {
-			console.error(`database err: ${err}`);
-			return reply.code(500).send({ message: `database error ${err}` });
-		}
+		return reply.code(res.code).send(res.data);
 	})
 
 	fastify.post('/logout', async (request: any, reply: any) => {
 		const { user_id } = request.body;
 
 		const res = await mgmt.logoutUser(user_id, core.db);
+		if (res.code == 200)
+			request.session.destroy(); // destroy session or user will be reconnected
 		return reply.code(res.code).send(res.data);
 	})
 
@@ -69,6 +76,8 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		const { id, username } = request.params as { id: number, username: string };
 
 		const res = await mgmt.unBlockUser(id, username, core.db);
+		if (res.code == 200)
+			request.session.destroy(); // destroy session or user will be reconnected
 		return reply.code(res.code).send(res.data);
 	})
 }

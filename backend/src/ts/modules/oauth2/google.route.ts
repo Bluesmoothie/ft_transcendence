@@ -10,7 +10,7 @@ export function googleOAuth2Routes (
 )
 {
 
-	fastify.get('/api/login/google/login', function(request, reply) {
+	fastify.get('/api/login/google/login', function(request: any, reply) {
 		fastify.GoogleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request, async (err, result) => {
 			if (err)
 			{
@@ -40,12 +40,13 @@ export function googleOAuth2Routes (
 			};
 
 			var res = await createUserOAuth2(email, name, id, AuthSource.GOOGLE, picture, core.db);
-			if (res.code == 200 || res.code == 500)
+			if (res.code == 200 || res.code == 500) // TODO: 500 ?
 			{
 				res = await loginOAuth2(id, AuthSource.GOOGLE, core.db);
 				console.log(res.code);
 				console.log(res.data);
-				return reply.code(res.code).send(res.data);
+				request.session.user = data.id;
+				return reply.code(res.code).send({ message: "Success"});
 			}
 			return reply.code(res.code).send(res.data);
 		})

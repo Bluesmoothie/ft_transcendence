@@ -38,8 +38,9 @@ export async function initFastify()
 	// register session
 	await core.fastify.register(import('@fastify/session'), {
 		secret: core.sessionKey,
+		cookieName: "sessionId",
 		cookie: {
-			secure: true,
+			secure: false,
 			maxAge: 24 * 60 * 60 * 1000 // 1 day
 		},
 		saveUninitialized: false

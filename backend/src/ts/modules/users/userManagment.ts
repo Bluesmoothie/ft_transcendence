@@ -38,6 +38,38 @@ function hash_string(name: string)
 	return hash;
 }
 
+export async function loginSession(id: string, db: Database) : Promise<DbResponse>
+{
+	var sql = 'UPDATE users SET is_login = 1 WHERE id = ? RETURNING *';
+
+	try {
+		const row = await core.db.get(sql, [id]);
+		if (!row)
+			return { code: 404, data: { message: "email or password invalid"}};
+		return { code: 200, data: row};
+	}
+	catch (err) {
+		console.error(`database err: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+}
+
+export async function login(email: string, passw: string, db: Database) : Promise<DbResponse>
+{
+	var sql = 'UPDATE users SET is_login = 1 WHERE email = ? AND passw = ? RETURNING *';
+
+	try {
+		const row = await core.db.get(sql, [email, passw]);
+		if (!row)
+			return { code: 404, data: { message: "email or password invalid"}};
+		return { code: 200, data: row};
+	}
+	catch (err) {
+		console.error(`database err: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+}
+
 export async function loginOAuth2(id: string, source: number, db: Database) : Promise<DbResponse>
 {
 	var sql = 'UPDATE users SET is_login = 1 WHERE oauth_id = ? AND source = ? RETURNING *';

@@ -148,13 +148,14 @@ function oauthLogin(path: string)
 	window.location.href = (`${url}${path}`);
 }
 
-const vars = getUrlVar();
-if (vars && vars["event"]) // 42api
-{
-	const ev = vars["event"];
-	console.log(vars);
-	if (ev == "oauth_redir") {
-		user.oauth2Login(vars["id"], vars["source"]);
-	}
-}
+// const vars = getUrlVar();
+// if (vars && vars["event"]) // 42api
+// {
+// 	const ev = vars["event"];
+// 	console.log(vars);
+// 	if (ev == "oauth_redir") {
+// 		user.oauth2Login(vars["id"], vars["source"]);
+// 	}
+// }
 
+user.loginSession();
