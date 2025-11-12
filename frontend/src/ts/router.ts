@@ -53,6 +53,10 @@ export class Router
 			{
 				history.back();
 			}
+			else if (e.key === 'h')
+			{
+				history.pushState({page: 'home'}, '', `#home`);
+			}
 		});
 	}
 

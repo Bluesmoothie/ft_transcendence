@@ -46,7 +46,7 @@ export class GameState
 		this.reversedIntArray = new Uint8Array(this.reversedBuffer, GameState.FLOAT_SIZE, GameState.INT_NB);
 	}
 
-	get stateBuffer(): ArrayBuffer	{ return this.buffer; }
+	get stateBuffer(): ArrayBuffer	{ return (this.buffer); }
 
 	get reversedStateBuffer(): ArrayBuffer
 	{

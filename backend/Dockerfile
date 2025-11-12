@@ -9,6 +9,6 @@ COPY ./db.sql /db.sql
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-COPY srcs/ /var/www/server
+COPY src/ /var/www/server
 
 CMD ["bash", "/entrypoint.sh"]

@@ -5,8 +5,8 @@ all:
 
 .PHONY: build
 build:
-	cp shared/* backend/srcs/ts/
-	cp shared/* frontend/srcs/ts/
+	cp shared/* backend/src/ts/
+	cp shared/* frontend/src/ts/
 	docker compose build
 
 .PHONY: start

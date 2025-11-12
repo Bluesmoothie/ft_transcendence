@@ -1,7 +1,6 @@
 import { GameInstance } from './GameInstance.js';
 import Fastify, { FastifyInstance } from 'fastify';
 import { FastifyReply } from 'fastify/types/reply';
-import websocket from '@fastify/websocket';
 
 export class GameServer
 {
@@ -21,7 +20,6 @@ export class GameServer
 	{
 		try
 		{
-			await this.server.register(websocket);
 			this.createGame();
 			this.startGame();
 			this.sendGameState();
