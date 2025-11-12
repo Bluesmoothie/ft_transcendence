@@ -1,7 +1,29 @@
-import { getDB } from '@core/server.js';
-import { getUserByName, getUserStats } from '@modules/users/user.js';
-const connections = new Set();
+import * as core from '@core/core.js';
+import { getBlockedUsrById, getUserById, getUserByName, getUserStats } from '@modules/users/user.js';
+import { WebSocket } from '@fastify/websocket';
+import * as utils from 'utils.js';
+import { FastifyRequest } from 'fastify';
 
+//TODO: if a user block someone everyone is blocked ?
+export const connections = new Map<WebSocket, number>(); // websocket => user login
+
+function serverMsg(str: string): string
+{
+	return JSON.stringify({ username: "<SERVER>", message: str });
+}
+
+async function getUserLoginByWs(ws: WebSocket): Promise<string>
+{
+	if (!connections.has(ws))
+		return "";
+	const res = await getUserById(connections.get(ws), core.db);
+	if (res.code != 200)
+		return res.data;
+	return res.data.name;
+}
+
+// TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
+// TODO: move to front
 async function handleCommand(str: string, connection) : Promise<string>
 {
 	const args: string[] = str.split(/\s+/);
@@ -9,10 +31,10 @@ async function handleCommand(str: string, connection) : Promise<string>
 	switch (args[0])
 	{
 		case "/inspect":
-			response = await getUserByName(args[1], getDB());
+			response = await getUserByName(args[1], core.db);
 			return JSON.stringify(response.data);
 		case "/stats":
-			response = await getUserStats(args[1], getDB());
+			response = await getUserStats(args[1], core.db);
 			return JSON.stringify(response[1]);
 		case "/ping":
 			return "pong";
@@ -21,67 +43,110 @@ async function handleCommand(str: string, connection) : Promise<string>
 	}
 }
 
-async function onMessage(message: any, connection: any, clientIp: any)
+async function onMessage(message: any, connection: WebSocket)
 {
 	try
 	{
-			const msg = message.toString();
-			const json = JSON.parse(message);
-			if (json.isCmd === true)
-			{
-				const result = await handleCommand(json.message, connection);
-				const str = JSON.stringify({
-					username: "<SERVER>",
-					message: result
-				});
-				console.log(str);
-				connection.send(str);
+		const msg = message.toString();
+		const json = JSON.parse(message);
+		if (json.isCmd === true)
+		{
+			const result = await handleCommand(json.message, connection);
+			if (result == "") // no server feedback
 				return ;
-			}
-			console.log(`${clientIp}: ${msg}`);
-			broadcast(msg, connection);
+			const str = serverMsg(result);
+			console.log(str);
+			connection.send(str);
+			return ;
 		}
+		await broadcast(msg, connection);
+	}
 	catch (err)
 	{
 		console.log(`failed to process message: ${err}`);
 	}
 }
 
-export function chatSocket(connection: any, request: any)
+export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 {
-	const clientIp = request.socket.remoteAddress;
-	console.log(`Client connected from: ${clientIp}`);
-	connection.send(JSON.stringify({ username: "<SERVER>", message: "welcome to room chat!" }));
+	try {
+		ws.send(serverMsg("welcome to room chat!"));
 
-	connections.add(connection);
-	broadcast(JSON.stringify({ username: "<SERVER>", message: `${clientIp}: has joined the room!`}), connection);
-	connection.on('message', async (message: any) => onMessage(message, connection, clientIp));
+		const id = utils.getUrlVar(request.url)["userid"];
+		var res = await getUserById(id, core.db);
+		var login = "Guest"; // will stay at -1 if user is not login
+		if (res.code === 200)
+			login = res.data.name;
+		
+		connections.set(ws, id);
+		ws.on('message', async (message: any) => onMessage(message, ws));
 
-	connection.on('error', (error: any) => {
-		console.error(`${clientIp}: websocket error: ${error}`);
-	})
+		ws.on('error', (error: any) => {
+			console.error(`${login}: websocket error: ${error}`);
+		})
 
-	connection.on('close', (code: any, reason: any) => {
-		connections.delete(connection);
-		broadcast(JSON.stringify({ username: "<SERVER>", message: `${clientIp}: has left the room` }), connection);
-		console.log(`${clientIp}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
-	});
+		ws.on('close', (code: any, reason: any) => {
+			connections.delete(ws);
+			broadcast(serverMsg(`${login} has left the room`), ws);
+			// console.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
+		});
+
+		broadcast(serverMsg(`${login} has join the room`), ws);
+	}
+	catch (err)
+	{
+		console.log(err);
+	}
 }
 
-function broadcast(message: any, sender = null)
+async function getBlockUsr(userid: number)
 {
-	connections.forEach((conn: any) => {
-		if (conn !== sender && conn.readyState === conn.OPEN)
+	var blockedUsr = [];
+	var res = await getBlockedUsrById(userid, core.db);
+	if (res.code == 200)
+		blockedUsr = res.data;
+	return blockedUsr;
+}
+
+async function isBlocked(blockedUsr: any, key: WebSocket, sender: WebSocket): Promise<number>
+{
+	for (let i = 0; i  < blockedUsr.length; i ++)
+	{
+ 		if (connections.get(key) == blockedUsr[i].user2_id)
 		{
-			try
+			console.log(connections.get(key), "is blocked by", connections.get(sender));
+			return 1;
+		}
+	}
+	return 0;
+}
+
+async function broadcast(message: any, sender: WebSocket = null)
+{
+
+	// console.log("broadcasting: ", message);
+	const blockedUsrSender = await getBlockUsr(connections.get(sender));
+	connections.forEach(async (id: number, conn: WebSocket) => {
+
+		if (conn === sender || conn.readyState !== conn.OPEN)
+			return ;
+		try
+		{
+			const blockedUsr = await getBlockUsr(id);
+			if (await isBlocked(blockedUsrSender, conn, sender) ||
+				await isBlocked(blockedUsr, sender, conn))
 			{
-				conn.send(message);
+				console.log("msg will be blocked");
+				const val = await JSON.parse(message);
+				val.message = "[REDACTED]";
+				message = JSON.stringify(val);
 			}
-			catch (err: any)
-			{
-				console.error(`Broadcast error: ${err}`);
-				connections.delete(conn);
-			}
+			conn.send(message);
+		}
+		catch (err: any)
+		{
+			console.error(`Broadcast error: ${err}`);
+			connections.delete(conn);
 		}
 	})
 }

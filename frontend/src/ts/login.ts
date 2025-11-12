@@ -1,7 +1,7 @@
-import { hashString } from './sha256.js'
-import { Chat } from './Chat.js'
+import { hashString } from 'sha256.js'
+import { Chat } from '@modules/chat.js'
 import { MainUser } from './User.js';
-
+import { getUrlVar } from './utils.js';
 
 async function sendFriendInvite()
 {
@@ -17,7 +17,6 @@ async function sendFriendInvite()
 		addLog(status, "user profile not found!");
 	else
 		addLog(status, "database error!");
-	
 }
 
 async function uploadAvatar()
@@ -35,10 +34,16 @@ async function uploadAvatar()
 		setPlaceholderTxt("you need to login first");
 		return ;
 	}
+
+	else if (retval == 2)
+	{
+		setPlaceholderTxt("no file selected");
+		return ;
+	}
 }
 
 
-function setPlaceholderTxt(msg:string)
+function setPlaceholderTxt(msg: string)
 {
 	var txt = document.getElementById("placeholder");
 	if (!txt)
@@ -76,7 +81,7 @@ async function submitNewUser()
 		return ;
 	}
 
-	const response = await fetch("/api/create_user", {
+	const response = await fetch("/api/user/create", {
 		method: "POST",
 		headers: {
 			'content-type': 'application/json'
@@ -132,5 +137,25 @@ document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAv
 document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);
 document.getElementById("refresh_btn")?.addEventListener("click", () => user.refreshSelf());
 document.getElementById("chat_send_btn")?.addEventListener("click", () => chat.sendMsg(user, chatInput.value));
+document.getElementById("forty_two_log_btn")?.addEventListener("click", () => oauthLogin("/api/oauth2/forty_two"));
+document.getElementById("github_log_btn")?.addEventListener("click", () => oauthLogin("/api/oauth2/github"));
 
-setInterval(() => user.refreshSelf(), 10000);
+setInterval(() => user.refreshSelf(), 60000);
+
+function oauthLogin(path: string)
+{
+	const url = window.location.href.split("/")[0];
+	window.location.href = (`${url}${path}`);
+}
+
+// const vars = getUrlVar();
+// if (vars && vars["event"]) // 42api
+// {
+// 	const ev = vars["event"];
+// 	console.log(vars);
+// 	if (ev == "oauth_redir") {
+// 		user.oauth2Login(vars["id"], vars["source"]);
+// 	}
+// }
+
+user.loginSession();

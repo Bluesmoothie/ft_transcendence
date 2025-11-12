@@ -18,10 +18,6 @@ export class ServerSideRendering
 				<link rel="preconnect" href="https://fonts.googleapis.com">
 				<link rel="preconnected" href="https://fonts.gstatic.com" crossorigin>
 				<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-				<link rel="stylesheet" href="/css/output.css">
-			</head>
-
-			<body>
 	`;
 
 	private static readonly HTML_FOOTER = `
@@ -30,14 +26,15 @@ export class ServerSideRendering
 	`;
 
 	private static readonly HTML_HOMEPAGE = `
+				<link rel="stylesheet" href="/css/output.css">
+			</head>
+
+			<body>
 				<section class="home">
 					<h1>PONG</h1>
 					<button id="1player"></button>
 					<button id="2player"></button>
 				</section>
-
-				<script>var exports = {};</script>
-				<script type="module" src="dist/router.js"></script>
 	`;
 
 	private static readonly HTML_GAMEPAGE = `
@@ -63,6 +60,13 @@ export class ServerSideRendering
 	`;
 
 	private static readonly HTML_LOGINPAGE = `
+			<link rel="stylesheet" href="/css/style.css">
+		</head>
+
+		<body>
+			<button id="forty_two_log_btn">log with intra</button>
+			<button id="github_log_btn">log with github</button>
+
 			<h1>create new user</h1>
 			<div>
 				<input id="create_email" type="email" placeholder="email">
@@ -100,11 +104,14 @@ export class ServerSideRendering
 			<div style="margin-top: 50px;">
 				<p>&lt;chat&gt;</p>
 				<div id="chatbox" class="debug-box">
-
 				</div>
 				<input id="chat_input" placeholder="enter msg...">
 				<button id="chat_send_btn">send</button>
 			</div>
+
+			<script>var exports = {};</script>
+			<script type="module" src="./dist/login.js"></script>
+			<script type="module" src="./dist/Chat.js"></script>
 	`;
 
 	constructor(server: FastifyInstance)
