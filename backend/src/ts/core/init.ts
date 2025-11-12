@@ -62,7 +62,5 @@ export async function initFastify()
 		prefix: '/api/images/',
 	});
 
-	console.log("Fastify routes:")
-	console.log(core.fastify.printRoutes());
 }
 
