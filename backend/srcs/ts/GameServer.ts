@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { GameInstance } from './GameInstance.js';
 import Fastify, { FastifyInstance } from 'fastify';
 import { FastifyReply } from 'fastify/types/reply';

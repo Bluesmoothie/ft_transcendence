@@ -1,4 +1,3 @@
-// @ts-ignore
 import { GameState } from './GameState.js';
 
 export class GameClient

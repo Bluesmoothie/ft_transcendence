@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { GameState } from './GameState.js';
 
 export class GameInstance
@@ -174,6 +173,7 @@ export class GameInstance
 		{
 			this.gameState.rightPaddleY = Math.min(GameInstance.MAX_Y_PADDLE, this.gameState.rightPaddleY + GameInstance.PADDLE_SPEED);
 		}
+		this.keysPressed.clear();
 	}
 
 	get state(): Buffer
@@ -193,7 +193,6 @@ export class GameInstance
 
 	public handleKeyPress(keysPressed: Set<string>): void
 	{
-		this.keysPressed.clear();
 		keysPressed.forEach(key =>
 		{
 			if (key === '1U')

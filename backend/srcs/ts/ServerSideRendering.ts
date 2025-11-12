@@ -1,4 +1,3 @@
-// @ts-ignore
 import { FastifyInstance } from 'fastify';
 
 export class ServerSideRendering
@@ -59,12 +58,6 @@ export class ServerSideRendering
 				</section>
 	`;
 
-	private static readonly HTML_TOURNAMENTPAGE = `
-				<section class="tournament">
-					<h1>Tournament Page - TODO</h1>
-				</section>
-	`;
-
 	constructor(server: FastifyInstance)
 	{
 		this.server = server;
@@ -73,29 +66,15 @@ export class ServerSideRendering
 
 	private setupRoutes(): void
 	{
-		this.server.get('/', (request, reply) =>
+		this.server.get('*', (request, reply) =>
 		{
-			reply.type('text/html').send(this.getPage(ServerSideRendering.HTML_HOMEPAGE));
-		});
-
-		this.server.get('/home', (request, reply) =>
-		{
-			reply.type('text/html').send(this.getPage(ServerSideRendering.HTML_HOMEPAGE));
-		});
-
-		this.server.get('/game', (request, reply) =>
-		{
-			reply.type('text/html').send(this.getPage(ServerSideRendering.HTML_GAMEPAGE));
-		});
-
-		this.server.get('/tournament', (request, reply) =>
-		{
-			reply.type('text/html').send(this.getPage(ServerSideRendering.HTML_TOURNAMENTPAGE));
+			console.log(`Serving page for ${request.url}`);
+			reply.type('text/html').send(this.getPage());
 		});
 	}
 
-	private getPage(content: string): string
+	private getPage(): string
 	{
-		return (ServerSideRendering.HTML_HEADER + content + ServerSideRendering.HTML_FOOTER);
+		return (ServerSideRendering.HTML_HEADER + ServerSideRendering.HTML_HOMEPAGE + ServerSideRendering.HTML_GAMEPAGE + ServerSideRendering.HTML_FOOTER);
 	}
 }
