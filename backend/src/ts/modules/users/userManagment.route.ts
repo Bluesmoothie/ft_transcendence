@@ -50,6 +50,14 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		return reply.code(res.code).send(res.data);
 	})
 
+	fastify.delete('/delete', async (request: FastifyRequest, reply: FastifyReply) => {
+		const { user_id } = request.body as { user_id: number }
+
+		const res = await mgmt.deleteUser(user_id, core.db);
+
+		
+	})
+
 	fastify.post('/set_status', async (request:any, reply:any) => {
 		const { user_id, newStatus } = request.body;
 

@@ -79,12 +79,15 @@ export class Message
 			case "/getHist":
 				if (args.length != 2) return ;
 				var response = await fetch(`/api/user/get_history_name/${args[1]}`, { method : "GET" })
-				console.log(response);
 				var data = await response.json();
-				console.log(data);
 				code = response.status;
-				if (code == 404) chat.displayMessage(utils.serverReply("no history"))
+				if (code == 404) chat.displayMessage(utils.serverReply("no history"));
 				if (code == 200) chat.displayMessage(utils.serverReply(JSON.stringify(data)));
+				return true;
+			case "/getfriends":
+				var res = await fetch(`/api/friends/get?user_id=${chat.getUser().getId()}`);
+				var data = await res.json();
+				chat.displayMessage(utils.serverReply(JSON.stringify(data)));
 				return true;
 			case "/dm":
 				var response = await fetch(`/api/chat/dm`, {

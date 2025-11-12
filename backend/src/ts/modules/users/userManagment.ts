@@ -7,6 +7,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import * as core from '@core/core.js';
 import { DbResponse, uploadDir } from "@core/core.js";
 import { getUserById, getUserByName } from "./user.js";
+import { getFriends } from "./friends.js";
 
 function validate_email(email:string)
 {
@@ -145,7 +146,17 @@ export async function updateUser(update: UserUpdate, db: Database) : Promise<DbR
 	}
 }
 
-export async function logoutUser(user_id: string, db: Database) : Promise<DbResponse>
+// TODO: logout user => delete all user that where friends => delete from db
+export async function deleteUser(user_id: number, db: Database) : Promise<DbResponse>
+{
+	var res = await logoutUser(user_id, db);
+	if (res.code != 200)
+		return res;
+
+	return null;
+}
+
+export async function logoutUser(user_id: number, db: Database) : Promise<DbResponse>
 {
 	const sql = "UPDATE users SET is_login = 0 WHERE id = ?";
 
@@ -160,7 +171,7 @@ export async function logoutUser(user_id: string, db: Database) : Promise<DbResp
 	}
 }
 
-export async function setUserStatus(user_id: string, newStatus: string, db: Database) : Promise<DbResponse>
+export async function setUserStatus(user_id: number, newStatus: string, db: Database) : Promise<DbResponse>
 {
 	const sql = "UPDATE users SET status = ? WHERE id = ?;";
 	try {
