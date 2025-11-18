@@ -1,39 +1,47 @@
 import { FastifyInstance } from 'fastify';
-import { startPage } from 'pages/start.html.js';
-import { lobbyPage } from 'pages/lobby.html.js';
-import { loginPage } from 'pages/login.html.js';
-import { gameviewPage } from 'pages/gameview.html.js';
+import { readFileSync } from 'fs';
 
+const pagePath = "/var/www/server/pages/";
 export class ServerSideRendering
 {
 	private server: FastifyInstance;
+
+	private startPage:	string;
+	private lobbyPage:	string;
+	private loginPage:	string;
+	private gamePage:	string;
 
 	constructor(server: FastifyInstance)
 	{
 		this.server = server;
 		this.setupRoutes();
+
+		this.startPage = readFileSync(pagePath + 'start.html', 'utf8');
+		this.lobbyPage = readFileSync(pagePath + 'lobby.html', 'utf8');
+		this.loginPage = readFileSync(pagePath + 'login.html', 'utf8');
+		this.gamePage = readFileSync(pagePath + 'game.html', 'utf8');
 	}
 
 	private setupRoutes(): void
 	{
 		this.server.get('/login', (request, reply) =>
 		{
-			reply.type('text/html').send(loginPage);
+			reply.type('text/html').send(this.loginPage);
 		});
 
 		this.server.get('/lobby', (request, reply) =>
 		{
-			reply.type('text/html').send(lobbyPage);
+			reply.type('text/html').send(this.lobbyPage);
 		});
 
 		this.server.get('/', (request, reply) =>
 		{
-			reply.type('text/html').send(startPage);
+			reply.type('text/html').send(this.startPage);
 		});
 
 		this.server.get('/game', (request, reply) =>
 		{
-			reply.type('text/html').send(gameviewPage);
+			reply.type('text/html').send(this.gamePage);
 		});
 	}
 
