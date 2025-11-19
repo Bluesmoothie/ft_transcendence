@@ -10,9 +10,36 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnected" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+		<link href="css/output.css" rel="stylesheet">
 		<link href="css/style.css" rel="stylesheet">
+
 		<head/>
+		
 		<body>
+			<template id="user-profile-template">
+				<div id="user-profile"
+					class="user-profile">
+					<div id="avatar-container">
+						<img
+						id="avatar-img"
+						src="" 
+						alt="Profile" 
+						class="avatar"/>
+						
+						<div id="avatar-name">
+							user
+						</div>
+						<div id="user-status"> </div>
+					</div>
+
+					<div id="user-stats">
+						<h1>elo: 500p</h1>
+						<h1>W/L: 42%</h1>
+					</div>
+					<div id="btn-container">
+					</div>
+				</div>
+			</template>
 			<button id="forty_two_log_btn">log with intra</button>
 			<button id="github_log_btn">log with github</button>
 

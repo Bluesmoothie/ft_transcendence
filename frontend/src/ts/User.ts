@@ -346,7 +346,6 @@ export class MainUser extends User {
 		await this.updateSelf();
 		await this.updateFriendContainer();
 
-		const data = await response.json();
 		return response;
 	}
 

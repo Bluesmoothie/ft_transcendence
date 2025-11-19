@@ -3,32 +3,59 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title></title>
+		<title>FT_TRANSCENDENCE</title>
 		<link href="css/output.css" rel="stylesheet">
 	</head>
 
-	<header class="flex items-center justify-center w-full">
-		<div class=" w-full flex flex-wrap gap-5 my-10">
-			<div class="h-2 w-full bg-(--red) m-0 p-0"></div>
-			<div class="h-2 w-full bg-(--yellow) m-0 p-0"></div>
-			<div class="h-2 w-full bg-(--blue) m-0 p-0"></div>
-			<div class="h-2 w-full bg-(--green) m-0 p-0"></div>
-		</div>
-		<div class="absolute flex items-center justify-center">
-			<h1 class="text-6xl bg-(--darker) px-6 py-4 font-extrabold">
-				FT_TRANSCENDENCE
-			</h1>
-		</div>
-	</header>
 	<body>
-		<section class="flex justify-around h-full w-full">
-			<div id="profile_section">
-				tmp
+		
+		<template id="user-profile-template">
+				<div id="user-profile"
+					class="user-profile">
+					<div id="avatar-container">
+						<img
+						id="avatar-img"
+						src="" 
+						alt="Profile" 
+						class="avatar"/>
+						
+						<div id="avatar-name">
+							user
+						</div>
+						<div id="user-status"> </div>
+					</div>
+
+					<div id="user-stats">
+						<h1>elo: 500p</h1>
+						<h1>W/L: 42%</h1>
+					</div>
+				</div>
+				<div id="btn-container">
+				</div>
+			</template>
+
+		<header>
+			<div class="banner">
+				<div id="line1"></div>
+				<div id="line2"></div>
+				<div id="line3"></div>
+				<div id="line4"></div>
 			</div>
-			<div class=" h-full">
-				<button id="play_btn" class="text-5xl px-6 py-4 font-bold hover:underline">
-					PLAY
-				</button>
+			<div class="banner-text">
+				<h1>
+					FT_TRANSCENDENCE
+				</h1>
+			</div>
+		</header>
+		
+		<section id="main" class="main">
+			<div id="user" class="user">
+				<h1 id="profile-header">user</h1>
+				<div id="profile-container" class="profile-container"></div>
+			</div>
+			<div class="play-menu">
+				<button id="play_btn">PLAY</button>
+				<button id="play_btn">SETTINGS</button>
 			</div>
 			<div id="leaderboard">
 				tmp

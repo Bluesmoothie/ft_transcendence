@@ -7,6 +7,6 @@ document.getElementById("play_btn").addEventListener('click', () => {
 		window.location.href = (`${window.location.origin}/lobby`);
 });
 
-var user: MainUser = new MainUser(document.body, null, null);
+var user: MainUser = new MainUser(document.getElementById("profile-container"), null, null);
 await user.loginSession();
 

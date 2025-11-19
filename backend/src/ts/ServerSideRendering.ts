@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { readFileSync } from 'fs';
+import fastifyStatic from '@fastify/static';
 
 const pagePath = "/var/www/server/pages/";
 export class ServerSideRendering
