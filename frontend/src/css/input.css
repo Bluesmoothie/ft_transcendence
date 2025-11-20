@@ -6,6 +6,7 @@
 {
 	body	{ @apply bg-[url('../assets/background.jpg')]; }
 	h1		{ @apply text animation text-[10vh] my-[10vh]; }
+	h2		{ @apply text animation text-[4vh] mt-[10vh]; }
 	p		{ @apply text; }
 	button	{ @apply text text-[4vh] border-white w-fit self-center w-[40vh] py-[1.5vh] my-[1vh] rounded-xl hover:bg-white hover:text-black active:scale-90 duration-200; }
 }
@@ -17,11 +18,12 @@
 	.centered		{ @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2; }
 	.paddle			{ @apply absolute top-1/2 transform -translate-y-1/2 bg-white; }
 
-	/* HOMEPAGE */
-	.home			{ @apply relative flex flex-col gap-[5vh]; }
+	.home				{ @apply relative flex flex-col gap-[5vh]; }
+	.game-menu			{ @apply relative flex flex-col gap-[5vh]; }
+	.game				{ @apply centered flex flex-col bg-black w-[50vw] aspect-[4/3] border-[0.5vw] border-white; box-sizing: content-box; }
+	.tournament-menu	{ @apply relative flex flex-col gap-[5vh]; }
+	.tournament			{ @apply relative flex flex-col gap-[5vh] h-screen w-screen; }
 
-	/* GAME */
-	.game			{ @apply hidden centered flex flex-col bg-black w-[50vw] aspect-[4/3] border-[0.5vw] border-white; box-sizing: content-box; }
 	.paddle-left	{ @apply paddle; }
 	.paddle-right	{ @apply paddle; }
 	.net			{ @apply centered h-full border-l-[0.35vw] border-dashed border-white; }

@@ -1,21 +1,23 @@
-import { GameClient } from './GameClient.js';
+import { Home } from 'pages/Home.js';
+import { GameMenu } from 'pages/GameMenu.js';
+import { GameClient } from 'pages/GameClient.js';
+import { TournamentMenu } from 'pages/TournamentMenu.js';
+import { Tournament } from 'pages/Tournament.js';
 
 export class Router
 {
 	private static readonly EXIT_KEY: string = 'Escape';
-	private static readonly homeButton1: string = 'one player';
-	private static readonly homeButton2: string = 'two player';
-	private button1Element = document.getElementById('1player') as HTMLButtonElement;
-	private button2Element = document.getElementById('2player') as HTMLButtonElement;
+	private static readonly HOME_KEY: string = 'h';
 
 	currentPage: string = 'home';
+	currentClass: any = null;
 	pages: Map<string, HTMLDivElement> = new Map();
 	gameInstance: GameClient | null = null;
 
 	constructor()
 	{
 		this.loadPages();
-		this.setupEventListeners();
+		this.setUpWindowEventListeners();
 		this.showPage(this.currentPage, null);
 	}
 
@@ -29,14 +31,9 @@ export class Router
 			if (pageName)
 			{
 				this.pages.set(pageName, element);
+				this.pages.get(pageName)!.style.display = 'none';
 			}
 		});
-	}
-
-	private setupEventListeners(): void
-	{
-		this.setUpWindowEventListeners();
-		this.setUpDocumentEventListeners();		
 	}
 
 	private setUpWindowEventListeners(): void
@@ -53,54 +50,50 @@ export class Router
 			{
 				history.back();
 			}
-			else if (e.key === 'h')
+			else if (e.key === Router.HOME_KEY)
 			{
-				history.pushState({page: 'home'}, '', `#home`);
+				this.navigateTo('home', '');
 			}
 		});
 	}
 
-	private setUpDocumentEventListeners(): void
+	public navigateTo(page: string, mode: string): void
 	{
-		document.getElementById('1player')?.addEventListener('click', () =>
-		{
-			this.navigateTo('game', '1player');
-		});
-
-		document.getElementById('2player')?.addEventListener('click', () =>
-		{
-			this.navigateTo('game', '2player');
-		});
+		history.pushState({page: page}, '', `#${page}`);
+		this.showPage(page, mode);
 	}
-
 
 	private showPage(page: string, mode: string): void
 	{
-		if (this.gameInstance)
+		if (this.currentClass && this.currentClass.destroy)
 		{
-			this.gameInstance.destroy();
+			this.currentClass.destroy();
 		}
 
 		this.pages.get(this.currentPage)!.style.display = 'none';
 		this.pages.get(page)!.style.display = 'flex';
 		this.currentPage = page;
-
-		if (page === 'home')
-		{
-			this.button1Element.textContent = Router.homeButton1;
-			this.button2Element.textContent = Router.homeButton2;
-		}
-		if (page === 'game')
-		{
-			this.gameInstance = new GameClient(mode);
-		}
+		this.currentClass = this.getClass(mode);
 	}
 
-	private navigateTo(page: string, mode: string): void
+	private getClass(mode: string)
 	{
-		history.pushState({page: page}, '', `#${page}`);
-		this.showPage(page, mode);
+		switch (this.currentPage)
+		{
+			case 'home':
+				return (new Home(this));
+			case 'game-menu':
+				return (new GameMenu(this));
+			case 'game':
+				return (new GameClient(mode!));
+			case 'tournament-menu':
+				return (new TournamentMenu(this));
+			case 'tournament':
+				return (new Tournament(mode!));
+			default:
+				return (null);
+		}
 	}
-};
+}
 
 new Router();
