@@ -15,58 +15,53 @@ enum Params
 
 enum Keys
 {
-	PLAY_AGAIN_KEY = 'Enter',
-	DEFAULT_UP_KEY = 'ArrowUp',
-	DEFAULT_DOWN_KEY = 'ArrowDown',
-	PLAYER1_UP_KEY = 'z',
-	PLAYER1_DOWN_KEY = 's',
-	PLAYER2_UP_KEY = 'ArrowUp',
-	PLAYER2_DOWN_KEY = 'ArrowDown',
+	PLAY_AGAIN = 'Enter',
+	DEFAULT_UP = 'ArrowUp',
+	DEFAULT_DOWN = 'ArrowDown',
+	PLAYER1_UP = 'z',
+	PLAYER1_DOWN = 's',
+	PLAYER2_UP = 'ArrowUp',
+	PLAYER2_DOWN = 'ArrowDown',
 }
 
 enum Msgs
 {
-	SEARCHING_MSG = 'Searching for opponent...',
-	WIN_MSG = 'wins !',
-	PLAY_AGAIN_MSG = `Press ${Keys.PLAY_AGAIN_KEY} to play again`,
+	SEARCHING = 'Searching for opponent...',
+	WIN = 'wins !',
+	PLAY_AGAIN = `Press ${Keys.PLAY_AGAIN} to play again`,
 }
 
-export class GameClient
+export class GameClient extends Utils
 {
 	private static readonly IPS_INTERVAL: number = 1000 / Params.IPS;
 
-	private utils: Utils;
-	private HTMLelements: Map<string, HTMLDivElement> = new Map();
 	private keysPressed: Set<string> = new Set();
 	private countdownInterval: any | null = null;
-	private playerName = Math.random().toString(36).substring(2, 10);
+	private playerName = Math.random().toString(36).substring(2, 10); // NEEDS TO GET THE USERNAME FROM AUTH
 	private opponentName: string | null = null;
 	private gameId: string | null = null;
 	private socket : WebSocket | null = null;
 	private interval: any | null = null;
-	private mode: string | null = null;
 	private end: boolean = false;
 	private playerId: string | null = null;
 	private keysToSend: string = '';
 
-	constructor(mode: string | null)
+	constructor(private mode: string)
 	{
-		if (this.isModeValid(mode))
+		super();
+
+		if (this.isModeValid())
 		{
-			this.mode = mode;
-			this.utils = new Utils(this.HTMLelements, Params.COLOR);
 			this.init();
-			this.setColors('1');
-			this.createGame().then(() =>
-			{
-				this.launchCountdown();
-			});
+			this.createGame();
 		}
 	}
 
-	private isModeValid(mode: string | null): boolean
+	private isModeValid(): boolean
 	{
-		return (mode && (mode === 'local' || mode === 'online' || mode === 'bot'));
+		return (this.mode === 'local'
+			|| this.mode === 'online'
+			|| this.mode === 'bot');
 	}
 
 	private init(): void
@@ -80,8 +75,9 @@ export class GameClient
 			element.style.display = 'none';
 		});
 
-		this.utils.setContent('player1', this.playerName);
-		this.utils.setContent('searching-msg', Msgs.SEARCHING_MSG);
+		this.setContent('player1', this.playerName, true);
+		this.setContent('searching-msg', Msgs.SEARCHING, true);
+		this.setColors('1');
 	}
 
 	private setColors(opacity: string): void
@@ -119,6 +115,8 @@ export class GameClient
 			this.gameId = data.gameId;
 			this.opponentName = data.opponentName;
 			this.playerId = data.playerId;
+
+			this.launchCountdown();
 		}
 		catch (error)
 		{
@@ -130,7 +128,8 @@ export class GameClient
 	{
 		let count: number = Params.COUNTDOWN_START;
 		const countdownIntervalTime =  (count > 0) ? 1000 : 0;
-		this.utils.setContent('countdown', count.toString());
+		this.hide('searching-msg');
+		this.setContent('countdown', count.toString(), true);
 
 		this.countdownInterval = setInterval(() =>
 		{
@@ -141,7 +140,6 @@ export class GameClient
 			else
 			{
 				clearInterval(this.countdownInterval);
-				this.hide('countdown');
 				this.showElements();
 				this.startGame();
 			}
@@ -150,17 +148,19 @@ export class GameClient
 
 	private showElements(): void
 	{
-		this.hide('searching-msg');
+		this.hide('countdown');
 		this.setHeight('paddle-left', Params.PADDLE_HEIGHT + '%');
 		this.setHeight('paddle-right', Params.PADDLE_HEIGHT + '%');
 		this.setWidth('paddle-left', Params.PADDLE_WIDTH + '%');
 		this.setWidth('paddle-right', Params.PADDLE_WIDTH + '%');
-		this.setLeft('paddle-left', Params.PADDLE_PADDING + '%');
-		this.setRight('paddle-right', Params.PADDLE_PADDING + '%');
-		this.setWidth('ball', Params.BALL_SIZE + '%');
-		this.setContent('score-left', '0');
-		this.setContent('score-right', '0');
-		this.setContent('player2', this.opponentName);
+		this.setLeft('paddle-left', Params.PADDLE_PADDING + '%', true);
+		this.setRight('paddle-right', Params.PADDLE_PADDING + '%', true);
+		console.log('Paddle left display: ', this.HTMLelements.get('paddle-left')!.style.display);
+		console.log('Paddle right display: ', this.HTMLelements.get('paddle-right')!.style.display);
+		this.setWidth('ball', Params.BALL_SIZE + '%', true);
+		this.setContent('score-left', '0', true);
+		this.setContent('score-right', '0', true);
+		this.setContent('player2', this.opponentName, true);
 		this.show('net');
 	}
 
@@ -212,7 +212,7 @@ export class GameClient
 	{
 		this.keysPressed.add(event.key);
 
-		if (event.key === Keys.PLAY_AGAIN_KEY && this.end)
+		if (event.key === Keys.PLAY_AGAIN && this.end)
 		{
 			this.destroy();
 			new GameClient(this.mode);
@@ -244,10 +244,10 @@ export class GameClient
 	{
 		switch (key)
 		{
-			case Keys.DEFAULT_UP_KEY:
+			case Keys.DEFAULT_UP:
 				this.keysToSend += 'U';
 				break ;
-			case Keys.DEFAULT_DOWN_KEY:
+			case Keys.DEFAULT_DOWN:
 				this.keysToSend += 'D';
 				break ;
 		}
@@ -257,16 +257,16 @@ export class GameClient
 	{
 		switch (key)
 		{
-			case Keys.PLAYER1_UP_KEY:
+			case Keys.PLAYER1_UP:
 				this.keysToSend += '1U';
 				break ;
-			case Keys.PLAYER1_DOWN_KEY:
+			case Keys.PLAYER1_DOWN:
 				this.keysToSend += '1D';
 				break ;
-			case Keys.PLAYER2_UP_KEY:
+			case Keys.PLAYER2_UP:
 				this.keysToSend += '2U';
 				break ;
-			case Keys.PLAYER2_DOWN_KEY:
+			case Keys.PLAYER2_DOWN:
 				this.keysToSend += '2D';
 				break ;
 		}
@@ -291,6 +291,7 @@ export class GameClient
 
 	private updateDisplay(gameState: any): void
 	{
+		this.HTMLelements.get('paddle-left')!.style.top = gameState.leftPaddleY + '%';
 		this.setTop('paddle-left', gameState.leftPaddleY + '%');
 		this.setTop('paddle-right', gameState.rightPaddleY + '%');
 		this.setLeft('ball', gameState.ballX + '%');
@@ -314,10 +315,10 @@ export class GameClient
 		this.hide('ball');
 		this.hide('paddle-left');
 		this.hide('paddle-right');
-		this.setInnerHTML('winner-msg', `${winner}<br>${Msgs.WIN_MSG}`);
-		this.setColor('winner-msg', '1');
-		this.setContent('play-again-msg', Msgs.PLAY_AGAIN_MSG);
-		this.setColor('play-again-msg', '1');
+		this.setInnerHTML('winner-msg', `${winner}<br>${Msgs.WIN}`);
+		this.setColor('winner-msg', Params.COLOR, undefined, true);
+		this.setContent('play-again-msg', Msgs.PLAY_AGAIN);
+		this.setColor('play-again-msg', Params.COLOR, undefined, true);
 	}
 
 	public destroy(): void
