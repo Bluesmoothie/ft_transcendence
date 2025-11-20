@@ -1,0 +1,7 @@
+async and await
+future (trait) -> Value that will become ready at 
+                    some point in the future (==Promise)
+ within an async block/function, await wait the future.
+await is postfix
+
+
