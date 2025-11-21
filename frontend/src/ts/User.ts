@@ -198,12 +198,15 @@ export class MainUser extends User {
 		super()
 		this.m_htmlFriendContainer = friendsContainer;
 		this.m_htmlPndgFriendContainer = pndgFriendsContainer;
-		this.m_userElement = new UserElement(null, parent, UserElementType.MAIN);
 		this.m_friendsElements = [];
 		this.m_pndgFriendsElements = [];
-
-		this.m_userElement.getBtn2().addEventListener("click", () => this.logout());
-		this.m_userElement.getStatusSelect().addEventListener("change", () => this.updateStatus(this.m_userElement.getStatusSelect().value, this, this.m_userElement));
+		
+		if (parent)
+		{
+			this.m_userElement = new UserElement(null, parent, UserElementType.MAIN);
+			this.m_userElement.getBtn2().addEventListener("click", () => this.logout());
+			this.m_userElement.getStatusSelect().addEventListener("change", () => this.updateStatus(this.m_userElement.getStatusSelect().value, this, this.m_userElement));
+		}
 
 		this.m_onLoginCb = [];
 		this.m_onLogoutCb = [];
@@ -274,7 +277,8 @@ export class MainUser extends User {
 	public async logout()
 	{
 		await this.logoutDB();
-		this.m_userElement.updateHtml(null);
+		if (this.m_userElement)
+			this.m_userElement.updateHtml(null);
 		if (this.m_htmlFriendContainer)
 			this.m_htmlFriendContainer.innerHTML = ""; // destroy all child
 		this.m_friendsElements = [];
@@ -288,7 +292,8 @@ export class MainUser extends User {
 			return;
 		await this.updateSelf();
 		await this.updateFriendContainer();
-		this.m_userElement.updateHtml(this);
+		if (this.m_userElement)
+			this.m_userElement.updateHtml(this);
 	}
 
 	private async updateStatus(newStatus: string, user: User, userHtml: UserElement)
@@ -324,7 +329,8 @@ export class MainUser extends User {
 			return 2;
 
 		await this.uploadAvatar(file);
-		this.m_userElement.updateHtml(this);
+		if (this.m_userElement)
+			this.m_userElement.updateHtml(this);
 
 		return 0;
 	}

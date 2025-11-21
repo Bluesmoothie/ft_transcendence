@@ -22,8 +22,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 	})
 
 	fastify.post('/create_guest', async (request: any, reply: FastifyReply) => {
-		const { alias } = request.body as { alias: string };
-		const res = await mgmt.createGuest(alias);
+		const res = await mgmt.createGuest();
 		if (res.code == 200)
 		{
 			request.session.user = res.data.id;

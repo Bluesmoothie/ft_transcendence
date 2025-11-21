@@ -30,16 +30,17 @@ export interface UserUpdate {
 	email:		string;
 }
 
-export async function createGuest(alias: string): Promise<DbResponse>
+export async function createGuest(): Promise<DbResponse>
 {
-	const res = await getUserByName("(guest) " + alias, core.db); // move guest thing in front ?
-	if (res.code != 404)
-		return { code: 409, data: { message: "alias already taken" }};
 
 	const sql = "INSERT INTO users (name, source) VALUES (?, ?) RETURNING id";
 	try
 	{
-		const id = await core.db.get(sql, ["(guest) " + alias, AuthSource.GUEST]);
+		const highest = await core.db.get("SELECT MAX(id) FROM users;");
+		console.log(highest["MAX(id)"]);
+		const rBytes = randomBytes(8).toString('hex');
+		const name = `guest${highest["MAX(id)"]}${rBytes}`;
+		const id = await core.db.get(sql, [name, AuthSource.GUEST]);
 		return { code: 200, data: id};
 	}
 	catch (err)

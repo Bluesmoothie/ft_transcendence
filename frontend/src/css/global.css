@@ -14,13 +14,25 @@
 
 @layer base {
 	body {
-		@apply flex flex-col flex-wrap bg-(--darker) text-(--white) h-screen;
+		@apply flex flex-col flex-wrap bg-(--darker) text-(--white) h-screen overflow-hidden;
 	}
 	
 
 	header {
 		@apply	translate-y-25 flex items-center justify-center w-full h-[10vh];
 	}
+
+	main {
+		@apply flex-1 flex justify-center flex-col items-center gap-6;
+	}
+
+	input {
+		@apply	bg-(--dark) border-b-2 border-(--blue) px-3 py-2
+				focus:outline-none focus:border-(--yellow)
+				hover:brightness-[1.4];
+	}
+
+
 }
 
 .avatar {
@@ -72,7 +84,6 @@
 	@apply	h-2 w-full bg-(--green) m-0 p-0;
 }
 
-
 .banner-text {
 	@apply	absolute flex items-center justify-center;
 }
@@ -81,26 +92,21 @@
 	@apply	text-6xl bg-(--darker) px-6 py-4 font-extrabold;
 }
 
-.main {
-	@apply flex-1 flex justify-around items-center align-middle w-full;
+.box {
+	@apply	border-2 rounded-md border-(--red) p-5 px-12 w-100
+			flex flex-col gap-2;
 }
 
-.play-menu {
-	@apply flex flex-1 flex-col items-center;
+.box h1 {
+	@apply	text-5xl font-bold underline mb-10;
 }
 
-.play-menu button {
-	@apply	text-5xl px-6 py-4 w-fit font-bold hover:underline;
+.button-empty {
+	@apply	border-(--green) text-(--green) border-2 bg-(--dark) py-1 px-5
+			hover:brightness-[1.1] active:brightness-[1.5];
 }
 
-.user {
-	@apply ml-6 flex-1 h-full flex flex-col gap-2 justify-end items-start;
-}
-
-.user #profile-header {
-	@apply underline text-3xl;
-}
-
-#leaderboard {
-	@apply flex-1;
+.button-full {
+	@apply	bg-(--green) text-(--dark) border-2 border-(--dark) py-1
+			hover:brightness-[1.1] active:brightness-[1.5];
 }

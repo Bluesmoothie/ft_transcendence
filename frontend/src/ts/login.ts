@@ -1,5 +1,4 @@
 import { hashString } from 'sha256.js'
-import { Chat } from '@modules/chat.js'
 import { MainUser } from './User.js';
 
 
@@ -156,19 +155,8 @@ async function validate_totp()
 
 async function logAsGuest()
 {
-	console.log("test");
-	const input = document.getElementById("alias_input") as HTMLInputElement;
-	if (!input)
-	{
-		console.error("alias_input is null");
-		return;
-	}
 	const res = await fetch("/api/user/create_guest", {
 		method: "POST",
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({
-			alias: input.value
-		})
 	})
 
 	if (res.status == 200)
@@ -178,7 +166,7 @@ async function logAsGuest()
 	
 }
 
-var user: MainUser = new MainUser(document.body, document.getElementById("friends_list"), document.getElementById("friends_pndg_list"));
+var user: MainUser = new MainUser(null, null, null);
 await user.loginSession();
 if (user.getId() != -1)
 	window.location.href = window.location.origin + "/lobby";
@@ -194,6 +182,11 @@ document.getElementById("new_totp")?.addEventListener("click", new_totp);
 document.getElementById("del_totp")?.addEventListener("click", del_totp);
 document.getElementById("totp_check_send")?.addEventListener("click", validate_totp);
 document.getElementById("guest_log_btn")?.addEventListener("click", logAsGuest);
+
+document.getElementById("home_btn")?.addEventListener("click", () => { 
+	window.location.href = (`${window.location.origin}`);
+});
+
 
 setInterval(() => user.refreshSelf(), 60000);
 
