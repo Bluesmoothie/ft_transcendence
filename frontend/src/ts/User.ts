@@ -75,8 +75,8 @@ export class User {
 	public getPndgFriends(): User[] { return this.m_pndgFriends; }
 	public getId(): number { return this.m_id; }
 	public getEmail(): string { return this.m_email; }
-	// public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
-	public getAvatarPath(): string { return this.m_avatarPath; }
+	public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
+	// public getAvatarPath(): string { return this.m_avatarPath; }
 
 	public async setStatus(status: UserStatus): Promise<Response> {
 		this.m_status = status;
@@ -176,7 +176,7 @@ export class User {
 
 		});
 		var data = await response.json();
-		this.m_avatarPath = "/public/images/" + data.filename;
+		this.m_avatarPath = "/public/avatars/" + data.filename;
 
 		return response;
 	}

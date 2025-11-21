@@ -16,10 +16,10 @@ import { AuthSource } from "@modules/oauth2/routes.js";
 function validate_email(email:string)
 {
 	return String(email)
-    .toLowerCase()
-    .match(
-      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-    );
+	.toLowerCase()
+	.match(
+		/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+	);
 }
 
 export interface UserUpdate {
@@ -262,17 +262,17 @@ export async function uploadAvatar(request: any, reply: any, db: Database)
 	if (!data)
 		return reply.code(400).send({ error: "no file uploaded" });
 
-    const email = request.headers['email'] as string;
+	const email = request.headers['email'] as string;
 	const filename = await hashString(email);
-	const filepath = path.join(uploadDir, filename);
-    const id = request.headers['id'] as string;
+	const filepath = path.join("/var/www/server/public/avatars/", filename);
+	const id = request.headers['id'] as string;
 
 	try
 	{
 		await pipeline(data.file, createWriteStream(filepath));
 
 		const sql = "UPDATE users SET avatar = ? WHERE id = ?";
-		await db.run(sql, ["/api/images/" + filename , id]);
+		await db.run(sql, ["/public/avatars/" + filename , id]);
 
 		console.log(`${email} has changed is avatar. location=${filepath}`);
 
