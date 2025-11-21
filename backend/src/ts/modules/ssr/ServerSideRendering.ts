@@ -1,34 +1,59 @@
 import { FastifyInstance } from 'fastify';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { readFileSync } from 'fs';
 
 export class ServerSideRendering
 {
-	private static readonly homePage: string = path.join(__dirname, 'index.html');
+	private static readonly pagePath = "/var/www/server/public/";
+	private static readonly cssPath = "/var/www/server/css/dist/";
+	private server: FastifyInstance;
+
+	private startPage:	string;
+	private lobbyPage:	string;
+	private loginPage:	string;
+	private gamePage:	string;
+
+	private startCss:	string;
+	// private loginCss:	string;
+	// private gameCss:	string;
+	private globalCss:	string;
 
 	constructor(server: FastifyInstance)
 	{
-		this.setupRoutes(server);
+		this.server = server;
+		this.setupRoutes();
+
+		this.startPage = readFileSync(ServerSideRendering.pagePath + 'start.html', 'utf8');
+		// this.lobbyPage = readFileSync(ServerSideRendering.pagePath + 'lobby.html', 'utf8');
+		// this.loginPage = readFileSync(ServerSideRendering.pagePath + 'login.html', 'utf8');
+		// this.gamePage = readFileSync(ServerSideRendering.pagePath + 'game.html', 'utf8');
+
+		// this.startCss = readFileSync(ServerSideRendering.cssPath + 'start.css', 'utf8');
+		// this.globalCss = readFileSync(ServerSideRendering.cssPath + 'global.css', 'utf8');
+		// this.loginCss = readFileSync(ServerSideRendering.cssPath + 'login.css', 'utf8');
 	}
 
-	private setupRoutes(server: FastifyInstance): void
+	private setupRoutes(): void
 	{
-		server.get('/', (request, reply) =>
+		this.server.get('/login', (request, reply) =>
 		{
-			reply.type('text/html').send(this.readFile(ServerSideRendering.homePage));
+			reply.type('text/html').sendFile('login.html');
 		});
+
+		this.server.get('/lobby', (request, reply) =>
+		{
+			reply.type('text/html').sendFile('lobby.html');
+		});
+
+		this.server.get('/', (request, reply) =>
+		{
+			reply.type('text/html').sendFile('start.html');
+		});
+
+		this.server.get('/game', (request, reply) =>
+		{
+			reply.type('text/html').sendFile('game.html');
+		});
+
 	}
 
-	private async readFile(filePath: string): Promise<string>
-	{
-		try
-		{
-			const data = await fs.readFile(filePath, 'utf-8');
-			return (data);
-		}
-		catch (error)
-		{
-			console.error(`Error reading file at ${filePath}:`, error);
-		}
-	}
 }

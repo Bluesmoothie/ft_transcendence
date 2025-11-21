@@ -1,0 +1,28 @@
+
+@import "tailwindcss";
+@import './global.css';
+
+
+.main {
+	@apply flex-1 flex justify-around items-center align-middle w-full;
+}
+
+.play-menu {
+	@apply flex flex-1 flex-col items-center;
+}
+
+.play-menu button {
+	@apply	text-5xl px-6 py-4 w-fit font-bold hover:underline;
+}
+
+.user {
+	@apply ml-6 flex-1 h-full flex flex-col gap-2 justify-end items-start;
+}
+
+.user #profile-header {
+	@apply underline text-3xl;
+}
+
+#leaderboard {
+	@apply flex-1;
+}

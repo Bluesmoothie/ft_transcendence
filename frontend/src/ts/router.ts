@@ -27,7 +27,7 @@ export class Router
 
 		pageElements.forEach(element =>
 		{
-			const pageName = element.getAttribute('class');
+			const pageName = element.getAttribute('id');
 			if (pageName)
 			{
 				this.pages.set(pageName, element);

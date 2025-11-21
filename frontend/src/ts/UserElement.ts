@@ -23,27 +23,41 @@ export class UserElement
 	private m_htmlAvatar:		HTMLImageElement;
 	private m_htmlStatusImg:	HTMLImageElement;
 	private m_htmlName:			HTMLElement;
-	private m_htmlContainer:	HTMLElement;
+	private m_clone:			HTMLElement;
 
 	private m_htmlBtnContainer:	HTMLElement;
 	private m_htmlBtn1:			HTMLButtonElement;
 	private m_htmlBtn2:			HTMLButtonElement;
-	private m_htmlBtn3:			HTMLButtonElement;
 	private m_htmlStatusSelect:	HTMLSelectElement;
 
-	constructor(user:User, parent:HTMLElement, type:UserElementType)
+	constructor(user: User, parent: HTMLElement, type: UserElementType)
 	{
-		this.m_htmlContainer = document.createElement("div");
-		this.m_htmlContainer.className = "user-container";
+		const template = document.getElementById("user-profile-template") as HTMLTemplateElement;
+		if (!template)
+		{
+			console.error("no template found for user element");
+			return ;
+		}
 
-		this.m_htmlStatusImg = document.createElement("img");
-		this.m_htmlStatusImg.className = "user-status";
+		this.m_clone = template.content.cloneNode(true) as HTMLElement;
+		this.m_htmlBtnContainer = this.m_clone.querySelector("#btn-container");
+		if (!this.m_htmlBtnContainer)
+			console.warn("no btn container found");
 
-		this.m_htmlAvatar = document.createElement("img");
-		this.m_htmlAvatar.className = "user-avatar";
+		this.m_htmlAvatar = this.m_clone.querySelector("#avatar-img");
+		if (!this.m_htmlAvatar)
+			console.warn("no avatar img found");
 
-		this.m_htmlName = document.createElement("h3")
-		
+		this.m_htmlStatusImg = this.m_clone.querySelector("#user-status");
+		if (!this.m_htmlStatusImg)
+			console.warn("no user status found");
+
+		this.m_htmlName = this.m_clone.querySelector("#avatar-name");
+		if (!this.m_htmlName)
+			console.warn("no btn username txt found");
+
+		this.m_htmlBtn1 = document.createElement("button");
+		this.m_htmlBtn2 = document.createElement("button");
 		this.m_htmlStatusSelect = document.createElement("select")
 
 		this.m_htmlStatusSelect.prepend(newOption("available"));
@@ -51,17 +65,7 @@ export class UserElement
 		this.m_htmlStatusSelect.prepend(newOption("busy"));
 		this.m_htmlStatusSelect.prepend(newOption("in_game"));
 
-		this.m_htmlBtnContainer = document.createElement("div");
-		this.m_htmlBtn1 = document.createElement("button");
-		this.m_htmlBtn2 = document.createElement("button");
-		this.m_htmlBtn3 = document.createElement("button");
-
-		this.m_htmlContainer.prepend(this.m_htmlStatusImg);
-		this.m_htmlContainer.prepend(this.m_htmlBtnContainer);
-		this.m_htmlContainer.prepend(this.m_htmlName);
-		this.m_htmlContainer.prepend(this.m_htmlAvatar);
-
-		parent.prepend(this.m_htmlContainer);
+		parent.prepend(this.m_clone);
 
 		this.setType(type);
 		this.updateHtml(user);
@@ -69,18 +73,14 @@ export class UserElement
 
 	public getBtn1():			HTMLButtonElement { return this.m_htmlBtn1; }
 	public getBtn2():			HTMLButtonElement { return this.m_htmlBtn2; }
-	public getBtn3():			HTMLButtonElement { return this.m_htmlBtn3; }
 	public getStatusSelect():	HTMLSelectElement { return this.m_htmlStatusSelect; }
 
 	public setType(type: UserElementType)
 	{
-		switch (type) {
+		switch (type)
+		{
 			case UserElementType.MAIN:
 				this.m_htmlBtnContainer.prepend(this.m_htmlStatusSelect);
-				this.m_htmlBtnContainer.prepend(this.m_htmlBtn1);	
-				this.m_htmlBtn1.innerText = "settings";
-				this.m_htmlBtnContainer.prepend(this.m_htmlBtn2);	
-				this.m_htmlBtn2.innerText = "logout";
 				break;
 			case UserElementType.FRIEND:
 				this.m_htmlBtnContainer.prepend(this.m_htmlBtn1);	

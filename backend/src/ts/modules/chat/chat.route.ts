@@ -25,16 +25,19 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 
 		console.log(res.data);
 
+		var success = false;
 		for (var [key, value] of chat.connections)
 		{
 			if (value == res.data.id)
 			{
 				const result = JSON.stringify({ username: login, message: `[dm] -> ${msg}` });
 				key.send(result);
-				return reply.code(200).send({ message: "Success" });
+				success = true;
 			}
 		}
 
+		if (success)
+			return reply.code(200).send({ message: "Success" });
 		return reply.code(200).send({ message: "user is offline" });
 	})
 
