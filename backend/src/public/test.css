@@ -4,7 +4,7 @@
 
 .crt {
 	position: relative;
-	overflow: hidden;
+	/* overflow: hidden; */
 	height: 100%;
 
 	display: flex;
@@ -174,7 +174,7 @@
 .scan {
 	pointer-events: none;
 
-	/* z-index: 99999; */
+	z-index: 99999;
 	height: 60px;
 	width: 100%;
 	/* background-color: blue; */

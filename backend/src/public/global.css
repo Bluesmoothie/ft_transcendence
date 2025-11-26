@@ -4,6 +4,7 @@
 :root {
 	--dark:		#282C34;
 	--darker:	#16181D;
+	--darkest:	#02040A;
 	--red:		#E06C75;
 	--yellow:	#E5C07B;
 	--blue:		#61AFEF;
@@ -14,7 +15,8 @@
 
 @layer base {
 	body {
-		@apply flex flex-col flex-wrap bg-(--darker) text-(--white) h-screen overflow-hidden;
+		@apply flex flex-col flex-wrap bg-(--darker) text-(--white) h-screen 
+		overflow-hidden;
 	}
 	
 
@@ -25,8 +27,6 @@
 	main {
 		@apply flex-1 flex justify-center flex-col items-center gap-6;
 	}
-
-
 }
 
 
@@ -122,9 +122,13 @@
 }
 
 .user-menu #user-menu-container {
-	@apply right-10 -bottom-20 px-3 py-2 w-35 bg-(--dark) border-2 border-(--purple) rounded-md  absolute;
+	@apply right-10 -bottom-20 px-3 py-2 w-35 bg-(--dark) border-2 border-(--green) absolute;
 }
 
 .hide {
-	@apply opacity-0;
+	@apply hidden;
+}
+
+.btn {
+	@apply text-(--white) p-1 hover:bg-(--white) hover:text-(--darker) rounded-none transition-none;
 }

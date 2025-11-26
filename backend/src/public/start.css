@@ -7,11 +7,11 @@
 }
 
 .play-menu {
-	@apply flex flex-1 flex-col items-center;
+	@apply flex flex-1 flex-col items-center gap-5;
 }
 
 .play-menu button {
-	@apply	text-5xl px-6 py-4 w-fit font-bold hover:underline;
+	@apply	text-5xl w-fit font-bold;
 }
 
 .user {

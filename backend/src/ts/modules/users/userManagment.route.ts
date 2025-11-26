@@ -32,6 +32,12 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		return reply.code(res.code).send(res.data);
 	})
 
+	fastify.post('/guest_cli', async (request: any, reply: FastifyReply) => {
+		const res = await mgmt.createGuest();
+		return reply.code(res.code).send(res);
+	})
+
+
 	fastify.post('/create', async (request: any, reply: any) => {
 		const { email, passw, username } = request.body as {
 			email: string,

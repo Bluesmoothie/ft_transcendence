@@ -6,12 +6,12 @@ import { UserElement, UserElementType } from 'UserElement.js';
 enum Params
 {
 	PADDLE_HEIGHT = 15,
-	PADDLE_WIDTH = 2,
+	PADDLE_WIDTH = 1,
 	PADDLE_PADDING = 2,
 	BALL_SIZE = 2,
 	BACKGROUND_OPACITY = '0.4',
 	COLOR = '255, 255, 255',
-	COUNTDOWN_START = 3,
+	COUNTDOWN_START = 1,
 	IPS = 60,
 }
 
@@ -90,7 +90,7 @@ export class GameClient extends Utils
 	private init(): void
 	{
 		const section = document.querySelector('.game') as HTMLDivElement;
-		this.HTMLelements.set('game', section);
+		this.HTMLelements.set('GAME', section);
 		Array.from(section.children).forEach((child) =>
 		{
 			const element = child as HTMLDivElement;
