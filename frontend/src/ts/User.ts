@@ -4,8 +4,6 @@ import { UserElement, UserElementType } from './UserElement.js';
 // *********************** TODO *********************** //
 // Add settings page									//
 // view user profile									//
-// match history										//
-// stats (win loses, winrate, etc)						//
 // default avatar										//
 // **************************************************** //
 
@@ -26,7 +24,7 @@ async function getUserInfoFromId(id: string): Promise<Response> {
 	return response;
 }
 
-async function getUserFromId(id: string): Promise<User> {
+export async function getUserFromId(id: string): Promise<User> {
 	const response = await getUserInfoFromId(id);
 	if (response.status != 200)
 		return null
@@ -76,6 +74,7 @@ export class User {
 	public getFriends(): User[] { return this.m_friends; }
 	public getPndgFriends(): User[] { return this.m_pndgFriends; }
 	public getId(): number { return this.m_id; }
+	public getEmail(): string { return this.m_email; }
 	// public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
 	public getAvatarPath(): string { return this.m_avatarPath; }
 
@@ -177,7 +176,7 @@ export class User {
 
 		});
 		var data = await response.json();
-		this.m_avatarPath = "/api/images/" + data.filename;
+		this.m_avatarPath = "/public/avatars/" + data.filename;
 
 		return response;
 	}
@@ -199,12 +198,15 @@ export class MainUser extends User {
 		super()
 		this.m_htmlFriendContainer = friendsContainer;
 		this.m_htmlPndgFriendContainer = pndgFriendsContainer;
-		this.m_userElement = new UserElement(null, parent, UserElementType.MAIN);
 		this.m_friendsElements = [];
 		this.m_pndgFriendsElements = [];
-
-		this.m_userElement.getBtn2().addEventListener("click", () => this.logout());
-		this.m_userElement.getStatusSelect().addEventListener("change", () => this.updateStatus(this.m_userElement.getStatusSelect().value, this, this.m_userElement));
+		
+		if (parent)
+		{
+			this.m_userElement = new UserElement(null, parent, UserElementType.MAIN);
+			this.m_userElement.getBtn2().addEventListener("click", () => this.logout());
+			this.m_userElement.getStatusSelect().addEventListener("change", () => this.updateStatus(this.m_userElement.getStatusSelect().value, this, this.m_userElement));
+		}
 
 		this.m_onLoginCb = [];
 		this.m_onLogoutCb = [];
@@ -240,7 +242,7 @@ export class MainUser extends User {
 	{
 		const response = await fetch("/api/user/get_session");
 		const data = await response.json();
-		console.log(response.status, data);
+		console.log("get session: ", response.status, data);
 
 		if (response.status == 200) {
 			var status = data.status;
@@ -252,7 +254,7 @@ export class MainUser extends User {
 		}
 	}
 
-	public async login(email: string, passw: string): Promise<{ status: number, data: any }> {
+	public async login(email: string, passw: string, totp: string): Promise<{ status: number, data: any }> {
 		if (this.getId() != -1)
 			return { status: -1, data: null };
 
@@ -264,6 +266,7 @@ export class MainUser extends User {
 			body: JSON.stringify({
 				email: email,
 				passw: await hashString(passw),
+				totp: totp
 			})
 		});
 		const data = await response.json();
@@ -274,8 +277,10 @@ export class MainUser extends User {
 	public async logout()
 	{
 		await this.logoutDB();
-		this.m_userElement.updateHtml(null);
-		this.m_htmlFriendContainer.innerHTML = ""; // destroy all child
+		if (this.m_userElement)
+			this.m_userElement.updateHtml(null);
+		if (this.m_htmlFriendContainer)
+			this.m_htmlFriendContainer.innerHTML = ""; // destroy all child
 		this.m_friendsElements = [];
 
 		this.m_onLogoutCb.forEach(cb => cb(this));
@@ -287,7 +292,8 @@ export class MainUser extends User {
 			return;
 		await this.updateSelf();
 		await this.updateFriendContainer();
-		this.m_userElement.updateHtml(this);
+		if (this.m_userElement)
+			this.m_userElement.updateHtml(this);
 	}
 
 	private async updateStatus(newStatus: string, user: User, userHtml: UserElement)
@@ -323,7 +329,8 @@ export class MainUser extends User {
 			return 2;
 
 		await this.uploadAvatar(file);
-		this.m_userElement.updateHtml(this);
+		if (this.m_userElement)
+			this.m_userElement.updateHtml(this);
 
 		return 0;
 	}
@@ -345,7 +352,6 @@ export class MainUser extends User {
 		await this.updateSelf();
 		await this.updateFriendContainer();
 
-		const data = await response.json();
 		return response;
 	}
 
@@ -401,5 +407,58 @@ export class MainUser extends User {
 		await this.updateFriendContainer();
 
 		return status;
+	}
+
+	public async newTotp() : Promise<{status: number, data: any}>
+	{
+		if (this.getId() == -1)
+			return null;
+
+		var response = await fetch("/api/totp/reset", {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				user_id: this.getId().toString(),
+				email: this.getEmail(),
+			})
+			
+		});
+		var data = await response.json();
+		return { status: response.status, data: data };
+	}
+
+	public async delTotp() : Promise<number>
+	{
+		if (this.getId() == -1)
+			return 404;
+
+		var response = await fetch("/api/totp/remove", {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				user_id: this.getId().toString(),
+			})
+			
+		});
+
+		return response.status;
+	}
+
+	public async validateTotp(totp: string) : Promise<number>
+	{
+		if (this.getId() == -1)
+			return 404;
+
+		var response = await fetch("/api/totp/validate", {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				user_id: this.getId().toString(),
+				totp: totp,
+			})
+			
+		});
+
+		return response.status;
 	}
 }

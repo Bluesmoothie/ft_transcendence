@@ -47,18 +47,18 @@ export class GameServer
 				if (mode === 'local')
 				{
 					const gameId = crypto.randomUUID();
-					const opponentName = 'Guest';
-					const game = new GameInstance(mode, name, opponentName);
+					const opponentId = 'Guest';
+					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
-					reply.status(201).send({ gameId, opponentName, playerId: '1' });
+					reply.status(201).send({ gameId, opponentId: opponentId, playerId: '1' });
 				}
 				else if (mode === 'online')
 				{
 					if (this.playerPending)
 					{
 						const gameId = crypto.randomUUID();
-						this.playerPending.reply.status(201).send({ gameId, opponentName: name, playerId: 1 });
-						reply.status(201).send({ gameId, opponentName: this.playerPending.name, playerId: 2 });
+						this.playerPending.reply.status(201).send({ gameId, opponentId: name, playerId: 1 });
+						reply.status(201).send({ gameId, opponentId: this.playerPending.name, playerId: 2 });
 						this.activeGames.set(gameId, new GameInstance(mode, this.playerPending.name, name));
 						this.playerPending = null;
 					}
@@ -70,10 +70,10 @@ export class GameServer
 				else if (mode === 'bot')
 				{
 					const gameId = crypto.randomUUID();
-					const opponentName = 'Bot';
-					const game = new GameInstance(mode, name, opponentName);
+					const opponentId = 'Bot';
+					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
-					reply.status(201).send({ gameId, opponentName, playerId: '1' });
+					reply.status(201).send({ gameId, opponentId: opponentId, playerId: '1' });
 				}
 				else
 				{
@@ -100,11 +100,11 @@ export class GameServer
 				if (game)
 				{
 					game.running = true;
-					reply.status(200).send({ message: 'Game started' });
+					reply.status(200).send(game.state);
 
 					if (game.mode === 'bot')
 					{
-						this.bots.set(gameId, new Bot(gameId));
+						this.bots.set(gameId, new Bot(gameId, game.reversedBuffer));
 					}
 				}
 				else
@@ -134,8 +134,22 @@ export class GameServer
 					throw new Error(`Game ${gameId} not found`);
 				}
 
+				let time = Date.now();
 				const send = () =>
 				{
+					if (game.mode === 'bot' && playerId === '2')
+					{
+						if (game.scoreUpdated || Date.now() - time > GameServer.BOT_FPS_INTERVAL)
+						{
+							time = Date.now();
+							game.scoreUpdated = false;
+						}
+						else
+						{
+							return ;
+						}
+					}
+
 					switch (playerId)
 					{
 						case '1':
@@ -155,7 +169,7 @@ export class GameServer
 					}
 				};
 
-				const intervalTime = (game.mode === 'bot' && playerId === '2') ? GameServer.BOT_FPS_INTERVAL : GameServer.FPS_INTERVAL;
+				const intervalTime = GameServer.FPS_INTERVAL;
 				const interval = setInterval(send, intervalTime);
 
 				connection.on('message', (message) =>

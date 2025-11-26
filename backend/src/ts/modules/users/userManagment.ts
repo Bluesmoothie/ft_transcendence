@@ -3,19 +3,23 @@ import { pipeline } from 'stream/promises';
 import { createWriteStream } from 'fs';
 import path from 'path';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { randomBytes } from "crypto";
 
 import * as core from '@core/core.js';
 import { DbResponse, uploadDir } from "@core/core.js";
 import { getUserById, getUserByName } from "./user.js";
-import { getFriends } from "./friends.js";
+import { hashString } from "@modules/sha256.js";
+import { check_totp } from "@modules/2fa/totp.js";
+import { AuthSource } from "@modules/oauth2/routes.js";
+
 
 function validate_email(email:string)
 {
 	return String(email)
-    .toLowerCase()
-    .match(
-      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-    );
+	.toLowerCase()
+	.match(
+		/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+	);
 }
 
 export interface UserUpdate {
@@ -26,27 +30,36 @@ export interface UserUpdate {
 	email:		string;
 }
 
-function hash_string(name: string)
+export async function createGuest(): Promise<DbResponse>
 {
-	let hash = 0;
 
-	for	(let i = 0; i < name.length; i++)
+	const sql = "INSERT INTO users (name, source) VALUES (?, ?) RETURNING id";
+	try
 	{
-		let c = name.charCodeAt(i);
-		hash = ((hash << 5) - hash) + c;
-		hash = hash & hash;
+		const highest = await core.db.get("SELECT MAX(id) FROM users;");
+		console.log(highest["MAX(id)"]);
+		const rBytes = randomBytes(8).toString('hex');
+		const name = `guest${highest["MAX(id)"]}${rBytes}`;
+		const id = await core.db.get(sql, [name, AuthSource.GUEST]);
+		return { code: 200, data: id};
 	}
-	return hash;
+	catch (err)
+	{
+		console.error(`database err: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+
 }
 
 export async function loginSession(id: string, db: Database) : Promise<DbResponse>
 {
 	var sql = 'UPDATE users SET is_login = 1 WHERE id = ? RETURNING *';
 
+	console.log("id:", id);
 	try {
 		const row = await core.db.get(sql, [id]);
 		if (!row)
-			return { code: 404, data: { message: "email or password invalid"}};
+			return { code: 404, data: { message: "user not found"}};
 		return { code: 200, data: row};
 	}
 	catch (err) {
@@ -55,7 +68,7 @@ export async function loginSession(id: string, db: Database) : Promise<DbRespons
 	}
 }
 
-export async function login(email: string, passw: string, db: Database) : Promise<DbResponse>
+export async function login(email: string, passw: string, totp: string, db: Database) : Promise<DbResponse>
 {
 	var sql = 'UPDATE users SET is_login = 1 WHERE email = ? AND passw = ? RETURNING *';
 
@@ -63,6 +76,11 @@ export async function login(email: string, passw: string, db: Database) : Promis
 		const row = await core.db.get(sql, [email, passw]);
 		if (!row)
 			return { code: 404, data: { message: "email or password invalid"}};
+		else if (row.totp_enable == 1 && !check_totp(row.totp_seed, totp))
+			return { code: 404, data: { message: "totp invalid"}};
+		if (row.source == AuthSource.GUEST)
+			return { code: 404, data: { message: "cannot login as guest profile"}};
+
 		return { code: 200, data: row};
 	}
 	catch (err) {
@@ -117,6 +135,9 @@ export async function createUser(email: string, passw: string, username: string,
 
 	if (!validate_email(email))
 		return { code: 403, data: { message: "error: email not valid" }};
+	const res = await getUserByName(username, core.db);	
+	if (res.code != 404)
+		return { code: 409, data: { message: "alias already taken" }};
 
 	try {
 		const result = await db.run(sql, [username, email, passw, source]);
@@ -146,18 +167,47 @@ export async function updateUser(update: UserUpdate, db: Database) : Promise<DbR
 	}
 }
 
-// TODO: logout user => delete all user that where friends => delete from db
 export async function deleteUser(user_id: number, db: Database) : Promise<DbResponse>
 {
-	var res = await logoutUser(user_id, db);
+	var res = await getUserById(user_id, db);
 	if (res.code != 200)
-		return res;
+	{
+		console.error("login out none existing user in logoutUser? id:", user_id);
+		return res; // should not happen
+	}
+	if (res.data.source != AuthSource.GUEST)
+	{
+		res = await logoutUser(user_id, db);
+		if (res.code != 200)
+			return res;
+	}
 
-	return null;
+	const rBytes = randomBytes(64).toString('hex');
+	const name = `DELETED_USER${user_id}${randomBytes(2).toString('hex')}`
+	console.log(rBytes);
+	const sql = "UPDATE users SET name = ?, email = ?, passw = ? WHERE id = ? oauth_id = ?"; // TODO: to continue;
+	try
+	{
+		const result = await db.run(sql, [name, rBytes, rBytes, user_id, rBytes]);
+		console.log(`user has been deleted ${result.changes}`)
+		return { code: 200, data: { message: "Success" }};
+	}
+	catch (err)
+	{
+		console.log(`Database Error: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
 }
 
 export async function logoutUser(user_id: number, db: Database) : Promise<DbResponse>
 {
+	const res = await getUserById(user_id, db);
+	if (res.code != 200)
+	{
+		console.error("login out none existing user in logoutUser? id:", user_id);
+		return res; // should not happen
+	}
+
 	const sql = "UPDATE users SET is_login = 0 WHERE id = ?";
 
 	try {
@@ -206,17 +256,17 @@ export async function uploadAvatar(request: any, reply: any, db: Database)
 	if (!data)
 		return reply.code(400).send({ error: "no file uploaded" });
 
-    const email = request.headers['email'] as string;
-	const filename = hash_string(email).toString();
-	const filepath = path.join(uploadDir, filename);
-    const id = request.headers['id'] as string;
+	const email = request.headers['email'] as string;
+	const filename = await hashString(email);
+	const filepath = path.join("/var/www/server/public/avatars/", filename);
+	const id = request.headers['id'] as string;
 
 	try
 	{
 		await pipeline(data.file, createWriteStream(filepath));
 
 		const sql = "UPDATE users SET avatar = ? WHERE id = ?";
-		await db.run(sql, ["/api/images/" + filename , id]);
+		await db.run(sql, ["/public/avatars/" + filename , id]);
 
 		console.log(`${email} has changed is avatar. location=${filepath}`);
 

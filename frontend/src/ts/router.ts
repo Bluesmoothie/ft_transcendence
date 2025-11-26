@@ -3,19 +3,29 @@ import { GameMenu } from 'pages/GameMenu.js';
 import { GameClient } from 'pages/GameClient.js';
 import { TournamentMenu } from 'pages/TournamentMenu.js';
 import { Tournament } from 'pages/Tournament.js';
+import { User } from "User.js";
+import { UserElement } from 'UserElement.js';
 
 export class Router
 {
 	private static readonly EXIT_KEY: string = 'Escape';
 	private static readonly HOME_KEY: string = 'h';
+	private static readonly GAME_KEY: string = 'g';
+	private static readonly GAME_ONLINE_KEY: string = 'o';
+	private static readonly GAME_LOCAL_KEY: string = 'l';
+	private static readonly GAME_BOT_KEY: string = 'b';
+	private static readonly TOURNAMENT_KEY: string = 't';
 
 	currentPage: string = 'home';
 	currentClass: any = null;
 	pages: Map<string, HTMLDivElement> = new Map();
 	gameInstance: GameClient | null = null;
+	m_user:			User;
+	m_player1:		UserElement;
 
-	constructor()
+	constructor(user: User = null)
 	{
+		this.m_user = user;
 		this.loadPages();
 		this.setUpWindowEventListeners();
 		this.showPage(this.currentPage, null);
@@ -27,11 +37,11 @@ export class Router
 
 		pageElements.forEach(element =>
 		{
-			const pageName = element.getAttribute('class');
+			const pageName = element.getAttribute('id');
 			if (pageName)
 			{
 				this.pages.set(pageName, element);
-				this.pages.get(pageName)!.style.display = 'none';
+				element.classList.add('hidden');
 			}
 		});
 	}
@@ -46,13 +56,29 @@ export class Router
 
 		window.addEventListener('keydown', (e) =>
 		{
-			if (e.key === Router.EXIT_KEY)
+			switch (e.key)
 			{
-				history.back();
-			}
-			else if (e.key === Router.HOME_KEY)
-			{
-				this.navigateTo('home', '');
+				case Router.EXIT_KEY:
+					history.back();
+					break ;
+				case Router.HOME_KEY:
+					this.navigateTo('home', '');
+					break ;
+				case Router.GAME_KEY:
+					this.navigateTo('game-menu', '');
+					break ;
+				case Router.GAME_ONLINE_KEY:
+					this.navigateTo('game', 'online');
+					break ;
+				case Router.GAME_LOCAL_KEY:
+					this.navigateTo('game', 'local');
+					break ;
+				case Router.GAME_BOT_KEY:
+					this.navigateTo('game', 'bot');
+					break ;
+				case Router.TOURNAMENT_KEY:
+					this.navigateTo('tournament-menu', '');
+					break ;
 			}
 		});
 	}
@@ -70,8 +96,8 @@ export class Router
 			this.currentClass.destroy();
 		}
 
-		this.pages.get(this.currentPage)!.style.display = 'none';
-		this.pages.get(page)!.style.display = 'flex';
+		this.pages.get(this.currentPage)!.classList.add('hidden');
+		this.pages.get(page)!.classList.remove('hidden');
 		this.currentPage = page;
 		this.currentClass = this.getClass(mode);
 	}
@@ -85,7 +111,7 @@ export class Router
 			case 'game-menu':
 				return (new GameMenu(this));
 			case 'game':
-				return (new GameClient(mode!));
+				return (new GameClient(mode!, this.m_user));
 			case 'tournament-menu':
 				return (new TournamentMenu(this));
 			case 'tournament':
@@ -95,5 +121,3 @@ export class Router
 		}
 	}
 }
-
-new Router();

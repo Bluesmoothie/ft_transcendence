@@ -11,14 +11,32 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		if (request.session.user) {
 			console.log("user is already auth");
 			const res = await mgmt.loginSession(request.session.user, core.db);
+			console.log(res);
 			return reply.code(res.code).send(res.data);
 		}
 
 		else {
-			console.log("user not loggin");
+			console.log("user not login");
 			return reply.code(404).send({ message: "user need to login" });
 		}
 	})
+
+	fastify.post('/create_guest', async (request: any, reply: FastifyReply) => {
+		const res = await mgmt.createGuest();
+		if (res.code == 200)
+		{
+			request.session.user = res.data.id;
+			return reply.code(res.code).send({ message: "Success" });
+		}
+
+		return reply.code(res.code).send(res.data);
+	})
+
+	fastify.post('/guest_cli', async (request: any, reply: FastifyReply) => {
+		const res = await mgmt.createGuest();
+		return reply.code(res.code).send(res);
+	})
+
 
 	fastify.post('/create', async (request: any, reply: any) => {
 		const { email, passw, username } = request.body as {
@@ -31,8 +49,8 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 	})
 
 	fastify.post('/login', async (request: any, reply: FastifyReply) => {
-		const { email, passw } = request.body as { email: string, passw: string };
-		const res = await mgmt.login(email, passw, core.db);
+		const { email, passw, totp } = request.body as { email: string, passw: string, totp: string };
+		const res = await mgmt.login(email, passw, totp, core.db);
 		if (res.code == 200)
 		{
 			request.session.user = res.data.id;
@@ -54,8 +72,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		const { user_id } = request.body as { user_id: number }
 
 		const res = await mgmt.deleteUser(user_id, core.db);
-
-		
+		return reply.code(res.code).send(res.data);
 	})
 
 	fastify.post('/set_status', async (request:any, reply:any) => {
