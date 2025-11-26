@@ -1175,6 +1175,7 @@ dependencies = [
  "crossterm 0.29.0",
  "env",
  "reqwest",
+ "serde_json",
  "terminal",
  "tokio",
 ]
