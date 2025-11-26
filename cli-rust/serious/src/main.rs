@@ -1,7 +1,13 @@
 use std::{
   io::{Write, stdout, Stdout},
   time::Duration,
+  future::Future
 };
+
+use std::thread::sleep;
+use serde_json::Value;
+
+use reqwest::{Client};
 
 mod welcome;
 use crate::welcome::{global_setup, game_setup};
@@ -17,6 +23,7 @@ use crossterm::{
   style::*,
   terminal,
   ExecutableCommand,
+  QueueableCommand,
 };
 
 pub const NUM_ROWS: u16 = 30;
@@ -25,15 +32,20 @@ struct infos {
   original_size: (u16, u16),
   location: String,
 }
-
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
   let mut stdout: Stdout = stdout();
 
   let original_size = terminal::size()?;
-  let location = get_location();
-  match create-guest-session(&location) {
-    
-  };
+  let mut location = get_location();
+  location = format!("https://{location}");
+  println!("{location}");
+  create_guest_session(&location, &stdout).await.unwrap();
+//   {
+//     Ok(ret) => println!("{:?}", ret),
+//     _ => {eprintln!("Errooooor"); std::process::exit(2)},
+//   };
+    sleep(Duration::from_secs(3));
   let game_main: infos = infos {original_size, location};
   global_setup(&stdout)?;
   // set_welcome(&stdout)?;
@@ -67,8 +79,26 @@ fn main() -> Result<()> {
 
 }
 
+async fn create_guest_session(location: &String, mut stdout: &Stdout) -> Result<()> {
+    let apiloc = format!("{location}/api/user/guest_cli");
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .unwrap();
+    let res = client.post(apiloc)
+        .send()
+        .await
+        .unwrap();
+
+    let value: serde_json::Value = res.json().await.unwrap();
+    let return_value = &value["data"]["id"];
+    println!("HERE WE ARE {:?}", value);
+    println!("return val {}", return_value);
+    Ok(())
+}
+
 fn get_location() -> String {
-    let mut args = env::args();
+    let mut args = std::env::args();
     args.next();
     let first = match args.next() {
         Some(addr) => addr,
