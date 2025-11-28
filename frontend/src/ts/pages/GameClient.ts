@@ -1,6 +1,7 @@
 import { Utils } from './Utils.js';
 import { GameState } from './GameState.js';
-import { getUserFromId, User } from 'User.js';
+import { User, getUserFromId } from 'User.js';
+import { Chat } from 'modules/chat.js';
 import { UserElement, UserElementType } from 'UserElement.js';
 
 enum Params
@@ -63,7 +64,7 @@ export class GameClient extends Utils
 	private socket :		WebSocket | null = null;
 	private interval:		any | null = null;
 	private end:			boolean = false;
-	private playerId:		string | null = null;
+	private playerSide:		string | null = null;
 	private keysToSend:		string = '';
 
 	private m_user:				User | null;
@@ -74,7 +75,7 @@ export class GameClient extends Utils
 	private	m_prevP1Score:		number;
 	private	m_prevP2Score:		number;
 
-	constructor(private mode: string, user: User = null)
+	constructor(private mode: string, user: User = null, chat: Chat = null)
 	{
 		super();
 
@@ -87,6 +88,8 @@ export class GameClient extends Utils
 
 		this.m_user = user;
 		this.createPlayerHtml();
+		if (chat)
+			chat.onGameCreated((json) => this.createGameFeedback(json));
 
 		if (this.isModeValid())
 		{
@@ -142,6 +145,18 @@ export class GameClient extends Utils
 		// }
 	}
 
+	private async createGameFeedback(json: any)
+	{
+		this.gameId = json.gameId.toString();
+		this.m_user2 = await getUserFromId(json.opponentId.toString());
+		this.playerSide = json.playerSide;
+		console.log(this.playerSide);
+		this.createPlayerHtml();
+		this.m_player2.updateHtml(this.m_user2);
+
+		this.launchCountdown();
+	}
+
 	private async createGame(): Promise<void>
 	{
 		try
@@ -155,11 +170,14 @@ export class GameClient extends Utils
 				body: JSON.stringify({ mode: this.mode, playerName: this.m_user.getId() }),
 			});
 
+			if (response.status == 202)
+				return ;
+
 			const data = await response.json();
 			console.log(data);
 			this.gameId = data.gameId;
-			this.playerId = data.playerId;
-			
+			this.playerSide = data.playerSide;
+
 			this.m_user2 = await getUserFromId(data.opponentId);
 			this.createPlayerHtml();
 			this.m_player2.updateHtml(this.m_user2);
@@ -213,6 +231,8 @@ export class GameClient extends Utils
 
 	private async startGame(): Promise<void>
 	{
+
+		console.log(this.playerSide);
 		const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
 		{
 			method: 'POST',
@@ -226,7 +246,7 @@ export class GameClient extends Utils
 
 		this.updateGameState(await response.arrayBuffer());
 
-		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerId}`);
+		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerSide}`);
 		this.socket.binaryType = 'arraybuffer';
 
 		this.socket.onopen = () =>
@@ -264,7 +284,7 @@ export class GameClient extends Utils
 		{
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ gameId: this.gameId, playerId: this.playerId }),
+			body: JSON.stringify({ gameId: this.gameId, playerId: this.playerSide }),
 		});
 
 		this.destroy();

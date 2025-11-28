@@ -129,11 +129,12 @@ export async function updateUserRank(userId: number, newRank: number, login: str
 		return { code: 403, data: { message: "permission denied" }}
 }
 
-export async function createUser(email: string, passw: string, username: string, source: number, db: Database) : Promise<DbResponse>
+export async function createUser(email: string, passw: string, username: string, source: AuthSource, db: Database) : Promise<DbResponse>
 {
 	const sql = 'INSERT INTO users (name, email, passw, source) VALUES (?, ?, ?, ?)';
+	console.log("creating", username);
 
-	if (!validate_email(email))
+	if (!validate_email(email) && source == AuthSource.INTERNAL)
 		return { code: 403, data: { message: "error: email not valid" }};
 	const res = await getUserByName(username, core.db);	
 	if (res.code != 404)
@@ -142,7 +143,7 @@ export async function createUser(email: string, passw: string, username: string,
 	try {
 		const result = await db.run(sql, [username, email, passw, source]);
 		console.log(`Inserted row with id ${result.lastID}`);
-		return { code: 200, data: { message: "Success" }};
+		return { code: 200, data: { message: "Success", id: result.lastID }};
 	}
 	catch (err) {
 		console.error(`database err: ${err}`);
@@ -250,6 +251,12 @@ export async function updateUserReq(request: FastifyRequest, reply: FastifyReply
 	return reply.code(result.code).send(result.data);
 }
 
+export async function updateAvatarPath(id: number, filename: string)
+{
+	const sql = "UPDATE users SET avatar = ? WHERE id = ?";
+	await core.db.run(sql, ["/public/avatars/" + filename , id]);
+}
+
 export async function uploadAvatar(request: any, reply: any, db: Database)
 {
 	const data = await request.file();
@@ -264,9 +271,7 @@ export async function uploadAvatar(request: any, reply: any, db: Database)
 	try
 	{
 		await pipeline(data.file, createWriteStream(filepath));
-
-		const sql = "UPDATE users SET avatar = ? WHERE id = ?";
-		await db.run(sql, ["/public/avatars/" + filename , id]);
+		await updateAvatarPath(Number(id), filename);
 
 		console.log(`${email} has changed is avatar. location=${filepath}`);
 

@@ -2,6 +2,8 @@
 
 sqlite3 /var/lib/sqlite/app.sqlite < /db.sql
 
+cp /bot-avatar.png /var/www/server/public/avatars/bot-avatar.png
+
 cd /var/www/server
 npm install
 npm run build

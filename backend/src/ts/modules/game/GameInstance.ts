@@ -1,4 +1,6 @@
+import { addGameToHist, GameRes } from '@modules/users/user.js';
 import { GameState } from './GameState.js';
+import * as core from 'core/core.js';
 
 enum Keys
 {
@@ -24,7 +26,7 @@ enum Parameters
 	MAX_ANGLE = 0.5,
 	SPEED = 1.0,
 	SPEED_INCREMENT = 0.05,
-	POINTS_TO_WIN = 3,
+	POINTS_TO_WIN = 1,
 	FPS = 60,
 	FRAME_TIME = 1000 / FPS,
 }
@@ -36,17 +38,18 @@ export class GameInstance
 	private _speed: number = Parameters.SPEED;
 	private _isRunning: boolean = false;
 	private _gameState: GameState = new GameState();
-	private _namePlayer1: string | null = null;
-	private _namePlayer2: string | null = null;
-	private _winner: string | null = null;
-	private _gameMode: string | null = null;
+	private _Player1Id: number | null = null;
+	private _Player2Id: number | null = null;
+	private _winner:	number | null = null;
+	private _gameMode:	string | null = null;
 	private _scoreUpdated: boolean = false;
 
-	constructor(gameMode: string, namePlayer1: string, namePlayer2: string)
+	constructor(gameMode: string, player1Id: number, player2Id: number)
 	{
 		this._gameMode = gameMode;
-		this._namePlayer1 = namePlayer1;
-		this._namePlayer2 = namePlayer2;
+		this._Player1Id = player1Id;
+		this._Player2Id = player2Id;
+		console.log(this._Player1Id, this._Player2Id);
 		this.normalizeSpeed();
 		this.gameLoop();
 	}
@@ -117,22 +120,26 @@ export class GameInstance
 		{
 			this._gameState.speedX = 0.5;
 			this._gameState.player1Score = this._gameState.player1Score + 1;
-			this.getWinner(this._gameState.player1Score, this._namePlayer1);
+			this.getWinner(this._gameState.player1Score, this._Player1Id);
 		}
 		else
 		{
 			this._gameState.speedX = -0.5;
 			this._gameState.player2Score = this._gameState.player2Score + 1;
-			this.getWinner(this._gameState.player2Score, this._namePlayer2);
+			this.getWinner(this._gameState.player2Score, this._Player2Id);
 		}
 	}
 
-	private getWinner(score: number, player: string | null): void
+	private getWinner(score: number, player: number | null): void
 	{
 		if (score >= Parameters.POINTS_TO_WIN)
 		{
 			this._winner = player;
 			this._isRunning = false;
+			console.log(`${player} won the game`);
+			var res: GameRes = { user1_id: this._Player1Id, user2_id: this._Player2Id, user1_score: this._gameState.player1Score, user2_score: this._gameState.player2Score};
+
+			addGameToHist(res, core.db);
 		}
 	}
 
@@ -265,12 +272,12 @@ export class GameInstance
 		this._isRunning = isRunning;
 	}
 
-	get winnerName(): string | null
+	get winnerName(): number | null
 	{
 		return (this._winner);
 	}
 
-	set winnerName(name: string | null)
+	set winnerName(name: number | null)
 	{
 		this._winner = name;
 	}
@@ -285,19 +292,19 @@ export class GameInstance
 		this._scoreUpdated = value;
 	}
 
-	set winner(value: string | null)
+	set winner(value: number | null)
 	{
 		this._winner = value;
 	}
 
-	get player1Name(): string | null
+	get player1Name(): number | null
 	{
-		return (this._namePlayer1);
+		return (this._Player1Id);
 	}
 
-	get player2Name(): string | null
+	get player2Name(): number | null
 	{
-		return (this._namePlayer2);
+		return (this._Player2Id);
 	}
 
 	public destroy(): void

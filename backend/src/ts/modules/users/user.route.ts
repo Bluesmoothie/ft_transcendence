@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import * as core from '@core/core.js';
 import * as user from '@modules/users/user.js'
+import { GameRes } from 'modules/users/user.js';
 
 export async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
@@ -23,9 +24,18 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 			user1_score:	number,
 			user2_score:	number,
 		};
-		var game = { user1_name, user2_name, user1_score, user2_score };
+		var user1_id: number, user2_id: number = -1;
 
-		const res = await user.addGameToHist(game, core.db);
+		var res = await user.getUserByName(user1_name, core.db);
+		if (res.code == 200)
+			user1_id = res.data.id;
+		var res = await user.getUserByName(user2_name, core.db);
+		if (res.code == 200)
+			user2_id = res.data.id;
+
+		var game: GameRes = { user1_id, user2_id, user1_score, user2_score };
+
+		res = await user.addGameToHist(game, core.db);
 		return reply.code(res.code).send(res.data);
 	})
 

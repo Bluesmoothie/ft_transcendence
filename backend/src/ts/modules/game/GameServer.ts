@@ -2,7 +2,9 @@ import { GameInstance } from './GameInstance.js';
 import { Bot } from './Bot.js';
 import { FastifyInstance } from 'fastify';
 import { FastifyReply } from 'fastify/types/reply';
-import { connect } from 'http2';
+import { getUserByName } from '@modules/users/user.js';
+import * as core from 'core/core.js';
+import { addPlayerToQueue } from '@modules/chat/chat.js';
 
 export class GameServer
 {
@@ -12,8 +14,8 @@ export class GameServer
 	private static readonly BOT_FPS_INTERVAL: number = 1000 / GameServer.BOT_FPS;
 
 	private server!: FastifyInstance;
-	private activeGames: Map<string, GameInstance> = new Map();
-	private playerPending: { reply: FastifyReply, name: string } | null = null;
+	public activeGames: Map<string, GameInstance> = new Map();
+	private playerPending: { reply: FastifyReply, name: number } | null = null;
 	private bots: Map<string, Bot> = new Map();
 
 	constructor(server: FastifyInstance)
@@ -38,48 +40,40 @@ export class GameServer
 
 	private createGame(): void
 	{
-		this.server.post('/api/create-game', (request, reply) =>
+		this.server.post('/api/create-game', async (request, reply) =>
 		{
 			try
 			{
-				const body = request.body as { mode: string; playerName: string };
+				const body = request.body as { mode: string; playerName: number};
 				const mode = body.mode;
 				const name = body.playerName;
 
 				if (mode === 'local')
 				{
 					const gameId = crypto.randomUUID();
-					const opponentId = 'Guest';
+					const opponentId = 0;
 					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
-					reply.status(201).send({ gameId, opponentId: opponentId, playerId: '1' });
+					return reply.status(201).send({ gameId, opponentId: opponentId, playerSide: '1' });
 				}
 				else if (mode === 'online')
 				{
-					if (this.playerPending)
-					{
-						const gameId = crypto.randomUUID();
-						this.playerPending.reply.status(201).send({ gameId, opponentId: name, playerId: 1 });
-						reply.status(201).send({ gameId, opponentId: this.playerPending.name, playerId: 2 });
-						this.activeGames.set(gameId, new GameInstance(mode, this.playerPending.name, name));
-						this.playerPending = null;
-					}
-					else
-					{
-						this.playerPending = { reply, name };
-					}
+					await addPlayerToQueue(Number(name), this);
+					return reply.code(202).send({ message: "added to queue" });
 				}
 				else if (mode === 'bot')
 				{
 					const gameId = crypto.randomUUID();
-					const opponentId = 'Bot';
+					const data = await getUserByName("bot", core.db);
+					const opponentId = data.data.id;
+					// const opponentId = "0";
 					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
-					reply.status(201).send({ gameId, opponentId: opponentId, playerId: '1' });
+					return reply.status(201).send({ gameId, opponentId: opponentId, playerSide: '1' });
 				}
 				else
 				{
-					reply.status(400).send({ error: 'Invalid game mode' });
+					return reply.status(400).send({ error: 'Invalid game mode' });
 				}
 			}
 			catch (error)
@@ -234,7 +228,7 @@ export class GameServer
 		{
 			try
 			{
-				const body = request.body as { playerName?: string; gameId?: string };
+				const body = request.body as { playerName?: number ; gameId?: string };
 				const name = body.playerName;
 
 				if (name && this.playerPending && this.playerPending.name === name)

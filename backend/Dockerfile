@@ -12,4 +12,9 @@ RUN chmod +x /entrypoint.sh
 COPY src/ /var/www/server
 COPY config.json /config.json
 
+RUN mkdir -p /var/www/server/public/avatars/
+COPY ./bot-avatar.png /bot-avatar.png
+
+WORKDIR /var/www/server
+
 CMD ["bash", "/entrypoint.sh"]

@@ -5,10 +5,9 @@ import { Router } from "router.js";
 console.log(document.getElementById("user-container"));
 var user: MainUser = new MainUser(document.getElementById("user-container"), null, null);
 await user.loginSession();
-new Router(user);
 
-// if (user.getId() == -1) // user not login
-// 	window.location.href = window.location.origin;
+if (user.getId() == -1) // user not login
+	window.location.href = window.location.origin;
 
 user.onLogout((user) => { window.location.href = window.location.origin })
 
@@ -75,6 +74,7 @@ function setPlaceholderTxt(msg: string)
 
 const chatInput: HTMLInputElement = document.getElementById("chat-in") as HTMLInputElement;
 const chat = new Chat(user, document.getElementById("chat-out"), chatInput);
+new Router(user, chat);
 
 document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAvatar);
 document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);

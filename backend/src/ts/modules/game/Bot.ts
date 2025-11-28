@@ -1,6 +1,8 @@
 import { GameState } from './GameState.js';
 import { GameInstance } from './GameInstance.js';
 import WebSocket from 'ws';
+import { getUserByName } from '@modules/users/user.js';
+import * as core from 'core/core.js';
 
 enum Keys
 {
@@ -25,9 +27,11 @@ export class Bot
 		this.start(gameId);
 	}
 
-	private init(gameState: ArrayBuffer)
+	private async init(gameState: ArrayBuffer)
 	{
-		this.gameInstance = new GameInstance('dev', 'Bot', 'Player');
+		const res = await getUserByName("bot", core.db);
+		
+		this.gameInstance = new GameInstance('dev', res.data.id, -1);
 		this.gameInstance.state = new GameState(gameState);
 		this.gameInstance.running = true;
 	}

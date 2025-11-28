@@ -4,6 +4,7 @@ import { GameClient } from 'pages/GameClient.js';
 import { TournamentMenu } from 'pages/TournamentMenu.js';
 import { Tournament } from 'pages/Tournament.js';
 import { User } from "User.js";
+import { Chat } from '@modules/chat';
 import { UserElement } from 'UserElement.js';
 
 export class Router
@@ -22,10 +23,12 @@ export class Router
 	gameInstance: GameClient | null = null;
 	m_user:			User;
 	m_player1:		UserElement;
+	m_chat:			Chat;
 
-	constructor(user: User = null)
+	constructor(user: User = null, chat: Chat = null)
 	{
 		this.m_user = user;
+		this.m_chat = chat;
 		this.loadPages();
 		this.setUpWindowEventListeners();
 		this.showPage(this.currentPage, null);
@@ -111,7 +114,7 @@ export class Router
 			case 'game-menu':
 				return (new GameMenu(this));
 			case 'game':
-				return (new GameClient(mode!, this.m_user));
+				return (new GameClient(mode!, this.m_user, this.m_chat));
 			case 'tournament-menu':
 				return (new TournamentMenu(this));
 			case 'tournament':

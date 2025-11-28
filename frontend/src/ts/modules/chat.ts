@@ -169,6 +169,8 @@ export class Chat
 	private m_user:			MainUser;
 	private	m_ws:			WebSocket;
 
+	private m_onStartGame:	Array<(json: any) => void>;
+
 	constructor(user: MainUser, chatbox: HTMLElement, chatInput: HTMLInputElement)
 	{
 		if (!chatbox || !chatInput || !user)
@@ -180,6 +182,7 @@ export class Chat
 		this.m_chatInput = chatInput;
 		this.m_user = user;
 		this.m_chatlog = [];
+		this.m_onStartGame = [];
 		user.onLogin((user: MainUser) => this.resetChat(user));
 		user.onLogout((user: MainUser) => this.resetChat(user));
 
@@ -190,6 +193,9 @@ export class Chat
 		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
 		chatInput.addEventListener("keypress", (e) => this.sendMsgFromInput(e));
 	}
+
+	public onGameCreated(cb: ((json: any) => void)) { this.m_onStartGame.push(cb); }
+
 	public getChatlog(): Message[]		{ return this.m_chatlog; }
 	public getChatbox(): HTMLElement	{ return this.m_chatbox; }
 	public getUser(): MainUser			{ return this.m_user; }
@@ -219,6 +225,11 @@ export class Chat
 		const username = json.username;
 		const message = json.message;
 
+		if (message == "START")
+		{
+			console.log(json);
+			this.m_onStartGame.forEach(cb => cb(json));
+		}
 		const user = new User();
 		user.setUser(-1, username, "", "", UserStatus.UNKNOW); // TODO: ajouter un user.ToJSON() et envoyer toutes les infos au serv
 		const newMsg = new Message(user, message);
