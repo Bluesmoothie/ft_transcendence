@@ -44,7 +44,7 @@ async fn enter_chat_room(location: &String, id: u64) -> Result<mpsc::Receiver<se
 				.unwrap()
 		);
 
-	let request = format!("wss://{}/api/chat?/userid={}", location, id);
+	let request = format!("wss://{}/api/chat?userid={}", location, id);
 	let (mut ws_stream, _) = connect_async_tls_with_config(
 			request,
 			None,
@@ -69,7 +69,7 @@ async fn   chat(mut ws_stream: WebSocketStream<MaybeTlsStream<TcpStream>>, sende
         Message::Text(text) => Some(text),
         _ => None,
     };
-    eprintln!("Message from chat room : {:#?}", message);
+    // eprintln!("Message from chat room : {:#?}", message);
 
     if let Some(msg) = message {
         let message: serde_json::Value = serde_json::from_str(msg.as_str())

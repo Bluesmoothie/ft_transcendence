@@ -48,7 +48,8 @@ struct Infos {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  let mut stdout: Stdout = stdout();
+  // let stdout = Arc::new(Mutex<Stdout>::new(stdout()));
+  let stdout = stdout();
 
   let original_size = terminal::size()?;
   let location = get_location();
@@ -58,6 +59,15 @@ async fn main() -> Result<()> {
   sleep(Duration::from_secs(1));
   let game_main = Infos {original_size, location, id: num, client};
   global_setup(&stdout)?;
+  tokio::spawn({ loop {
+    let event = event::read()?;
+
+    if should_exit(&event)? == true {
+      // eprintln!("here")
+      std::process::exit(1);
+      }
+    }
+});
 
   'drawing: loop {
       let event = event::read()?;

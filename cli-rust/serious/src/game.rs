@@ -3,7 +3,7 @@ use reqwest::{
 	Client,
 };
 
-use crossterm::event::{self, poll, Event, KeyCode, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers, poll};
 use futures_util::{StreamExt, SinkExt};
 use futures_util::stream::SplitSink;
 use std::time::Duration;
@@ -38,7 +38,7 @@ struct Game {
 	client: Client,
 	game_id: String,
 	opponent_id: u64,
-	player_id: u64,
+	player_side: u64,
 }
 
 // struct Infos {
@@ -114,14 +114,14 @@ pub async fn create_game<'a>(game_main: &Infos, stdout: &Stdout, mode: &str, mut
     //     .await
 	// 	.unwrap();
 	// let mgame_main.receiver;
-	// eprintln!("before");
-	eprintln!("Response: {:?}", response);
+	eprintln!("before");
 	let response = receiver.recv().await.unwrap();
+	eprintln!("Response received: {:?}", response);
 	
 	let game = match Game::new(game_main, response) {
 		Ok(game) => game,
 		Err(e) => {
-			// eprintln!("EEEEEEEEE: {:?}", e);
+			eprintln!("EEEEEEEEE: {:?}", e);
 			std::process::exit(1);
 		},
 	};
@@ -141,11 +141,12 @@ impl Game {
 			Some(id) => id,
 			None => return Err(anyhow::anyhow!("No opponent id in response")),
 		};
-		let player_id: u64 = match value["playerId"].as_u64() {
+		let player_side: u64 = match value["playerSide"].as_u64() {
 			Some(nbr) => nbr,
 			None => return Err(anyhow::anyhow!("No player Id in response")),
 		};
-		Ok(Game{location: info.location.clone(), id: info.id, client: info.client.clone(), game_id, opponent_id, player_id})
+		eprintln!("ok");
+		Ok(Game{location: info.location.clone(), id: info.id, client: info.client.clone(), game_id, opponent_id, player_side})
 	}
 	// async fn launch_countdown(&self) -> Result<()> {
 	// 	//3...2....1....0 -->
@@ -159,7 +160,7 @@ impl Game {
 		// eprintln!("POST RESPONSE  {:?}", toprint);
 		let body = toprint.text().await.unwrap();
 		// eprintln!("Body: {:?}", body);
-		let request = format!("wss://{}/api/game/{}/{}", self.location, self.game_id, self.player_id).into_client_request().unwrap();
+		let request = format!("wss://{}/api/game/{}/{}", self.location, self.game_id, self.player_side).into_client_request().unwrap();
 
 		let connector = Connector::NativeTls(
 			native_tls::TlsConnector::builder()
@@ -203,6 +204,8 @@ impl Game {
 		display(decoded, stdout);
 	}
 	fn decode(msg: Bytes, mut stdout: &Stdout) -> (f32, f32, f32, f32, f32, f32, u8, u8) {
+		//if msg.len() < 26 Error  
+		
 		let left_y: f32 = f32::from_le_bytes(msg[0..4].try_into().unwrap());
 		let right_y: f32 = f32::from_le_bytes(msg[4..8].try_into().unwrap());
 		let ball_x: f32 = f32::from_le_bytes(msg[8..12].try_into().unwrap());
@@ -223,18 +226,33 @@ impl Game {
 			return Err(anyhow::anyhow!("Error, parent task hung hup"));
 		});
 		loop {
-			let mut to_send = String::new();
 			let event = event::read()?;
 			// eprintln!("Event read");
 			if let Event::Key(key_event) = event {
-				let to_append: char = match key_event.code {
-					KeyCode::Up => 'U',
-					KeyCode::Down => 'D',
-					_ => return Ok(()),
+				match key_event.code {
+					KeyCode::Up => {loop {
+						let mut to_send = String::new();
+						let to_append = match key_event.kind {
+							KeyEventKind::Press => 'U',
+							KeyEventKind::Repeat => 'U',
+							KeyEventKind::Release => {break;}
+						};
+						to_send.push(to_append);
+						ws_write.send(to_send.into()).await?;
+					}},
+					KeyCode::Down =>{loop {
+						let mut to_send = String::new();
+						let to_append = match key_event.kind {
+							KeyEventKind::Press => 'D',
+							KeyEventKind::Repeat => 'D',
+							KeyEventKind::Release => {break;}
+						};
+						to_send.push(to_append);
+						ws_write.send(to_send.into()).await?;
+					}},
+					_ => {break Ok(()) ;},
 				};
-				to_send.push(to_append);
 			}
-			ws_write.send(to_send.into()).await?;
 		}
 	}
 }
