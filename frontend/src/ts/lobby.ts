@@ -18,12 +18,13 @@ const userMenuContainer = document.getElementById("user-menu-container");
 document.getElementById("user-menu-btn").addEventListener('click', () => {
 	userMenuContainer.classList.toggle("hide");
 });
-document.getElementById("logout_btn")?.addEventListener("click", () => user.logout());
 document.getElementById("banner")?.addEventListener("click", () => window.location.href = window.location.origin);
+document.getElementById("logout_btn")?.addEventListener("click", () => user.logout());
 document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAvatar);
 document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);
 document.getElementById("refresh_btn")?.addEventListener("click", () => user.refreshSelf());
-document.getElementById("chat_send_btn")?.addEventListener("click", () => chat.sendMsg(user, chatInput.value));
+document.getElementById("profile_btn")?.addEventListener("click", () => window.location.href = window.location.origin + "/profile");
+document.getElementById("settings_btn")?.addEventListener("click", () => window.location.href = window.location.origin + "/settings");
 
 setInterval(() => user.refreshSelf(), 60000);
 

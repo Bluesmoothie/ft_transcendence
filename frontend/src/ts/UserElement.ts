@@ -6,16 +6,7 @@ export enum UserElementType
 	STANDARD,			//
 	FRIEND,				// enable remove btn
 	FRIEND_PNDG,		// enable remove / accept btn
-}
-
-function newOption(optionName: string) : HTMLOptionElement
-{
-	var option: HTMLOptionElement;
-
-	option = document.createElement("option");
-	option.innerText = optionName;
-	option.value = optionName;
-	return option;
+	REQUEST,			// only show remove btn
 }
 
 export class UserElement
@@ -24,14 +15,14 @@ export class UserElement
 	private m_htmlStatusImg:	HTMLImageElement;
 	private m_htmlName:			HTMLElement;
 	private m_clone:			HTMLElement;
-
-	private m_htmlBtnContainer:	HTMLElement;
-	private m_htmlBtn1:			HTMLButtonElement;
-	private m_htmlBtn2:			HTMLButtonElement;
-	private m_htmlStatusSelect:	HTMLSelectElement;
+	private	m_user:				User;
+	private m_type:				UserElementType;
 
 	constructor(user: User, parent: HTMLElement, type: UserElementType, templateName: string = "user-profile-template")
 	{
+		this.m_user = null;
+		this.m_type = type;
+
 		const template = document.getElementById(templateName) as HTMLTemplateElement;
 		if (!template)
 		{
@@ -40,9 +31,6 @@ export class UserElement
 		}
 
 		this.m_clone = template.content.cloneNode(true) as HTMLElement;
-		this.m_htmlBtnContainer = this.m_clone.querySelector("#btn-container");
-		if (!this.m_htmlBtnContainer)
-			console.warn("no btn container found");
 
 		this.m_htmlAvatar = this.m_clone.querySelector("#avatar-img");
 		if (!this.m_htmlAvatar)
@@ -56,82 +44,64 @@ export class UserElement
 		if (!this.m_htmlName)
 			console.warn("no btn username txt found");
 
-		this.m_htmlBtn1 = document.createElement("button");
-		this.m_htmlBtn2 = document.createElement("button");
-		this.m_htmlStatusSelect = document.createElement("select")
-
-		this.m_htmlStatusSelect.prepend(newOption("available"));
-		this.m_htmlStatusSelect.prepend(newOption("unavailable"));
-		this.m_htmlStatusSelect.prepend(newOption("busy"));
-		this.m_htmlStatusSelect.prepend(newOption("in_game"));
-
 		parent.prepend(this.m_clone);
-
-		this.setType(type);
+		this.m_clone = parent.firstElementChild as HTMLElement;
 		this.updateHtml(user);
 	}
 
-	public getBtn1():			HTMLButtonElement { return this.m_htmlBtn1; }
-	public getBtn2():			HTMLButtonElement { return this.m_htmlBtn2; }
-	public getStatusSelect():	HTMLSelectElement { return this.m_htmlStatusSelect; }
-
-	public setType(type: UserElementType)
+	public getElement(id: string) : HTMLElement
 	{
-		switch (type)
+		return this.m_clone.querySelector(id);
+	}
+
+	public get clone()	{ return this.m_clone; }
+	public get user()	{ return this.m_user; }
+	public get type()	{ return this.m_type; }
+
+	public static setStatusColor(user: User, statusElt: HTMLElement)
+	{
+		if (!user)
 		{
-			case UserElementType.MAIN:
-				this.m_htmlBtnContainer.prepend(this.m_htmlStatusSelect);
+			statusElt.style.background = "black:"
+			return ;
+		}
+		switch (user.getStatus())
+		{
+			case UserStatus.UNKNOW:
+				statusElt.style.background = "black";
 				break;
-			case UserElementType.FRIEND:
-				this.m_htmlBtnContainer.prepend(this.m_htmlBtn1);	
-				this.m_htmlBtn1.innerText = "Remove Friend";
+			case UserStatus.UNAVAILABLE:
+				statusElt.style.background = "gray";
 				break;
-			case UserElementType.FRIEND_PNDG:
-				this.m_htmlBtnContainer.prepend(this.m_htmlBtn1);	
-				this.m_htmlBtn1.innerText = "Y";
-				this.m_htmlBtnContainer.prepend(this.m_htmlBtn2);	
-				this.m_htmlBtn2.innerText = "N";
+			case UserStatus.AVAILABLE:
+				statusElt.style.background = "green";
+				break;
+			case UserStatus.BUSY:
+				statusElt.style.background = "red";
+				break;
+			case UserStatus.INVISIBLE:
+				statusElt.style.background = "gray";
+				break;
+			case UserStatus.IN_GAME:
+				statusElt.style.background = "blue";
 				break;
 			default:
 				break;
 		}
 	}
 
-	public updateHtml(user:User) : void
+	public updateHtml(user: User) : void
 	{
+		UserElement.setStatusColor(user, this.m_htmlStatusImg);
 		if (!user)
 		{
-			this.m_htmlAvatar.src = ""; // TODO: add default avatar
+			this.m_htmlAvatar.src = "/public/avatars/default.png";
 			this.m_htmlName.innerText = "guest";
-			this.m_htmlStatusImg.style.background = "black";
 			return ;
 		}
 
 		this.m_htmlAvatar.src = user.getAvatarPath();
 		this.m_htmlName.innerText = user.name;
-
-		switch (user.getStatus())
-		{
-			case UserStatus.UNKNOW:
-				this.m_htmlStatusImg.style.background = "black";
-				break;
-			case UserStatus.UNAVAILABLE:
-				this.m_htmlStatusImg.style.background = "gray";
-				break;
-			case UserStatus.AVAILABLE:
-				this.m_htmlStatusImg.style.background = "green";
-				break;
-			case UserStatus.BUSY:
-				this.m_htmlStatusImg.style.background = "red";
-				break;
-			case UserStatus.INVISIBLE:
-				this.m_htmlStatusImg.style.background = "gray";
-				break;
-			case UserStatus.IN_GAME:
-				this.m_htmlStatusImg.style.background = "blue";
-				break;
-			default:
-				break;
-		}
+		this.m_user = user;
 	}
 }

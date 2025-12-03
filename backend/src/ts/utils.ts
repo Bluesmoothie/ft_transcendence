@@ -19,3 +19,8 @@ export function setCookie(name: string, value: any, exdays: any)
 	let expire = "expire=" + d.toUTCString();
 	document.cookie = name + "=" + value + ";" + expire + ";path=/";
 }
+
+export function getSqlDate()
+{
+	return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Paris"})).toISOString().slice(0, 19).replace('T', ' ');
+}

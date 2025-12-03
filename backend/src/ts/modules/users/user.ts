@@ -26,7 +26,8 @@ export async function updateUserStats(id: number, win: boolean, db: Database)
 
 export async function getUserByName(username: string, db: Database) : Promise<DbResponse>
 {
-	const sql = 'SELECT id, name, avatar, elo, status, is_login FROM users WHERE name = ?';
+	const sql = 'SELECT id, name, avatar, status, is_login, source, created_at, elo, games_played, wins, rank FROM users WHERE name = ?';
+
 	try {
 		const row = await db.get(sql, [username])
 		if (!row)
@@ -105,7 +106,7 @@ export async function getUserHistByName(request: FastifyRequest, reply: FastifyR
 
 export async function getUserById(user_id: number, db: Database) : Promise<DbResponse>
 {
-	const sql = 'SELECT id, name, avatar, status, is_login, source, rank FROM users WHERE id = ?';
+	const sql = 'SELECT id, name, avatar, status, is_login, source, created_at, elo, games_played, wins, rank FROM users WHERE id = ?';
 
 	try {
 		const row = await db.get(sql, [user_id])

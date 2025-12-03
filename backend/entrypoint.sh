@@ -2,7 +2,7 @@
 
 sqlite3 /var/lib/sqlite/app.sqlite < /db.sql
 
-cp /bot-avatar.png /var/www/server/public/avatars/bot-avatar.png
+cp /default.png /var/www/server/public/avatars/default.png
 
 cd /var/www/server
 npm install

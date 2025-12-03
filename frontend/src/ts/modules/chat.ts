@@ -44,13 +44,13 @@ export class Message
 		if (!senderTxt)
 			console.warn("no senderTxt found");
 
-		senderTxt.innerText = utils.applyMsgStyle(this.m_sender.name);
+		senderTxt.textContent = utils.applyMsgStyle(this.m_sender.name);
 		senderTxt.style.color = strToCol(this.m_sender.name);
 
 		const msgTxt = clone.querySelector("#message") as HTMLElement;
 		if (!msgTxt)
 			console.warn("no senderTxt found");
-		msgTxt.innerText = this.getMsg();
+		msgTxt.textContent= this.getMsg();
 
 		return clone;
 	}
@@ -76,7 +76,7 @@ export class Message
 				chat.getChatbox().innerHTML = "";
 				return true;
 			case "/help":
-				chat.displayMessage(utils.serverReply(utils.helpMsg()))
+				chat.displayMessage(utils.serverReply(utils.helpMsg))
 				return true;
 			case "/addFriend":
 				if (args.length != 2) return ;
@@ -84,13 +84,13 @@ export class Message
 				if (code == 404) chat.displayMessage(utils.serverReply("user not found"))
 				if (code == 200) chat.displayMessage(utils.serverReply("request sent"))
 				return true;
-			case "/getHist":
+			case "/hist":
 				if (args.length != 2) return ;
 				var response = await fetch(`/api/user/get_history_name/${args[1]}`, { method : "GET" })
 				var data = await response.json();
 				code = response.status;
 				if (code == 404) chat.displayMessage(utils.serverReply("no history"));
-				if (code == 200) chat.displayMessage(utils.serverReply(JSON.stringify(data)));
+				if (code == 200) chat.displayMessage(utils.serverReply(JSON.stringify(data, null, 2)));
 				return true;
 			case "/getfriends":
 				var res = await fetch(`/api/friends/get?user_id=${chat.getUser().getId()}`);

@@ -21,15 +21,6 @@ export class ServerSideRendering
 	{
 		this.server = server;
 		this.setupRoutes();
-
-		this.startPage = readFileSync(ServerSideRendering.pagePath + 'start.html', 'utf8');
-		// this.lobbyPage = readFileSync(ServerSideRendering.pagePath + 'lobby.html', 'utf8');
-		// this.loginPage = readFileSync(ServerSideRendering.pagePath + 'login.html', 'utf8');
-		// this.gamePage = readFileSync(ServerSideRendering.pagePath + 'game.html', 'utf8');
-
-		// this.startCss = readFileSync(ServerSideRendering.cssPath + 'start.css', 'utf8');
-		// this.globalCss = readFileSync(ServerSideRendering.cssPath + 'global.css', 'utf8');
-		// this.loginCss = readFileSync(ServerSideRendering.cssPath + 'login.css', 'utf8');
 	}
 
 	private setupRoutes(): void
@@ -37,6 +28,11 @@ export class ServerSideRendering
 		this.server.get('/login', (request, reply) =>
 		{
 			reply.type('text/html').sendFile('login.html');
+		});
+
+		this.server.get('/profile', (request, reply) =>
+		{
+			reply.type('text/html').sendFile('profile.html');
 		});
 
 		this.server.get('/lobby', (request, reply) =>

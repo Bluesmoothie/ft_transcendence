@@ -1,14 +1,17 @@
-export function getUrlVar()
+export function getUrlVar(): Map<string, string>
 {
 	const	url = window.location.href;
-	var		vars = {};
+	if (url.indexOf('?') == -1)
+		return new Map<string, string>();
+
+	var		vars: Map<string, string> = new Map<string, string>();
 	var		hashes = url.split("?")[1];
 	var		hash = hashes.split("&");
 
 	for (let i = 0; i < hash.length; i++)
 	{
 		var param = hash[i].split('=');
-		vars[param[0]] = param[1];
+		vars.set(param[0], param[1]);
 	}
 	return vars;
 }

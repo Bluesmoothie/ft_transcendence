@@ -63,10 +63,7 @@ export async function initFastify()
 	});
 
 	// create account for bot
-	const res = await createUser("", "", "bot", AuthSource.BOT, core.db);
-	
-	await updateAvatarPath(res.data.id, 'bot-avatar.png');
-
+	await createUser("", "", "bot", AuthSource.BOT, core.db);
 	await loadConfig("/config.json", core.db); // create default_users
 }
 
