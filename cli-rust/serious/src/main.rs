@@ -5,6 +5,10 @@ use std::{
   future::Future
 };
 
+use std::pin::Pin;    
+use std::boxed::Box;
+
+use futures_util::sink::drain;
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::WebSocketStream;
 use tokio::net::TcpStream;
@@ -17,7 +21,7 @@ use reqwest::{Client};
 
 mod welcome;
 mod game;
-use crate::welcome::{global_setup, game_setup};
+use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
 use crate::game::{create_game};
 
 mod login;
@@ -35,7 +39,7 @@ use crossterm::{
 
 pub const NUM_ROWS: u16 = 30;
 pub const NUM_COLS: u16 = 10;
-struct Infos {
+pub struct Infos {
   original_size: (u16, u16),
   location: String,
   id: u64,
@@ -49,95 +53,93 @@ struct Infos {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  if crossterm::event::supports_keyboard_enhancement()? {
-    eprintln!("Keyboard enhancement supporté"); 
-  } else {
-    eprintln!("PAS supporté !");
-  }
-  let original_size = terminal::size()?;
-  let for_signal = original_size.clone();
-  global_setup()?;
-  ctrlc_async::set_handler(move || {
-    eprintln!("here");
-    cleanup_and_quit(&for_signal).unwrap();
-  })?;
-  let location = get_location();
-  // location = format!("{location}");
-  // println!("{location}");
-  let (num, client, receiver) = create_guest_session(&location).await?;
-  sleep(Duration::from_secs(1));
+  if let Err(e) = setup_terminal() {
+    return Err(anyhow::anyhow!("{}", e));
+  };
+  let (original_size, location) = match get_infos_elements() {
+    Ok(result) => result,
+    Err(e) => {return Err(anyhow::anyhow!("{}", e));},
+  };
+  let (num, client, receiver) = match create_guest_session(&location).await {
+    Ok(res) => res,
+    Err(e) => {
+      clean_terminal(&original_size)?;
+      return Err(anyhow::anyhow!("{}", e));
+    },
+  };
   let game_main = Infos {original_size, location, id: num, client};
-
-  welcome_screen(&game_main, receiver).await?;
-      // if let Event::Resize(x, y) = event {
-      //   println!("HERE");
-      //   set_terminal_size();
-      // }
-
+  if let Err(e) = welcome_screen(&game_main, receiver).await {
+    clean_terminal(&game_main.original_size)?;
+    return Err(anyhow::anyhow!("{}", e));
+  };
   cleanup_and_quit(&original_size)?;
-
   Ok(())
-
 }
 
-async fn welcome_screen(game_main: &Infos, receiver: mpsc::Receiver<serde_json::Value>) -> Result<()> {
-    loop {
+pub async fn welcome_screen(game_main: &Infos, mut receiver: mpsc::Receiver<serde_json::Value>) -> Result<()> {
+  loop {
+    draw_welcome_screen()?;
       let event = event::read()?;
 
-      // if should_exit(&event)? == true {
-      //   cleanup_and_quit(&stdout, &game_main.original_size)?;
-      // }
-      // else 
-      if let Event::Key(key_event) = event {
+      if should_exit(&event)? == true {
+        cleanup_and_quit(&game_main.original_size)?;
+      }
+      else if let Event::Key(key_event) = event {
         if key_event.code == KeyCode::Char('1') {
-          game_loop(&game_main, receiver).await?;
-          break Ok(());
+          receiver = game_loop(&game_main, receiver).await?;
         } else if key_event.code == KeyCode::Char('2') {
 
-        } else if key_event.code == KeyCode::Char('3') {}
+        } else if key_event.code == KeyCode::Char('3') {
+
+        }
       }
     }
 }
 
-fn get_location() -> String {
+fn get_infos_elements() -> Result<((u16, u16), String)> {
+  let original_size = terminal::size()?;
+  let location = get_location()?;
+  Ok((original_size, location))
+} 
+
+fn get_location() -> Result<String> {
     let mut args = std::env::args();
     args.next();
     let first = match args.next() {
         Some(addr) => addr,
-        None => {
-            eprintln!("No argument provided");
-            std::process::exit(1);
+        _ => {
+            return Err(anyhow::anyhow!("no argument provided"));
         }
     };
-    first
+    Ok(first)
 }
 
-async fn game_loop<'a>(game_main: &'a Infos, receiver: mpsc::Receiver<serde_json::Value>) -> Result<()> {
-  game_setup()?;
+pub async fn game_loop(game_main: &Infos, mut receiver: mpsc::Receiver<serde_json::Value>) -> Result<mpsc::Receiver<serde_json::Value>> {
   
   loop {
+    game_setup()?;
     let event: Event = event::read()?;
 
-    // if should_exit(&event)? == true {
-    //   break cleanup_and_quit(&stdout, &game_main.original_size)?; //should quit
-    // } else 
-    if let Event::Key(key_event) = event {
-        if key_event.code == KeyCode::Char('1') {
-          break;
-        } else if key_event.code == KeyCode::Char('2') {
-          let _var = match create_game(&game_main, "online", receiver).await {
-            Ok(()) => (),
-            _ => return Err(anyhow::anyhow!("Error creating game")),
-          };
-          break;
-//          online game;
-        } else if key_event.code == KeyCode::Char('3') {
-          break;
-//          bot;
-        } 
+    if should_exit(&event)? == true {
+      cleanup_and_quit(&game_main.original_size)?; //should quit
+    } else if let Event::Key(key_event) = event {
+        match key_event.code {
+          KeyCode::Char('1') => {},
+          KeyCode::Char('2') => {receiver = create_game(&game_main, "online", receiver).await?;},
+          KeyCode::Char('3') => {},
+          KeyCode::Char('4') => {break Ok(receiver);},
+          _ => {}
+        }
+//         if key_event.code == KeyCode::Char('1') {
+//           // local game;
+//         } else if key_event.code == KeyCode::Char('2') {
+//           receiver = create_game(&game_main, "online", receiver).await?;
+// //          online game;
+//         } else if key_event.code == KeyCode::Char('3') {
+// //          bot;
+//         }
       }
   }
-  Ok(())
 }
 
 pub fn should_exit(event: &Event) -> Result<bool> {
@@ -158,6 +160,14 @@ pub fn cleanup_and_quit(original_size: &(u16, u16)) -> std::io::Result<()> {
   stdout().execute(PopKeyboardEnhancementFlags)?;
   terminal::disable_raw_mode()?;
   std::process::exit(0);
+}
+
+pub fn clean_terminal(original_size: &(u16, u16)) -> Result<()> {
+  stdout().execute(cursor::Show)?;
+  stdout().execute(terminal::LeaveAlternateScreen)?;
+  stdout().execute(terminal::SetSize(original_size.0, original_size.1))?;
+  stdout().execute(PopKeyboardEnhancementFlags)?;
+  terminal::disable_raw_mode()?;
   Ok(())
 }
 

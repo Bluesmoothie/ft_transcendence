@@ -17,6 +17,7 @@ use crossterm::{
 
 pub const NUM_ROWS: u16 = 90;
 pub const NUM_COLS: u16 = 30;
+
 const LOGO: &str = r#"
   ██████╗  ██████╗ ███╗   ██╗ ██████╗ 
   ██╔══██╗██╔═══██╗████╗  ██║██╔════╝ 
@@ -26,12 +27,8 @@ const LOGO: &str = r#"
   ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ 
   "#;
 
-pub fn global_setup() -> std::io::Result<()> {
-    setup_terminal()?;
+pub fn draw_welcome_screen() -> std::io::Result<()> {
     stdout().execute(terminal::Clear(terminal::ClearType::All))?;
-    stdout().execute(PushKeyboardEnhancementFlags(
-        KeyboardEnhancementFlags::REPORT_EVENT_TYPES
-    ))?;
     borders()?;
     draw_logo(LOGO)?;
     set_welcome_options()?;
@@ -40,17 +37,23 @@ pub fn global_setup() -> std::io::Result<()> {
 }
 
 pub fn game_setup() -> std::io::Result<()> {
-    clean_options()?;
+    stdout().execute(terminal::Clear(terminal::ClearType::All))?;
+    borders()?;
+    draw_logo(LOGO)?;
     set_game_options()?;
     stdout().flush()?;
     Ok(())
 }
 
-fn setup_terminal() -> std::io::Result<()> {
+pub fn setup_terminal() -> std::io::Result<()> {
     terminal::enable_raw_mode()?;
     stdout().execute(terminal::EnterAlternateScreen)?;
     stdout().execute(cursor::Hide)?;
     stdout().execute(terminal::SetSize(NUM_ROWS, NUM_COLS))?;
+    stdout().execute(terminal::Clear(terminal::ClearType::All))?;
+    stdout().execute(PushKeyboardEnhancementFlags(
+        KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+    ))?;
     Ok(())
 }
   
@@ -115,41 +118,16 @@ fn set_game_options() -> std::io::Result<()> {
     Ok(())
 }
 
-fn clean_options() -> std::io::Result<()> {
-    stdout()
-        .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 13))?
-        .queue(Print("                          "))?
-        .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 16))?
-        .queue(Print("                          "))?
-        .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 19))?
-        .queue(Print("                          "))?;
-    Ok(())
-}
-
-fn normalize(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> (u16, u16, u16, u16, f32, f32, u8, u8) {
-    let (left_y, right_y, ball_x, ball_y, speed_x, speed_y, player1_score, player2_score) = message;
-    let my_left_y = (left_y * NUM_COLS as f32 / 100.0) as u16;
-    let my_right_y = (right_y * NUM_COLS as f32 / 100.0) as u16;
-    let my_ball_y = (ball_y * NUM_COLS as f32 / 100.0) as u16;
-    let my_ball_x = (ball_x * NUM_ROWS as f32 / 100.0) as u16;
-    (my_left_y, my_right_y, my_ball_x, my_ball_y, speed_x, speed_y, player1_score, player2_score)
-}
-
-pub fn display(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> Result<()> {
-    stdout().execute(terminal::Clear(terminal::ClearType::All))?;
-    let normalized = normalize(message);
-    let (left_y, right_y, ball_x, ball_y, speed_x, speed_y, player1_score, player2_score) = normalized;
-    // borders(&stdout)?;
-    stdout()
-        .queue(cursor::MoveTo(ball_x, ball_y))?
-        .queue(Print("o"))?
-        .queue(cursor::MoveTo(1, left_y))?
-        .queue(Print("I"))?
-        .queue(cursor::MoveTo(NUM_ROWS - 1, right_y))?
-        .queue(Print("I"))?;
-    stdout().flush()?;
-    Ok(())
-}
+// fn clean_options() -> std::io::Result<()> {
+//     stdout()
+//         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 13))?
+//         .queue(Print("                          "))?
+//         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 16))?
+//         .queue(Print("                          "))?
+//         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 19))?
+//         .queue(Print("                          "))?;
+//     Ok(())
+// }
 
 	// PADDLE_HEIGHT = 15,
 	// PADDLE_WIDTH = 1,
