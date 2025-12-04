@@ -44,12 +44,7 @@ pub struct Infos {
   location: String,
   id: u64,
   client: Client,
-  // ws_stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
 }
-
-// impl Infos {
-//   fn clone(&self)
-// }
 
 #[tokio::main]
 async fn main() -> Result<()> {
