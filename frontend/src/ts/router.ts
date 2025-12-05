@@ -66,7 +66,7 @@ export class Router
 							method: "DELETE",
 							headers: { 'content-type': 'application/json' },
 							body: JSON.stringify({
-								id: this.m_user.getId()
+								id: this.m_user.id
 							})
 						});
 					history.back();

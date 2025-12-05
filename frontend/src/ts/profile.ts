@@ -6,7 +6,7 @@ import * as utils from 'utils.js'
 var main: MainUser = new MainUser(document.getElementById("user-container"), null, null);
 await main.loginSession();
 main.onLogout((user) => { window.location.href = window.location.origin })
-if (main.getId() == -1) // user not login
+if (main.id == -1) // user not login
 	window.location.href = window.location.origin;
 
 var user: User = main;
@@ -18,7 +18,68 @@ if (utils.getUrlVar().has("username"))
 
 const stats: Stats = user.stats;
 new FriendManager(user, "pndg-container", "friend-container", main);
+setBtn();
 addMatch();
+
+function replaceBtn()
+{
+
+	const addBtn = document.getElementById("main-btn-friend");
+	const blockBtn = document.getElementById("main-btn-block");
+
+	const clone = addBtn.cloneNode(true);
+
+	addBtn.parentNode.replaceChild(clone, addBtn);
+}
+
+function setBtn()
+{
+	replaceBtn();
+
+	const addBtn = document.getElementById("main-btn-friend");
+	const blockBtn = document.getElementById("main-btn-block");
+
+	if (user.id == main.id)
+	{
+		addBtn.style.display = "none";
+		blockBtn.style.display = "none";
+		return ;
+	}
+
+	for (var [pndg, sender] of main.pndgFriends)
+	{
+		if (pndg.id == user.id) // set button for friends
+		{
+			if (sender == main.id)
+			{
+				// TODO: set color to orange
+				addBtn.innerText = "cancel request";
+				addBtn.addEventListener("click", async () => { await main.removeFriend(pndg), setBtn(); });
+			}
+			else
+			{
+				addBtn.innerText = "accept friend";
+				addBtn.addEventListener("click", async () => { await main.acceptFriend(pndg); setBtn(); });
+			}
+			return ;
+		}
+	}
+	for (var i = 0; i < main.friends.length; i++)
+	{
+		if (main.friends[i].id == user.id) // set button for friends
+		{
+			addBtn.innerText = "remove friend";
+			addBtn.addEventListener("click", async () => { await main.removeFriend(main.friends[i]); setBtn(); });
+			break;
+		}
+	}
+	if (i == main.friends.length)
+	{
+		addBtn.innerText = "add friend";
+		addBtn.addEventListener("click", async () => { await main.addFriend(user.name); setBtn(); });
+	}
+
+}
 
 async function addMatch()
 {
@@ -57,9 +118,9 @@ async function addMatchItem(json: any): Promise<HTMLElement>
 	const score = clone.querySelector("#score") as HTMLElement;
 	const date = clone.querySelector("#date") as HTMLElement;
 
-	const player2Id = json.user1_id === user.getId() ? json.user2_id : json.user1_id;
-	const player2Score = json.user1_id === user.getId() ? json.user2_score: json.user1_score;
-	const player1Score = json.user1_id === user.getId() ? json.user1_score: json.user2_score;
+	const player2Id = json.user1_id === user.id ? json.user2_id : json.user1_id;
+	const player2Score = json.user1_id === user.id ? json.user2_score: json.user1_score;
+	const player1Score = json.user1_id === user.id ? json.user1_score: json.user2_score;
 
 	const player2: User = await getUserFromId(player2Id);
 	matchup.innerText = `${user.name} - ${player2.name}`;

@@ -170,7 +170,7 @@ export class GameClient extends Utils
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ mode: this.mode, playerName: this.m_user.getId() }),
+				body: JSON.stringify({ mode: this.mode, playerName: this.m_user.id }),
 			});
 
 			if (response.status == 202)

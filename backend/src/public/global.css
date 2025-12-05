@@ -47,7 +47,7 @@
 }
 
 .avatar-img {
-	@apply bg-white rounded-full aspect-square object-cover h-14 border border-(--white);
+	@apply bg-white rounded-full aspect-square object-cover h-14 min-w-14 border border-(--white);
 }
 
 .user-profile {
@@ -93,7 +93,7 @@
 }
 
 .button-empty {
-	@apply	border-(--green) text-(--green) border-2 bg-(--dark) py-1 px-5
+	@apply	border-(--green) text-(--green) rounded-none border-2 bg-(--dark) py-1 px-5
 			hover:brightness-[1.1] active:brightness-[1.5];
 }
 

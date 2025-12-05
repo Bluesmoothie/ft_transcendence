@@ -168,7 +168,7 @@ async function logAsGuest()
 
 var user: MainUser = new MainUser(null, null, null);
 await user.loginSession();
-if (user.getId() != -1)
+if (user.id != -1)
 	window.location.href = window.location.origin + "/lobby";
 
 user.onLogin((user) => { window.location.href = window.location.origin + "/lobby" })

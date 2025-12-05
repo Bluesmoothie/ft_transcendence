@@ -93,9 +93,9 @@ export class User {
 	}
 
 	public getStatus(): UserStatus { return this.m_status; }
-	public getFriends(): User[] { return this.m_friends; }
-	public getPndgFriends(): Map<User, number> { return this.m_pndgFriends; }
-	public getId(): number { return this.m_id; }
+	public get friends(): User[] { return this.m_friends; }
+	public get pndgFriends(): Map<User, number> { return this.m_pndgFriends; }
+	public get id(): number { return this.m_id; }
 	public getEmail(): string { return this.m_email; }
 	// public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
 	public getAvatarPath(): string { return this.m_avatarPath; }
@@ -113,7 +113,7 @@ export class User {
 				'content-type': 'application/json'
 			},
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				newStatus: this.m_status.toString()
 			})
 		});
@@ -126,7 +126,7 @@ export class User {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 			})
 		});
 		this.setUser(-1, "Guest", "", "", UserStatus.UNKNOW);
@@ -137,7 +137,7 @@ export class User {
 		this.m_friends = [];
 		this.m_pndgFriends = new Map<User, number>();
 
-		const params = { user_id: this.getId().toString() };
+		const params = { user_id: this.id.toString() };
 		const queryString = new URLSearchParams(params).toString();
 		var response = await fetch(`/api/friends/get?${queryString}`);
 		var data = await response.json();
@@ -145,7 +145,7 @@ export class User {
 		for (let i = 0; i < data.length; i++) {
 			const element = data[i];
 			
-			var id = element.user1_id == this.getId() ? element.user2_id : element.user1_id;
+			var id = element.user1_id == this.id ? element.user2_id : element.user1_id;
 			if (data[i].pending)
 				this.m_pndgFriends.set(await getUserFromId(id), data[i].sender_id);
 			else
@@ -155,10 +155,10 @@ export class User {
 	}
 
 	public async updateSelf(): Promise<number> {
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 1;
 
-		var response = await getUserInfoFromId(this.getId());
+		var response = await getUserInfoFromId(this.id);
 		if (response.status != 200)
 			return response.status;
 
@@ -182,7 +182,7 @@ export class User {
 			method: "POST",
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				friend_name: friend_name
 			})
 		});
@@ -292,7 +292,7 @@ export class MainUser extends User
 	}
 
 	public async login(email: string, passw: string, totp: string): Promise<{ status: number, data: any }> {
-		if (this.getId() != -1)
+		if (this.id != -1)
 			return { status: -1, data: null };
 
 		const response = await fetch("/api/user/login", {
@@ -322,7 +322,7 @@ export class MainUser extends User
 
 	public async refreshSelf()
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return;
 		await this.updateSelf();
 		if (this.m_userElement)
@@ -356,7 +356,7 @@ export class MainUser extends User
 
 	public async setAvatar(file: File): Promise<number> // TODO: check si multipart upload ok
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 1;
 		if (!file)
 			return 2;
@@ -369,7 +369,7 @@ export class MainUser extends User
 	}
 
 	public async removeFriend(user: User): Promise<Response> {
-		const url = `/api/friends/remove/${this.getId()}/${user.getId()}`;
+		const url = `/api/friends/remove/${this.id}/${user.id}`;
 		const response = await fetch(url, { method: "DELETE" });
 
 		await this.updateSelf();
@@ -378,7 +378,7 @@ export class MainUser extends User
 	}
 
 	public async acceptFriend(user: User): Promise<Response> {
-		const url = `/api/friends/accept/${this.getId()}/${user.getId()}`;
+		const url = `/api/friends/accept/${this.id}/${user.id}`;
 		const response = await fetch(url, { method: "POST" });
 
 		await this.updateSelf();
@@ -390,7 +390,7 @@ export class MainUser extends User
 	public async addFriend(friend_name: string): Promise<number> {
 		if (!friend_name || friend_name == "")
 			return 1;
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 2;
 
 		const status = await this.addFriendToDB(friend_name);
@@ -401,14 +401,14 @@ export class MainUser extends User
 
 	public async newTotp() : Promise<{status: number, data: any}>
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return null;
 
 		var response = await fetch("/api/totp/reset", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				email: this.getEmail(),
 			})
 			
@@ -419,14 +419,14 @@ export class MainUser extends User
 
 	public async delTotp() : Promise<number>
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 404;
 
 		var response = await fetch("/api/totp/remove", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 			})
 			
 		});
@@ -436,14 +436,14 @@ export class MainUser extends User
 
 	public async validateTotp(totp: string) : Promise<number>
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 404;
 
 		var response = await fetch("/api/totp/validate", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				totp: totp,
 			})
 			

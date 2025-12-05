@@ -1,49 +1,82 @@
-import { MainUser } from "User.js";
+import { MainUser, User } from "User.js";
+import { UserElement, UserElementType } from "UserElement.js";
 import { Chat } from "modules/chat.js";
 import { Router } from "router.js";
 
 var user: MainUser = new MainUser(document.getElementById("user-container"), null, null);
 await user.loginSession();
 user.onLogout((user) => { window.location.href = window.location.origin })
-if (user.getId() == -1) // user not login
+if (user.id == -1) // user not login
 	window.location.href = window.location.origin;
 
 const chatInput: HTMLInputElement = document.getElementById("chat-in") as HTMLInputElement;
 const chat = new Chat(user, document.getElementById("chat-out"), chatInput);
+chat.onConnRefresh(fillUserList);
 new Router(user, chat);
-
 
 const userMenuContainer = document.getElementById("user-menu-container");
 
+document.getElementById("user-list-btn").addEventListener('click', () => {
+	showListContainer(ListState.USER);
+});
+document.getElementById("friend-list-btn").addEventListener('click', () => {
+	showListContainer(ListState.FRIEND);
+});
 document.getElementById("user-menu-btn").addEventListener('click', () => {
 	userMenuContainer.classList.toggle("hide");
 });
+
 document.getElementById("banner")?.addEventListener("click", () => window.location.href = window.location.origin);
 document.getElementById("logout_btn")?.addEventListener("click", () => user.logout());
-document.getElementById("avatar_upload_btn")?.addEventListener("click", uploadAvatar);
-document.getElementById("add_friend_btn")?.addEventListener("click", sendFriendInvite);
-document.getElementById("refresh_btn")?.addEventListener("click", () => user.refreshSelf());
 document.getElementById("profile_btn")?.addEventListener("click", () => window.location.href = window.location.origin + "/profile");
 document.getElementById("settings_btn")?.addEventListener("click", () => window.location.href = window.location.origin + "/settings");
 
-setInterval(() => user.refreshSelf(), 60000);
-
-
-async function sendFriendInvite()
+enum ListState
 {
-	var inviteInput = document.getElementById("add_friend_input") as HTMLInputElement;
-	var status = await user.addFriend(inviteInput.value);
-	console.log(status);
-	// if (status == 1)
-	// 	addLog(500, "some field are empty");
-	// else if (status == 2)
-	// 	addLog(500, "please login to add friends")
-	// else if (status == 200)
-	// 	addLog(status, "friend request sent!");
-	// else if (status == 404)
-	// 	addLog(status, "user profile not found!");
-	// else
-	// 	addLog(status, "database error!");
+	HIDDEN,
+	FRIEND,
+	USER,
+}
+
+var state = ListState.HIDDEN;
+function showListContainer(newState: ListState)
+{
+	const userListParent = document.getElementById("user-list-parent");
+	
+	if (state != ListState.HIDDEN && state == newState)
+	{
+		userListParent.classList.add("hide");
+		state = ListState.HIDDEN;
+	}
+	else
+	{
+		state = newState;
+		userListParent.classList.remove("hide");
+	}
+
+	if (state == ListState.USER)
+		fillUserList(chat.conns);
+	if (state == ListState.FRIEND)
+		fillUserList(user.friends);
+}
+
+function fillUserList(users: User[])
+{
+	const container = document.getElementById("user-list-container");
+	container.innerHTML = "";
+
+	const text = document.createElement("p");
+	text.innerText = state == ListState.USER ? "user list" : "friends list";
+	text.style.color = "var(--white)";
+
+	users.forEach((conn: User) => {
+		const elt = new UserElement(conn, container, UserElementType.STANDARD, "user-template");
+		elt.clone.addEventListener("click", () => {
+			console.log(`${window.location.origin}/profile?username=${conn.name}`);
+			window.location.href = `${window.location.origin}/profile?username=${conn.name}` });
+		elt.updateHtml(conn);
+	})
+	container.prepend(text);
 }
 
 async function uploadAvatar()
@@ -54,32 +87,6 @@ async function uploadAvatar()
 		console.error("no avatar_upload elt found");
 		return ;
 	}
-
 	const retval: number = await user.setAvatar(fileInput.files[0]);
-	if (retval == 1)
-	{
-		setPlaceholderTxt("you need to login first");
-		return ;
-	}
-
-	else if (retval == 2)
-	{
-		setPlaceholderTxt("no file selected");
-		return ;
-	}
 }
-
-
-function setPlaceholderTxt(msg: string)
-{
-	var txt = document.getElementById("placeholder");
-	if (!txt)
-	{
-		console.error("no placeholder text found");
-		return ;
-	}
-
-	txt.innerText = msg;
-}
-
 
