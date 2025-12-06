@@ -3,8 +3,6 @@ import { UserElement, UserElementType } from './UserElement.js';
 
 // *********************** TODO *********************** //
 // Add settings page									//
-// view user profile									//
-// default avatar										//
 // **************************************************** //
 
 export enum UserStatus {
@@ -16,15 +14,25 @@ export enum UserStatus {
 	IN_GAME,			// show when user in game
 }
 
-async function getUserInfoFromId(id: string): Promise<Response> {
-	const params = { user_id: id };
-	const queryString = new URLSearchParams(params).toString();
-	var response = await fetch(`/api/user/get_profile_id?${queryString}`);
-	
+async function getUserInfoFromId(id: number): Promise<Response> {
+	var response = await fetch(`/api/user/get_profile_id?user_id=${id.toString()}`);
 	return response;
 }
 
-export async function getUserFromId(id: string): Promise<User> {
+export async function getUserFromName(name: string): Promise<User> {
+	var response = await fetch(`/api/user/get_profile_name?profile_name=${name}`);
+	if (response.status != 200)
+		return null
+
+	const data = await response.json();
+	var user = new User();
+	var status = data.is_login ? data.status : UserStatus.UNAVAILABLE;
+	user.setUser(data.id, data.name, "", data.avatar, status);
+	await user.updateSelf();
+	return user;
+}
+
+export async function getUserFromId(id: number): Promise<User> {
 	const response = await getUserInfoFromId(id);
 	if (response.status != 200)
 		return null
@@ -34,6 +42,15 @@ export async function getUserFromId(id: string): Promise<User> {
 	var status = data.is_login ? data.status : UserStatus.UNAVAILABLE;
 	user.setUser(data.id, data.name, "", data.avatar, status);
 	return user;
+}
+
+export interface Stats {
+	gamePlayed:	number;
+	gameWon:	number;
+	currElo:	number;
+	maxElo:		number;
+	avrTime:	string;
+	shortTime:	string;
 }
 
 export class User {
@@ -47,8 +64,11 @@ export class User {
 	private m_avatarPath: string;
 
 	private m_friends: User[]; // accepted request
-	private m_pndgFriends: User[]; // pending requests
+	private m_pndgFriends: Map<User, number>; // pending requests (number == sender)
 	private m_status: UserStatus;
+	private m_created_at: string;
+
+	private m_stats:	Stats;
 
 	constructor() {
 		this.setUser(
@@ -58,6 +78,8 @@ export class User {
 			"", // TODO: add default avatar
 			UserStatus.UNKNOW
 		);
+
+		this.m_stats = { gamePlayed: 0, gameWon: 0, currElo: 0, maxElo: 0, avrTime: "", shortTime: "" };
 	}
 
 	public setUser(id: number, name: string, email: string, avatar: string, status: UserStatus) {
@@ -67,16 +89,19 @@ export class User {
 		this.m_avatarPath = avatar;
 		this.m_status = status;
 		this.m_friends = [];
-		this.m_pndgFriends = [];
+		this.m_pndgFriends = new Map<User, number>();
 	}
 
 	public getStatus(): UserStatus { return this.m_status; }
-	public getFriends(): User[] { return this.m_friends; }
-	public getPndgFriends(): User[] { return this.m_pndgFriends; }
-	public getId(): number { return this.m_id; }
+	public get friends(): User[] { return this.m_friends; }
+	public get pndgFriends(): Map<User, number> { return this.m_pndgFriends; }
+	public get id(): number { return this.m_id; }
 	public getEmail(): string { return this.m_email; }
 	// public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
 	public getAvatarPath(): string { return this.m_avatarPath; }
+	
+	get		created_at(): string { return this.m_created_at; }
+	get		stats(): Stats { return this.m_stats; }
 
 	public async setStatus(status: UserStatus): Promise<Response> {
 		this.m_status = status;
@@ -88,7 +113,7 @@ export class User {
 				'content-type': 'application/json'
 			},
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				newStatus: this.m_status.toString()
 			})
 		});
@@ -101,7 +126,7 @@ export class User {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 			})
 		});
 		this.setUser(-1, "Guest", "", "", UserStatus.UNKNOW);
@@ -110,19 +135,19 @@ export class User {
 
 	public async updateFriendList(): Promise<number> {
 		this.m_friends = [];
-		this.m_pndgFriends = [];
+		this.m_pndgFriends = new Map<User, number>();
 
-		const params = { user_id: this.getId().toString() };
+		const params = { user_id: this.id.toString() };
 		const queryString = new URLSearchParams(params).toString();
 		var response = await fetch(`/api/friends/get?${queryString}`);
 		var data = await response.json();
 
 		for (let i = 0; i < data.length; i++) {
 			const element = data[i];
-
-			var id = element.user1_id == this.getId() ? element.user2_id : element.user1_id;
+			
+			var id = element.user1_id == this.id ? element.user2_id : element.user1_id;
 			if (data[i].pending)
-				this.m_pndgFriends.push(await getUserFromId(id));
+				this.m_pndgFriends.set(await getUserFromId(id), data[i].sender_id);
 			else
 				this.m_friends.push(await getUserFromId(id));
 		}
@@ -130,10 +155,10 @@ export class User {
 	}
 
 	public async updateSelf(): Promise<number> {
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 1;
 
-		var response = await getUserInfoFromId(this.getId().toString());
+		var response = await getUserInfoFromId(this.id);
 		if (response.status != 200)
 			return response.status;
 
@@ -141,6 +166,12 @@ export class User {
 		this.name = data.name;
 		this.m_avatarPath = data.avatar;
 		this.m_status = data.status;
+		this.m_created_at = data.created_at;
+
+		this.m_stats.gamePlayed = data.games_played;
+		this.m_stats.gameWon = data.wins;
+		this.m_stats.currElo = data.elo;
+
 		await this.updateFriendList();
 
 		return response.status;
@@ -151,7 +182,7 @@ export class User {
 			method: "POST",
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				friend_name: friend_name
 			})
 		});
@@ -182,30 +213,36 @@ export class User {
 	}
 }
 
+function newOption(optionName: string) : HTMLOptionElement
+{
+	var option: HTMLOptionElement;
 
-export class MainUser extends User {
-	private m_htmlFriendContainer: HTMLElement;
-	private m_htmlPndgFriendContainer: HTMLElement;
+	option = document.createElement("option");
+	option.innerText = optionName;
+	option.value = optionName;
+	return option;
+}
+
+export class MainUser extends User
+{
 
 	private m_userElement: UserElement;
-	private m_friendsElements: UserElement[];
-	private m_pndgFriendsElements: UserElement[];
-
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
 
 	constructor(parent: HTMLElement, friendsContainer: HTMLElement, pndgFriendsContainer: HTMLElement) {
 		super()
-		this.m_htmlFriendContainer = friendsContainer;
-		this.m_htmlPndgFriendContainer = pndgFriendsContainer;
-		this.m_friendsElements = [];
-		this.m_pndgFriendsElements = [];
 		
 		if (parent)
 		{
 			this.m_userElement = new UserElement(null, parent, UserElementType.MAIN);
-			this.m_userElement.getBtn2().addEventListener("click", () => this.logout());
-			this.m_userElement.getStatusSelect().addEventListener("change", () => this.updateStatus(this.m_userElement.getStatusSelect().value, this, this.m_userElement));
+
+			const statusSelect = this.m_userElement.getElement("#status") as HTMLSelectElement;
+			statusSelect.prepend(newOption("available"));
+			statusSelect.prepend(newOption("unavailable"));
+			statusSelect.prepend(newOption("busy"));
+			statusSelect.prepend(newOption("in_game"));
+			statusSelect.addEventListener("change", () => this.updateStatus(statusSelect.value, this, this.m_userElement));
 		}
 
 		this.m_onLoginCb = [];
@@ -255,7 +292,7 @@ export class MainUser extends User {
 	}
 
 	public async login(email: string, passw: string, totp: string): Promise<{ status: number, data: any }> {
-		if (this.getId() != -1)
+		if (this.id != -1)
 			return { status: -1, data: null };
 
 		const response = await fetch("/api/user/login", {
@@ -279,19 +316,15 @@ export class MainUser extends User {
 		await this.logoutDB();
 		if (this.m_userElement)
 			this.m_userElement.updateHtml(null);
-		if (this.m_htmlFriendContainer)
-			this.m_htmlFriendContainer.innerHTML = ""; // destroy all child
-		this.m_friendsElements = [];
 
 		this.m_onLogoutCb.forEach(cb => cb(this));
 	}
 
 	public async refreshSelf()
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return;
 		await this.updateSelf();
-		await this.updateFriendContainer();
 		if (this.m_userElement)
 			this.m_userElement.updateHtml(this);
 	}
@@ -323,7 +356,7 @@ export class MainUser extends User {
 
 	public async setAvatar(file: File): Promise<number> // TODO: check si multipart upload ok
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 1;
 		if (!file)
 			return 2;
@@ -336,89 +369,46 @@ export class MainUser extends User {
 	}
 
 	public async removeFriend(user: User): Promise<Response> {
-		const url = `/api/friends/remove/${this.getId()}/${user.getId()}`;
+		const url = `/api/friends/remove/${this.id}/${user.id}`;
 		const response = await fetch(url, { method: "DELETE" });
 
 		await this.updateSelf();
-		await this.updateFriendContainer();
 
 		return response;
 	}
 
 	public async acceptFriend(user: User): Promise<Response> {
-		const url = `/api/friends/accept/${this.getId()}/${user.getId()}`;
+		const url = `/api/friends/accept/${this.id}/${user.id}`;
 		const response = await fetch(url, { method: "POST" });
 
 		await this.updateSelf();
-		await this.updateFriendContainer();
 
 		return response;
 	}
 
-	private rebuildFriendContainer(friends: User[], container: HTMLElement, elements: UserElement[], pending: boolean) {
-		elements = [];
-		container.innerHTML = ""; // destroy all child
-		for (let i = 0; i < friends.length; i++) {
-			const elt: UserElement = new UserElement(friends[i], container, pending ? UserElementType.FRIEND_PNDG : UserElementType.FRIEND);
-			elements.push(elt);
-
-			if (pending) {
-				elt.getBtn1().addEventListener('click', () => { // to move in update
-					this.acceptFriend(friends[i]);
-				})
-				elt.getBtn2().addEventListener('click', () => { // to move in update
-					this.removeFriend(friends[i]);
-				})
-			}
-			else {
-				elt.getBtn1().addEventListener('click', () => { // to move in update
-					this.removeFriend(friends[i]);
-				})
-			}
-		}
-		return elements;
-	}
-
-	public async updateFriendContainer() {
-		await this.updateSelf();
-		var friends = this.getFriends();
-		var pndgFriends = this.getPndgFriends();
-
-		if (friends.length != this.m_friendsElements.length)
-			this.m_friendsElements = this.rebuildFriendContainer(friends, this.m_htmlFriendContainer, this.m_friendsElements, false);
-
-		if (pndgFriends.length != this.m_pndgFriendsElements.length)
-			this.m_pndgFriendsElements = this.rebuildFriendContainer(pndgFriends, this.m_htmlPndgFriendContainer, this.m_pndgFriendsElements, true);
-
-		for (let i = 0; i < friends.length; i++)
-			this.m_friendsElements[i].updateHtml(friends[i]);
-		for (let i = 0; i < pndgFriends.length; i++)
-			this.m_pndgFriendsElements[i].updateHtml(pndgFriends[i]);
-	}
 
 	public async addFriend(friend_name: string): Promise<number> {
 		if (!friend_name || friend_name == "")
 			return 1;
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 2;
 
 		const status = await this.addFriendToDB(friend_name);
 		await this.updateSelf();
-		await this.updateFriendContainer();
 
 		return status;
 	}
 
 	public async newTotp() : Promise<{status: number, data: any}>
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return null;
 
 		var response = await fetch("/api/totp/reset", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				email: this.getEmail(),
 			})
 			
@@ -429,14 +419,14 @@ export class MainUser extends User {
 
 	public async delTotp() : Promise<number>
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 404;
 
 		var response = await fetch("/api/totp/remove", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 			})
 			
 		});
@@ -446,14 +436,14 @@ export class MainUser extends User {
 
 	public async validateTotp(totp: string) : Promise<number>
 	{
-		if (this.getId() == -1)
+		if (this.id == -1)
 			return 404;
 
 		var response = await fetch("/api/totp/validate", {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.getId().toString(),
+				user_id: this.id.toString(),
 				totp: totp,
 			})
 			

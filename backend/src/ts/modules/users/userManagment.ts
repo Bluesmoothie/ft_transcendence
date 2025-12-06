@@ -11,6 +11,7 @@ import { getUserById, getUserByName } from "./user.js";
 import { hashString } from "@modules/sha256.js";
 import { check_totp } from "@modules/2fa/totp.js";
 import { AuthSource } from "@modules/oauth2/routes.js";
+import { getSqlDate } from "utils.js";
 
 
 function validate_email(email:string)
@@ -33,15 +34,18 @@ export interface UserUpdate {
 export async function createGuest(): Promise<DbResponse>
 {
 
-	const sql = "INSERT INTO users (name, source) VALUES (?, ?) RETURNING id";
+	const sql = "INSERT INTO users (name, source, created_at) VALUES (?, ?, ?) RETURNING id";
 	try
 	{
+
+		const date = getSqlDate();
 		const highest = await core.db.get("SELECT MAX(id) FROM users;");
 		console.log(highest["MAX(id)"]);
 		const rBytes = randomBytes(8).toString('hex');
 		const name = `guest${highest["MAX(id)"]}${rBytes}`;
-		const id = await core.db.get(sql, [name, AuthSource.GUEST]);
-		return { code: 200, data: id};
+		const data = await core.db.get(sql, [name, AuthSource.GUEST, date]);
+		await updateAvatarPath(data.id, 'default.png');
+		return { code: 200, data: data};
 	}
 	catch (err)
 	{
@@ -107,10 +111,10 @@ export async function loginOAuth2(id: string, source: number, db: Database) : Pr
 
 export async function createUserOAuth2(email: string, name: string, id: string, source: number, avatar: string, db: Database) : Promise<DbResponse>
 {
-	const sql = 'INSERT INTO users (name, email, oauth_id, source, avatar) VALUES (?, ?, ?, ?, ?)';
+	const sql = 'INSERT INTO users (name, email, oauth_id, source, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)';
 
 	try {
-		const result = await db.run(sql, [name, email, id, source, avatar]);
+		const result = await db.run(sql, [name, email, id, source, avatar, getSqlDate()]);
 		console.log(`Inserted row with id ${result.lastID}`);
 		return { code: 200, data: { message: "Success" }};
 	}
@@ -129,20 +133,22 @@ export async function updateUserRank(userId: number, newRank: number, login: str
 		return { code: 403, data: { message: "permission denied" }}
 }
 
-export async function createUser(email: string, passw: string, username: string, source: number, db: Database) : Promise<DbResponse>
+export async function createUser(email: string, passw: string, username: string, source: AuthSource, db: Database) : Promise<DbResponse>
 {
-	const sql = 'INSERT INTO users (name, email, passw, source) VALUES (?, ?, ?, ?)';
+	const sql = 'INSERT INTO users (name, email, passw, source, created_at) VALUES (?, ?, ?, ?, ?)';
+	console.log("creating", username);
 
-	if (!validate_email(email))
+	if (!validate_email(email) && source == AuthSource.INTERNAL)
 		return { code: 403, data: { message: "error: email not valid" }};
 	const res = await getUserByName(username, core.db);	
 	if (res.code != 404)
 		return { code: 409, data: { message: "alias already taken" }};
 
 	try {
-		const result = await db.run(sql, [username, email, passw, source]);
+		const result = await db.run(sql, [username, email, passw, source, getSqlDate()]);
 		console.log(`Inserted row with id ${result.lastID}`);
-		return { code: 200, data: { message: "Success" }};
+		await updateAvatarPath(result.lastID, 'default.png');
+		return { code: 200, data: { message: "Success", id: result.lastID }};
 	}
 	catch (err) {
 		console.error(`database err: ${err}`);
@@ -250,6 +256,12 @@ export async function updateUserReq(request: FastifyRequest, reply: FastifyReply
 	return reply.code(result.code).send(result.data);
 }
 
+export async function updateAvatarPath(id: number, filename: string)
+{
+	const sql = "UPDATE users SET avatar = ? WHERE id = ?";
+	await core.db.run(sql, ["/public/avatars/" + filename , id]);
+}
+
 export async function uploadAvatar(request: any, reply: any, db: Database)
 {
 	const data = await request.file();
@@ -264,9 +276,7 @@ export async function uploadAvatar(request: any, reply: any, db: Database)
 	try
 	{
 		await pipeline(data.file, createWriteStream(filepath));
-
-		const sql = "UPDATE users SET avatar = ? WHERE id = ?";
-		await db.run(sql, ["/public/avatars/" + filename , id]);
+		await updateAvatarPath(Number(id), filename);
 
 		console.log(`${email} has changed is avatar. location=${filepath}`);
 

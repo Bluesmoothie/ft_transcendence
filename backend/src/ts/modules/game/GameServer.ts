@@ -2,7 +2,10 @@ import { GameInstance } from './GameInstance.js';
 import { Bot } from './Bot.js';
 import { FastifyInstance } from 'fastify';
 import { FastifyReply } from 'fastify/types/reply';
-import { connect } from 'http2';
+import { getUserByName } from '@modules/users/user.js';
+import * as core from 'core/core.js';
+import { addPlayerToQueue } from '@modules/chat/chat.js';
+import { clear } from 'console';
 
 export class GameServer
 {
@@ -12,8 +15,8 @@ export class GameServer
 	private static readonly BOT_FPS_INTERVAL: number = 1000 / GameServer.BOT_FPS;
 
 	private server!: FastifyInstance;
-	private activeGames: Map<string, GameInstance> = new Map();
-	private playerPending: { reply: FastifyReply, name: string } | null = null;
+	public activeGames: Map<string, GameInstance> = new Map();
+	private playerPending: { reply: FastifyReply, name: number } | null = null;
 	private bots: Map<string, Bot> = new Map();
 
 	constructor(server: FastifyInstance)
@@ -28,7 +31,6 @@ export class GameServer
 			this.createGame();
 			this.startGame();
 			this.sendGameState();
-			this.deletePlayer();
 		}
 		catch (error)
 		{
@@ -38,48 +40,39 @@ export class GameServer
 
 	private createGame(): void
 	{
-		this.server.post('/api/create-game', (request, reply) =>
+		this.server.post('/api/create-game', async (request, reply) =>
 		{
 			try
 			{
-				const body = request.body as { mode: string; playerName: string };
+				const body = request.body as { mode: string; playerName: number};
 				const mode = body.mode;
 				const name = body.playerName;
 
 				if (mode === 'local')
 				{
 					const gameId = crypto.randomUUID();
-					const opponentId = 'Guest';
+					const opponentId = 0;
 					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
-					reply.status(201).send({ gameId, opponentId: opponentId, playerId: '1' });
+					return reply.status(201).send({ gameId, opponentId: opponentId, playerSide: '1' });
 				}
 				else if (mode === 'online')
 				{
-					if (this.playerPending)
-					{
-						const gameId = crypto.randomUUID();
-						this.playerPending.reply.status(201).send({ gameId, opponentId: name, playerId: 1 });
-						reply.status(201).send({ gameId, opponentId: this.playerPending.name, playerId: 2 });
-						this.activeGames.set(gameId, new GameInstance(mode, this.playerPending.name, name));
-						this.playerPending = null;
-					}
-					else
-					{
-						this.playerPending = { reply, name };
-					}
+					await addPlayerToQueue(Number(name), this);
+					return reply.code(202).send({ message: "added to queue" });
 				}
 				else if (mode === 'bot')
 				{
 					const gameId = crypto.randomUUID();
-					const opponentId = 'Bot';
+					const data = await getUserByName("bot", core.db);
+					const opponentId = data.data.id;
 					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
-					reply.status(201).send({ gameId, opponentId: opponentId, playerId: '1' });
+					return reply.status(201).send({ gameId, opponentId: opponentId, playerSide: '1' });
 				}
 				else
 				{
-					reply.status(400).send({ error: 'Invalid game mode' });
+					return reply.status(400).send({ error: 'Invalid game mode' });
 				}
 			}
 			catch (error)
@@ -165,9 +158,10 @@ export class GameServer
 					}
 
 					const winner = game?.winnerName;
-					if (winner)
+					if (winner !== null)
 					{
 						connection.send(JSON.stringify({ type: 'winner', winner }));
+						clearInterval(interval);
 					}
 				};
 
@@ -204,6 +198,11 @@ export class GameServer
 					if (game.mode === 'bot')
 					{
 						const bot = this.bots.get(gameId);
+						if (!bot)
+						{
+							console.error(`Bot not found for game ${gameId}`);
+						}
+
 						bot?.destroy();
 						this.bots.delete(gameId);
 					}
@@ -224,64 +223,6 @@ export class GameServer
 			{
 				console.error('Error in websocket connection:', error);
 				connection.close();
-			}
-		});
-	}
-
-	private deletePlayer(): void
-	{
-		this.server.post('/api/delete-player', (request, reply) =>
-		{
-			try
-			{
-				const body = request.body as { gameId?: string, playerName?: string };
-				const name = body.playerName;
-				if (!name)
-				{
-					throw new Error('Player name is required');
-				}
-
-				console.log(`Request to delete player: ${name}`);
-
-				if (name && this.playerPending && this.playerPending.name === name)
-				{
-					this.playerPending = null;
-					reply.status(200).send({ message: `Player ${name} deleted` });
-					console.log(`Player ${name} deleted from pending players`);
-					return ;
-				}
-
-				const gameId = body.gameId;
-				if (!gameId)
-				{
-					throw new Error('Game ID is required');
-				}
-
-				const game = this.activeGames.get(gameId);
-				if (!game)
-				{
-					reply.status(404).send({ error: 'Game not found' });
-				}
-
-				if (game.player1Name === name)
-				{
-					game.winnerName = game.player2Name;
-					console.log(`Player ${name} deleted from game ${gameId}`);
-				}
-				else if (game.player2Name === name)
-				{
-					game.winnerName = game.player1Name;
-					console.log(`Player ${name} deleted from game ${gameId}`);
-				}
-				else
-				{
-					reply.status(404).send({ error: 'Player not found in game' });
-				}
-			}
-			catch (error)
-			{
-				console.error('Error deleting player:', error);
-				reply.status(500).send({ error });
 			}
 		});
 	}

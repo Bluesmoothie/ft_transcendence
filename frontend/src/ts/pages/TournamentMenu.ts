@@ -1,74 +1,46 @@
-import { Router } from "../router";
+import { Router } from '../router';
 
 export class TournamentMenu
 {
-	private static readonly TITLE: string = "Select the number of players";
-	private static readonly BUTTON_1: string = '4';
-	private static readonly BUTTON_2: string = '8';
-	private static readonly BUTTON_3: string = '16';
-	private static readonly BUTTON_4: string = '32';
+	private static readonly BUTTON_1: string = 'local';
+	private static readonly BUTTON_2: string = 'online';
 
 	private router: Router;
-	private titleElement = document.getElementById('title') as HTMLHeadingElement;
-	private button1Element = document.getElementById('four') as HTMLButtonElement;
-	private button2Element = document.getElementById('eight') as HTMLButtonElement;
-	private button3Element = document.getElementById('sixteen') as HTMLButtonElement;
-	private button4Element = document.getElementById('thirty-two') as HTMLButtonElement;
+	private button1Element = document.getElementById('local-tournament') as HTMLButtonElement;
+	private button2Element = document.getElementById('online-tournament') as HTMLButtonElement;
 
 	constructor(router: Router)
 	{
 		this.router = router;
-		this.hydrate();
+		this.hydrateButtons();
 		this.setUpDocumentEventListeners();
 	}
 
-	private hydrate(): void
+	private hydrateButtons(): void
 	{
-		this.titleElement.textContent = TournamentMenu.TITLE;
 		this.button1Element.textContent = TournamentMenu.BUTTON_1;
 		this.button2Element.textContent = TournamentMenu.BUTTON_2;
-		this.button3Element.textContent = TournamentMenu.BUTTON_3;
-		this.button4Element.textContent = TournamentMenu.BUTTON_4;
 	}
 
-	private move(content: string): void
+	private localTournamentClickHandler = () =>
 	{
-		this.router.navigateTo('tournament', content);
+		this.router.navigateTo('Tournament', 'local');
 	}
 
-	private fourPlayersClickHandler = () =>
+	private onlineTournamentClickHandler = () =>
 	{
-		this.move(this.button1Element.textContent);
-	}
-
-	private eightPlayersClickHandler = () =>
-	{
-		this.move(this.button2Element.textContent);
-	}
-
-	private sixteenPlayersClickHandler = () =>
-	{
-		this.move(this.button3Element.textContent);
-	}
-
-	private thirtyTwoPlayersClickHandler = () =>
-	{
-		this.move(this.button4Element.textContent);
+		this.router.navigateTo('Tournament', 'online');
 	}
 
 	private setUpDocumentEventListeners(): void
 	{
-		document.getElementById('four')?.addEventListener('click', this.fourPlayersClickHandler);
-		document.getElementById('eight')?.addEventListener('click', this.eightPlayersClickHandler);
-		document.getElementById('sixteen')?.addEventListener('click', this.sixteenPlayersClickHandler);
-		document.getElementById('thirty-two')?.addEventListener('click', this.thirtyTwoPlayersClickHandler);
+		document.getElementById('local-tournament')?.addEventListener('click', this.localTournamentClickHandler);
+		document.getElementById('online-tournament')?.addEventListener('click', this.onlineTournamentClickHandler);
 	}
 
 	public destroy(): void
 	{
-		document.getElementById('four')?.removeEventListener('click', this.fourPlayersClickHandler);
-		document.getElementById('eight')?.removeEventListener('click', this.eightPlayersClickHandler);
-		document.getElementById('sixteen')?.removeEventListener('click', this.sixteenPlayersClickHandler);
-		document.getElementById('thirty-two')?.removeEventListener('click', this.thirtyTwoPlayersClickHandler);
+		document.getElementById('local-tournament')?.removeEventListener('click', this.localTournamentClickHandler);
+		document.getElementById('online-tournament')?.removeEventListener('click', this.onlineTournamentClickHandler);
 	}
 }

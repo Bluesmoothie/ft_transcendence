@@ -3,20 +3,20 @@ import { Database } from 'sqlite'
 import { DbResponse } from '@core/core.js';
 
 export interface GameRes {
-	user1_name:		string;
-	user2_name:		string;
+	user1_id:		number;
+	user2_id:		number;
 	user1_score:	number;
 	user2_score:	number;
 }
 
-export async function updateUserStats(user: any, win: boolean, db: Database)
+export async function updateUserStats(id: number, win: boolean, db: Database)
 {
 	const sql = "UPDATE users SET games_played = games_played + 1 WHERE id = ?";
 	const winSql = "UPDATE users SET wins = wins + 1 WHERE id = ?";
 	try {
-		await db.run(sql, [user.id]);
+		await db.run(sql, [id]);
 		if (win)
-			await db.run(winSql, [user.id]);
+			await db.run(winSql, [id]);
 	}
 	catch (err) {
 		console.error(`database err: ${err}`);
@@ -26,7 +26,8 @@ export async function updateUserStats(user: any, win: boolean, db: Database)
 
 export async function getUserByName(username: string, db: Database) : Promise<DbResponse>
 {
-	const sql = 'SELECT id, name, avatar, elo, status, is_login FROM users WHERE name = ?';
+	const sql = 'SELECT id, name, avatar, status, is_login, source, created_at, elo, games_played, wins, rank FROM users WHERE name = ?';
+
 	try {
 		const row = await db.get(sql, [username])
 		if (!row)
@@ -41,22 +42,21 @@ export async function getUserByName(username: string, db: Database) : Promise<Db
 
 export async function addGameToHist(game: GameRes, db: Database) : Promise<DbResponse>
 {
-	var res1 = await getUserByName(game.user1_name, db);
-	var res2 = await getUserByName(game.user2_name, db);
-	if (res1.code != 200 || res2.code != 200)
-		return { code: 404, data: { message: "user not found" }};
-	if (res1.data.id > res2.data.id)
+	var id1 = game.user1_id;
+	var id2 = game.user2_id;
+
+	if (id1 > id2)
 	{
-		[res1, res2] = [res2, res1];
+		[id1, id2] = [id2, id1];
 		[game.user1_score, game.user2_score] = [game.user2_score, game.user1_score];
 	}
 	const sql = "INSERT INTO games (user1_id, user2_id, user1_score, user2_score, created_at) VALUES(?, ?, ?, ?, ?);";
 	const date = new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Paris"})).toISOString().slice(0, 19).replace('T', ' ');
 	try {
-		const response = await db.run(sql, [res1.data.id, res2.data.id, game.user1_score, game.user2_score, date]);
+		const response = await db.run(sql, [id1, id2, game.user1_score, game.user2_score, date]);
 		console.log(`added game to history. id: ${response.lastID}`);
-		await updateUserStats(res1.data, game.user1_score > game.user2_score, db);
-		await updateUserStats(res2.data, game.user2_score > game.user1_score, db);
+		await updateUserStats(id1, game.user1_score > game.user2_score, db);
+		await updateUserStats(id2, game.user2_score > game.user1_score, db);
 
 		return { code: 200, data: { message: "Success" }};
 	}
@@ -106,7 +106,7 @@ export async function getUserHistByName(request: FastifyRequest, reply: FastifyR
 
 export async function getUserById(user_id: number, db: Database) : Promise<DbResponse>
 {
-	const sql = 'SELECT id, name, avatar, status, is_login, source, rank FROM users WHERE id = ?';
+	const sql = 'SELECT id, name, avatar, status, is_login, source, created_at, elo, games_played, wins, rank FROM users WHERE id = ?';
 
 	try {
 		const row = await db.get(sql, [user_id])

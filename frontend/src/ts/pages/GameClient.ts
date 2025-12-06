@@ -1,7 +1,9 @@
 import { Utils } from './Utils.js';
 import { GameState } from './GameState.js';
-import { getUserFromId, User } from 'User.js';
+import { User, getUserFromId } from 'User.js';
+import { Chat } from 'modules/chat.js';
 import { UserElement, UserElementType } from 'UserElement.js';
+import { Router } from 'router.js';
 
 enum Params
 {
@@ -10,7 +12,7 @@ enum Params
 	PADDLE_PADDING = 2,
 	BALL_SIZE = 2,
 	BACKGROUND_OPACITY = '0.4',
-	COLOR = '255, 255, 255',
+	COLOR = 'var(--white)',
 	COUNTDOWN_START = 1,
 	IPS = 60,
 }
@@ -63,7 +65,7 @@ export class GameClient extends Utils
 	private socket :		WebSocket | null = null;
 	private interval:		any | null = null;
 	private end:			boolean = false;
-	private playerId:		string | null = null;
+	private playerSide:		string | null = null;
 	private keysToSend:		string = '';
 
 	private m_user:				User | null;
@@ -73,11 +75,13 @@ export class GameClient extends Utils
 	private m_playerContainer:	HTMLElement;
 	private	m_prevP1Score:		number;
 	private	m_prevP2Score:		number;
+	private m_router:			Router;
 
-	constructor(private mode: string, user: User = null)
+	constructor(router: Router, private mode: string, user: User = null, chat: Chat = null)
 	{
 		super();
 
+		this.m_router = router;
 		this.m_playerContainer = document.getElementById("player-container");
 		if (!this.m_playerContainer)
 		{
@@ -87,6 +91,8 @@ export class GameClient extends Utils
 
 		this.m_user = user;
 		this.createPlayerHtml();
+		if (chat)
+			chat.onGameCreated((json) => this.createGameFeedback(json));
 
 		if (this.isModeValid())
 		{
@@ -121,45 +127,41 @@ export class GameClient extends Utils
 		});
 
 		this.setContent('searching-msg', Msgs.SEARCHING, true);
-		this.setColors('1');
 	}
 
-	private setColors(opacity: string): void
+	private async createGameFeedback(json: any)
 	{
-		// TODO NEEDS A REWORK
+		this.gameId = json.gameId.toString();
+		this.m_user2 = await getUserFromId(json.opponentId.toString());
+		this.playerSide = json.playerSide;
+		console.log(this.playerSide);
+		this.createPlayerHtml();
+		this.m_player2.updateHtml(this.m_user2);
 
-		// this.HTMLelements.get('game')!.style.borderBlockColor = `rgba(${Params.COLOR}, ${opacity})`;
-		// for (const element of this.HTMLelements.values())
-		// {
-		// 	if (element.tagName === 'DIV')
-		// 	{
-		// 		element.style.backgroundColor = `rgba(${Params.COLOR}, ${opacity})`;
-		// 	}
-		// 	else if (element)
-		// 	{
-		// 		element.style.color = `rgba(${Params.COLOR}, ${opacity})`;
-		// 	}
-		// }
+		this.launchCountdown();
 	}
 
 	private async createGame(): Promise<void>
 	{
 		try
 		{
-			window.addEventListener('beforeunload', this.beforeUnloadHandler);
+			window.addEventListener('beforeunload', this.destroy);
 
 			const response = await fetch(`https://${window.location.host}/api/create-game`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ mode: this.mode, playerName: this.m_user.getId() }),
+				body: JSON.stringify({ mode: this.mode, playerName: this.m_user.id }),
 			});
+
+			if (response.status == 202)
+				return ;
 
 			const data = await response.json();
 			console.log(data);
 			this.gameId = data.gameId;
-			this.playerId = data.playerId;
-			
+			this.playerSide = data.playerSide;
+
 			this.m_user2 = await getUserFromId(data.opponentId);
 			this.createPlayerHtml();
 			this.m_player2.updateHtml(this.m_user2);
@@ -213,6 +215,7 @@ export class GameClient extends Utils
 
 	private async startGame(): Promise<void>
 	{
+		console.log(this.playerSide);
 		const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
 		{
 			method: 'POST',
@@ -226,7 +229,7 @@ export class GameClient extends Utils
 
 		this.updateGameState(await response.arrayBuffer());
 
-		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerId}`);
+		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerSide}`);
 		this.socket.binaryType = 'arraybuffer';
 
 		this.socket.onopen = () =>
@@ -258,32 +261,13 @@ export class GameClient extends Utils
 		document.addEventListener('keyup', this.keyupHandler);
 	}
 
-	private beforeUnloadHandler = async (): Promise<void> =>
-	{
-		// await this.sendDeletePlayer();
-		await this.destroy();
-	}
-
-	private sendDeletePlayer = async (): Promise<void> =>
-	{
-		console.log("Deleting player from game...");
-
-		await fetch(`https://${window.location.host}/api/delete-player`,
-		{
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({  gameId: this.gameId, playerId: this.playerId }),
-		});
-	}
-
 	private keydownHandler = (event: KeyboardEvent): void =>
 	{
 		this.keysPressed.add(event.key);
 
 		if (event.key === Keys.PLAY_AGAIN && this.end)
 		{
-			this.destroy();
-			new GameClient(this.mode);
+			this.m_router.navigateTo("game", this.mode);
 		}
 	}
 
@@ -359,7 +343,8 @@ export class GameClient extends Utils
 			}
 			catch (error)
 			{
-				console.error('Error updating game state:', error);
+				console.error('Error updating game state:', error, '. Exiting game loop');
+				this.destroy();
 			}
 		}
 	}
@@ -398,17 +383,32 @@ export class GameClient extends Utils
 		}
 	}
 
-	private showWinner(winner: string): void
+	private async showWinner(winner: number)
 	{
-		this.setColors(Params.BACKGROUND_OPACITY);
+		var winnerName = "Player2";
+		if (winner >= 1) // db id start at 1
+		{
+			const usr = await getUserFromId(winner);
+			winnerName = usr.name;
+		}
 		this.hide('net');
 		this.hide('ball');
 		this.hide('paddle-left');
 		this.hide('paddle-right');
-		this.setInnerHTML('winner-msg', `${winner}<br>${Msgs.WIN}`);
+		this.setInnerHTML('winner-msg', `${winnerName}<br>${Msgs.WIN}`);
 		this.setColor('winner-msg', Params.COLOR, undefined, true);
 		this.setContent('play-again-msg', Msgs.PLAY_AGAIN);
 		this.setColor('play-again-msg', Params.COLOR, undefined, true);
+	}
+
+	private removeQueue = async (): Promise<void> =>
+	{
+		await fetch("/api/chat/removeQueue",
+		{
+			method: "DELETE",
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ id: this.m_user.id })
+		});
 	}
 
 	public async destroy(): Promise<void>
@@ -418,10 +418,10 @@ export class GameClient extends Utils
 			clearInterval(this.countdownInterval);
 		}
 
-		// await this.sendDeletePlayer();
+		this.removeQueue();
 		this.socket?.close();
 		this.stopGameLoop();
-		window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+		window.removeEventListener('beforeunload', this.destroy);
 		document.removeEventListener('keydown', this.keydownHandler);
 		document.removeEventListener('keyup', this.keyupHandler);
 		this.keysPressed.clear();

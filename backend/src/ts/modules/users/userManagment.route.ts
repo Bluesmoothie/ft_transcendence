@@ -8,14 +8,14 @@ import * as mgmt from '@modules/users/userManagment.js'
 export async function userManagmentRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
 	fastify.get('/get_session', async (request: any, reply) => {
-		if (request.session.user) {
-			console.log("user is already auth");
+		if (request.session.user)
+		{
 			const res = await mgmt.loginSession(request.session.user, core.db);
-			console.log(res);
+			console.log("user is already auth as:", res.data.name);
 			return reply.code(res.code).send(res.data);
 		}
-
-		else {
+		else
+		{
 			console.log("user not login");
 			return reply.code(404).send({ message: "user need to login" });
 		}

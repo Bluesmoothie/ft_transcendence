@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS users (
 	oauth_id		STRING NOT NULL DEFAULT 0,
 
 	-- 1=player 0=admin
-	rank			INTEGER NOT NULL DEFAULT 1
+	rank			INTEGER NOT NULL DEFAULT 1,
+	created_at		DATE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS blocked_usr (

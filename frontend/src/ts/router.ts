@@ -4,6 +4,7 @@ import { GameClient } from 'pages/GameClient.js';
 import { TournamentMenu } from 'pages/TournamentMenu.js';
 import { Tournament } from 'pages/Tournament.js';
 import { User } from "User.js";
+import { Chat } from '@modules/chat';
 import { UserElement } from 'UserElement.js';
 
 export class Router
@@ -22,10 +23,12 @@ export class Router
 	gameInstance: GameClient | null = null;
 	m_user:			User;
 	m_player1:		UserElement;
+	m_chat:			Chat;
 
-	constructor(user: User = null)
+	constructor(user: User = null, chat: Chat = null)
 	{
 		this.m_user = user;
+		this.m_chat = chat;
 		this.loadPages();
 		this.setUpWindowEventListeners();
 		this.showPage(this.currentPage, null);
@@ -54,46 +57,33 @@ export class Router
 			this.showPage(page, null);
 		});
 
-		window.addEventListener('keydown', (e) =>
+		window.addEventListener('keydown', async (e) =>
 		{
-			const el = document.getElementById('menu')!;
-			if (el)
+			switch (e.key)
 			{
-				const activeTag = document.activeElement ? document.activeElement.tagName : null;
-				if (activeTag && !(activeTag === 'INPUT' || activeTag === 'TEXTAREA'))
-				{
-					this.findKey(e.key);
-				}
+				case Router.EXIT_KEY:
+					history.back();
+					break ;
+				case Router.HOME_KEY:
+					this.navigateTo('home', '');
+					break ;
+				case Router.GAME_KEY:
+					this.navigateTo('game-menu', '');
+					break ;
+				case Router.GAME_ONLINE_KEY:
+					this.navigateTo('game', 'online');
+					break ;
+				case Router.GAME_LOCAL_KEY:
+					this.navigateTo('game', 'local');
+					break ;
+				case Router.GAME_BOT_KEY:
+					this.navigateTo('game', 'bot');
+					break ;
+				case Router.TOURNAMENT_KEY:
+					this.navigateTo('tournament-menu', '');
+					break ;
 			}
 		});
-	}
-
-	private findKey(key: string): void
-	{
-		switch (key)
-		{
-			case Router.EXIT_KEY:
-				history.back();
-				break ;
-			case Router.HOME_KEY:
-				this.navigateTo('home', '');
-				break ;
-			case Router.GAME_KEY:
-				this.navigateTo('game-menu', '');
-				break ;
-			case Router.GAME_ONLINE_KEY:
-				this.navigateTo('game', 'online');
-				break ;
-			case Router.GAME_LOCAL_KEY:
-				this.navigateTo('game', 'local');
-				break ;
-			case Router.GAME_BOT_KEY:
-				this.navigateTo('game', 'bot');
-				break ;
-			case Router.TOURNAMENT_KEY:
-				this.navigateTo('tournament-menu', '');
-				break ;
-		}
 	}
 
 	public navigateTo(page: string, mode: string): void
@@ -124,7 +114,7 @@ export class Router
 			case 'game-menu':
 				return (new GameMenu(this));
 			case 'game':
-				return (new GameClient(mode!, this.m_user));
+				return (new GameClient(this, mode!, this.m_user, this.m_chat));
 			case 'tournament-menu':
 				return (new TournamentMenu(this));
 			case 'tournament':
@@ -134,4 +124,3 @@ export class Router
 		}
 	}
 }
-
