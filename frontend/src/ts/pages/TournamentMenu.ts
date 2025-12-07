@@ -6,8 +6,8 @@ export class TournamentMenu
 	private static readonly BUTTON_2: string = 'online';
 
 	private router: Router;
-	private button1Element = document.getElementById('local-tournament') as HTMLButtonElement;
-	private button2Element = document.getElementById('online-tournament') as HTMLButtonElement;
+	private button1Element = document.getElementById('tournament-local') as HTMLButtonElement;
+	private button2Element = document.getElementById('tournament-online') as HTMLButtonElement;
 
 	constructor(router: Router)
 	{
@@ -24,23 +24,23 @@ export class TournamentMenu
 
 	private localTournamentClickHandler = () =>
 	{
-		this.router.navigateTo('Tournament', 'local');
+		this.router.navigateTo('tournament', 'local');
 	}
 
 	private onlineTournamentClickHandler = () =>
 	{
-		this.router.navigateTo('Tournament', 'online');
+		this.router.navigateTo('tournament', 'online');
 	}
 
 	private setUpDocumentEventListeners(): void
 	{
-		document.getElementById('local-tournament')?.addEventListener('click', this.localTournamentClickHandler);
-		document.getElementById('online-tournament')?.addEventListener('click', this.onlineTournamentClickHandler);
+		document.getElementById('tournament-local')?.addEventListener('click', this.localTournamentClickHandler);
+		document.getElementById('tournament-online')?.addEventListener('click', this.onlineTournamentClickHandler);
 	}
 
 	public destroy(): void
 	{
-		document.getElementById('local-tournament')?.removeEventListener('click', this.localTournamentClickHandler);
-		document.getElementById('online-tournament')?.removeEventListener('click', this.onlineTournamentClickHandler);
+		document.getElementById('tournament-local')?.removeEventListener('click', this.localTournamentClickHandler);
+		document.getElementById('tournament-online')?.removeEventListener('click', this.onlineTournamentClickHandler);
 	}
 }

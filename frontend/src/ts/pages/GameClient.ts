@@ -289,7 +289,7 @@ export class GameClient extends Utils
 			this.keysPressed.forEach((key) => { this.getKeyToSend2Player(key); });
 		}
 
-		this.socket.send(this.keysToSend);
+		this.socket!.send(this.keysToSend);
 	}
 
 	private getKeyToSend1Player(key: string): void
@@ -362,13 +362,13 @@ export class GameClient extends Utils
 		if (gameState.player1Score != this.m_prevP1Score)
 		{
 			let score = document.querySelector("#score-left");
-			score.animate(scoreAnimation, scoreAnimationParams);
+			score!.animate(scoreAnimation, scoreAnimationParams);
 		}
 
 		if (gameState.player2Score != this.m_prevP2Score)
 		{
 			let score = document.querySelector("#score-right");
-			score.animate(scoreAnimation, scoreAnimationParams);
+			score!.animate(scoreAnimation, scoreAnimationParams);
 		}
 
 		this.m_prevP1Score = gameState.player1Score;
