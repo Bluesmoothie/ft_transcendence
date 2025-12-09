@@ -3,7 +3,7 @@ import { UserElement } from "UserElement.js";
 import { FriendManager } from "friends.js";
 import * as utils from 'utils.js'
 
-var main: MainUser = new MainUser(document.getElementById("user-container"), null, null);
+var main: MainUser = new MainUser(document.getElementById("user-container"));
 await main.loginSession();
 main.onLogout((user) => { window.location.href = window.location.origin })
 if (main.id == -1) // user not login

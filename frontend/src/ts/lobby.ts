@@ -3,7 +3,7 @@ import { UserElement, UserElementType } from "UserElement.js";
 import { Chat } from "modules/chat.js";
 import { Router } from "router.js";
 
-var user: MainUser = new MainUser(document.getElementById("user-container"), null, null);
+var user: MainUser = new MainUser(document.getElementById("user-container"));
 await user.loginSession();
 user.onLogout((user) => { window.location.href = window.location.origin })
 if (user.id == -1) // user not login
@@ -78,15 +78,3 @@ function fillUserList(users: User[])
 	})
 	container.prepend(text);
 }
-
-async function uploadAvatar()
-{
-	var fileInput = document.getElementById("avatar_input") as HTMLInputElement;
-	if (!fileInput)
-	{
-		console.error("no avatar_upload elt found");
-		return ;
-	}
-	const retval: number = await user.setAvatar(fileInput.files[0]);
-}
-

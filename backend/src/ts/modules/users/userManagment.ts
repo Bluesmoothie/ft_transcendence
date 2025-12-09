@@ -23,17 +23,8 @@ function validate_email(email:string)
 	);
 }
 
-export interface UserUpdate {
-	oldName:	string;
-	oldPassw:	string;
-	name:		string;
-	passw:		string;
-	email:		string;
-}
-
 export async function createGuest(): Promise<DbResponse>
 {
-
 	const sql = "INSERT INTO users (name, source, created_at) VALUES (?, ?, ?) RETURNING id";
 	try
 	{
@@ -156,20 +147,22 @@ export async function createUser(email: string, passw: string, username: string,
 	}
 }
 
-export async function updateUser(update: UserUpdate, db: Database) : Promise<DbResponse>
+export async function resetUser(user_id: number)
 {
-	console.log(update);
-
-	const sql = "UPDATE users SET name = ?, email = ?, passw = ? WHERE name = ? AND passw = ? RETURNING id";
-	try {
-		const row = await db.get(sql, [update.name, update.email, update.passw, update.oldName, update.oldPassw]);
-		if (!row)
-			return { code: 404, data: { message: "user not found" }};
-		return { code: 200, data: { message: "Success" }};
+	var sql = "UPDATE users SET elo = 1000, wins = 0, games_played = 0 WHERE id = ?";
+	try
+	{
+		await core.db.run(sql, user_id);
+		sql = "DELETE FROM friends WHERE user1_id = ? OR user2_id = ?";
+		await core.db.run(sql, user_id);
+		sql = "DELETE FROM games WHERE user1_id = ? OR user2_id = ?";
+		await core.db.run(sql, user_id);
+		console.log(`user: ${user_id} has reseted his account`);
 	}
-	catch (err) {
-		console.error(`database err: ${err}`);
-		return { code: 500, data: { message: "database error" }};
+	catch (err)
+	{
+		console.log(`Database Error: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
 	}
 }
 
@@ -181,21 +174,15 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 		console.error("login out none existing user in logoutUser? id:", user_id);
 		return res; // should not happen
 	}
-	if (res.data.source != AuthSource.GUEST)
-	{
-		res = await logoutUser(user_id, db);
-		if (res.code != 200)
-			return res;
-	}
 
 	const rBytes = randomBytes(64).toString('hex');
 	const name = `DELETED_USER${user_id}${randomBytes(2).toString('hex')}`
-	console.log(rBytes);
-	const sql = "UPDATE users SET name = ?, email = ?, passw = ? WHERE id = ? oauth_id = ?"; // TODO: to continue;
+	const sql = "UPDATE users SET name = ?, email = ?, passw = ?, oauth_id = ? WHERE id = ?";
 	try
 	{
-		const result = await db.run(sql, [name, rBytes, rBytes, user_id, rBytes]);
-		console.log(`user has been deleted ${result.changes}`)
+		await updateAvatarPath(user_id, 'default.png');
+		await db.run(sql, [name, rBytes, rBytes, rBytes, user_id]);
+		console.log(`user has been deleted`)
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err)
@@ -241,44 +228,31 @@ export async function setUserStatus(user_id: number, newStatus: string, db: Data
 	}
 }
 
-export async function updateUserReq(request: FastifyRequest, reply: FastifyReply, db: Database)
-{
-	const { oldName, oldPassw, name, email, passw } = request.body as {
-		oldName:	string,
-		oldPassw:	string,
-		name:		string,
-		email:		string,
-		passw:		string
-	};
-	const update: UserUpdate = { oldName, oldPassw, name, email, passw };
-	console.log(update);
-	const result = await updateUser(update, db);
-	return reply.code(result.code).send(result.data);
-}
-
 export async function updateAvatarPath(id: number, filename: string)
 {
 	const sql = "UPDATE users SET avatar = ? WHERE id = ?";
 	await core.db.run(sql, ["/public/avatars/" + filename , id]);
 }
 
-export async function uploadAvatar(request: any, reply: any, db: Database)
+export async function uploadAvatar(request: FastifyRequest, reply: any, db: Database)
 {
 	const data = await request.file();
 	if (!data)
 		return reply.code(400).send({ error: "no file uploaded" });
 
-	const email = request.headers['email'] as string;
-	const filename = await hashString(email);
+	const res = await getUserById(request.session.user, db);
+	if (res.code != 200)
+		return reply.code(res.code).send(res.data);
+
+	const filename = await hashString(res.data.email) + await hashString(data.filename);
 	const filepath = path.join("/var/www/server/public/avatars/", filename);
-	const id = request.headers['id'] as string;
 
 	try
 	{
 		await pipeline(data.file, createWriteStream(filepath));
-		await updateAvatarPath(Number(id), filename);
+		await updateAvatarPath(Number(res.data.id), filename);
 
-		console.log(`${email} has changed is avatar. location=${filepath}`);
+		console.log(`${res.data.name} has changed is avatar. location=${filepath}`);
 
 		return {
 			Success:	true,
@@ -328,6 +302,57 @@ export async function unBlockUser(user_id: number, loginToUnBlock: string, db: D
 	}
 	catch (err) {
 		console.log(`Database error: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+}
+
+export async function updatePassw(user_id: number, oldPass: string, newPass: string): Promise<DbResponse>
+{
+	const sql = "UPDATE users SET passw = ? WHERE id = ? AND passw = ? RETURNING id";
+	try
+	{
+		const row = await core.db.get(sql, [newPass, user_id, oldPass]);
+		if (!row)
+			return { code: 404, data: { message: "password is incorect" }};
+		return { code: 200, data: { message: "password updated" }};
+	}
+	catch (err)
+	{
+		console.log(`Database error: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+}
+
+export async function updateName(user_id: number, name: string): Promise<DbResponse>
+{
+	const sql = "UPDATE users SET name = ? WHERE id = ?";
+	try
+	{
+		await core.db.run(sql, [name, user_id]);
+		return { code: 200, data: { message: "name updated" }};
+	}
+	catch (err)
+	{
+		console.log(`Database error: ${err}`);
+		if (err.code === "SQLITE_CONSTRAINT")
+			return { code: 500, data: { message: "username already taken" }};
+		return { code: 500, data: { message: "Database Error" }};
+	}
+}
+
+export async function updateEmail(user_id: number, email: string): Promise<DbResponse>
+{
+	const sql = "UPDATE users SET email = ? WHERE id = ?";
+	try
+	{
+		await core.db.run(sql, [email, user_id]);
+		return { code: 200, data: { message: "name updated" }};
+	}
+	catch (err)
+	{
+		console.log(`Database error: ${err}`);
+		if (err.code === "SQLITE_CONSTRAINT")
+			return { code: 500, data: { message: "email already taken" }};
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }

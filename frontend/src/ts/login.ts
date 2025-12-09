@@ -1,7 +1,6 @@
 import { hashString } from 'sha256.js'
 import { MainUser } from './User.js';
 
-
 function setPlaceholderTxt(msg: string)
 {
 	var txt = document.getElementById("placeholder");
@@ -166,7 +165,7 @@ async function logAsGuest()
 	
 }
 
-var user: MainUser = new MainUser(null, null, null);
+var user: MainUser = new MainUser(null);
 await user.loginSession();
 if (user.id != -1)
 	window.location.href = window.location.origin + "/lobby";

@@ -14,6 +14,15 @@ export enum UserStatus {
 	IN_GAME,			// show when user in game
 }
 
+export enum AuthSource {
+	BOT = -2,	// for bot account
+	GUEST = -1, // guest profile are deleted on logout
+	INTERNAL = 0,
+	GOOGLE, // not used anymore
+	GITHUB,
+	FORTY_TWO
+}
+
 async function getUserInfoFromId(id: number): Promise<Response> {
 	var response = await fetch(`/api/user/get_profile_id?user_id=${id.toString()}`);
 	return response;
@@ -69,6 +78,7 @@ export class User {
 	private m_created_at: string;
 
 	private m_stats:	Stats;
+	private m_source:	AuthSource;
 
 	constructor() {
 		this.setUser(
@@ -80,6 +90,7 @@ export class User {
 		);
 
 		this.m_stats = { gamePlayed: 0, gameWon: 0, currElo: 0, maxElo: 0, avrTime: "", shortTime: "" };
+		this.m_source = AuthSource.GUEST;
 	}
 
 	public setUser(id: number, name: string, email: string, avatar: string, status: UserStatus) {
@@ -100,8 +111,9 @@ export class User {
 	// public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
 	public getAvatarPath(): string { return this.m_avatarPath; }
 	
-	get		created_at(): string { return this.m_created_at; }
-	get		stats(): Stats { return this.m_stats; }
+	get		created_at(): string	{ return this.m_created_at; }
+	get		stats(): Stats			{ return this.m_stats; }
+	get		source(): AuthSource	{ return this.m_source; }
 
 	public async setStatus(status: UserStatus): Promise<Response> {
 		this.m_status = status;
@@ -167,6 +179,7 @@ export class User {
 		this.m_avatarPath = data.avatar;
 		this.m_status = data.status;
 		this.m_created_at = data.created_at;
+		this.m_source = data.source;
 
 		this.m_stats.gamePlayed = data.games_played;
 		this.m_stats.gameWon = data.wins;
@@ -189,22 +202,11 @@ export class User {
 		return response.status;
 	}
 
-	public async uploadAvatar(file: File): Promise<any> {
-		const formData = new FormData();
-		if (!file)
-			return;
-
-		formData.append("file", file, file.name);
+	public async uploadAvatar(file: FormData): Promise<any> {
 
 		var response = await fetch("/api/user/upload/avatar", {
 			method: "POST",
-			headers: {
-				'id': this.m_id.toString(),
-				'email': this.m_email,
-				'prev_avatar': this.m_avatarPath,
-			},
-			body: formData,
-
+			body: file,
 		});
 		var data = await response.json();
 		this.m_avatarPath = "/public/avatars/" + data.filename;
@@ -230,7 +232,8 @@ export class MainUser extends User
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
 
-	constructor(parent: HTMLElement, friendsContainer: HTMLElement, pndgFriendsContainer: HTMLElement) {
+	constructor(parent: HTMLElement)
+	{
 		super()
 		
 		if (parent)
@@ -354,7 +357,7 @@ export class MainUser extends User
 		userHtml.updateHtml(user);
 	}
 
-	public async setAvatar(file: File): Promise<number> // TODO: check si multipart upload ok
+	public async setAvatar(file: FormData): Promise<number> // TODO: check si multipart upload ok
 	{
 		if (this.id == -1)
 			return 1;
@@ -450,5 +453,20 @@ export class MainUser extends User
 		});
 
 		return response.status;
+	}
+
+	public async deleteUser(): Promise<number>
+	{
+		const res = await fetch ('api/user/delete', {
+			method: "DELETE",
+		});
+		this.logout();
+		return res.status;
+	}
+
+	public async resetUser(): Promise<number>
+	{
+		const res = await fetch('/api/user/reset', { method: "DELETE" });
+		return res.status;
 	}
 }

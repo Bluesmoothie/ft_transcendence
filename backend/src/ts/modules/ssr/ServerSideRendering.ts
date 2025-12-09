@@ -50,6 +50,11 @@ export class ServerSideRendering
 			reply.type('text/html').sendFile('game.html');
 		});
 
+		this.server.get('/settings', (request, reply) =>
+		{
+			reply.type('text/html').sendFile('settings.html');
+		})
+
 	}
 
 }
