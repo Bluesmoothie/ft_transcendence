@@ -3,12 +3,7 @@ use std::{
 };
 
 use crossterm::{
-    cursor,
-    event::{PushKeyboardEnhancementFlags, KeyboardEnhancementFlags},
-    style::*,
-    terminal,
-    ExecutableCommand,
-    QueueableCommand,
+    ExecutableCommand, QueueableCommand, cursor, event::{KeyboardEnhancementFlags, PushKeyboardEnhancementFlags}, style::*, terminal::{self, SetTitle}
 };
 
 pub const NUM_ROWS: u16 = 90;
@@ -32,6 +27,15 @@ pub fn draw_welcome_screen() -> std::io::Result<()> {
     Ok(())
 }
 
+pub fn draw_friends_screen() -> std::io::Result<()> {
+    stdout().execute(terminal::Clear(terminal::ClearType::All))?;
+    borders()?;
+    draw_logo(LOGO)?;
+    set_friends_options()?;
+    stdout().flush()?;
+    Ok(())
+}
+
 pub fn game_setup() -> std::io::Result<()> {
     stdout().execute(terminal::Clear(terminal::ClearType::All))?;
     borders()?;
@@ -45,6 +49,7 @@ pub fn setup_terminal() -> std::io::Result<()> {
     terminal::enable_raw_mode()?;
     stdout().execute(terminal::EnterAlternateScreen)?;
     stdout().execute(cursor::Hide)?;
+    // stdout().execute(SetTitle("Transcendence"))?;
     stdout().execute(terminal::SetSize(NUM_ROWS, NUM_COLS))?;
     stdout().execute(terminal::Clear(terminal::ClearType::All))?;
     stdout().execute(PushKeyboardEnhancementFlags(
@@ -53,7 +58,7 @@ pub fn setup_terminal() -> std::io::Result<()> {
     Ok(())
 }
   
-fn borders() -> std::io::Result<()> {
+pub fn borders() -> std::io::Result<()> {
     for y in 1..NUM_COLS {
         stdout()
             .queue(cursor::MoveTo(0, y))?
@@ -95,9 +100,20 @@ fn set_welcome_options() -> std::io::Result<()> {
         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 13))?
         .queue(Print("1. GAME"))?
         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 16))?
-        .queue(Print("2. TOURNAMENT"))?
+        .queue(Print("2. SOCIAL LIFE"))?
         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 19))?
         .queue(Print("3. SETTINGS"))?;
+    Ok(())
+}
+
+fn set_friends_options() -> std::io::Result<()> {
+    stdout()
+        .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 13))?
+        .queue(Print("1. YOUR FRIENDS"))?
+        .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 16))?
+        .queue(Print("2. CHAT"))?
+        .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 19))?
+        .queue(Print("3. GO BACK"))?;
     Ok(())
 }
 
@@ -113,19 +129,3 @@ fn set_game_options() -> std::io::Result<()> {
         .queue(Print("4. GO BACK"))?;
     Ok(())
 }
-
-// fn clean_options() -> std::io::Result<()> {
-//     stdout()
-//         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 13))?
-//         .queue(Print("                          "))?
-//         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 16))?
-//         .queue(Print("                          "))?
-//         .queue(cursor::MoveTo((NUM_ROWS - 6) / 2, 19))?
-//         .queue(Print("                          "))?;
-//     Ok(())
-// }
-
-	// PADDLE_HEIGHT = 15,
-	// PADDLE_WIDTH = 1,
-	// PADDLE_PADDING = 2,
-	// BALL_SIZE = 2,

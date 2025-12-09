@@ -9,20 +9,17 @@ use reqwest::{Client};
 
 mod welcome;
 mod game;
+mod friends;
 use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
 use crate::game::{create_game};
+use crate::friends::social_life;
 
 mod login;
 use crate::login::{create_guest_session};
 use tokio::sync::{mpsc};
 
 use crossterm::{
-  cursor,
-  event::{self, PopKeyboardEnhancementFlags, Event, KeyCode, KeyModifiers},
-  style::*,
-  terminal,
-  ExecutableCommand,
-  QueueableCommand,
+  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
 
 pub const NUM_ROWS: u16 = 30;
@@ -68,11 +65,13 @@ pub async fn welcome_screen(game_main: &Infos, mut receiver: mpsc::Receiver<serd
         cleanup_and_quit(&game_main.original_size)?;
       }
       else if let Event::Key(key_event) = event {
-        if key_event.code == KeyCode::Char('1') {
-          receiver = game_loop(&game_main, receiver).await?;
-        } else if key_event.code == KeyCode::Char('2') {
-
-        } else if key_event.code == KeyCode::Char('3') {
+        match key_event.code {
+          KeyCode::Char('1') => {receiver = game_loop(&game_main, receiver).await?;},
+          KeyCode::Char('2') => {
+            social_life(&game_main).await?;
+          },
+          KeyCode::Char('3') => {},
+          _ => {},
 
         }
       }
@@ -138,6 +137,7 @@ pub fn should_exit(event: &Event) -> Result<bool> {
 
 pub fn cleanup_and_quit(original_size: &(u16, u16)) -> std::io::Result<()> {
   stdout().execute(cursor::Show)?;
+  stdout().execute(SetCursorStyle::BlinkingBlock)?;
   stdout().execute(terminal::LeaveAlternateScreen)?;
   stdout().execute(terminal::SetSize(original_size.0, original_size.1))?;
   stdout().execute(PopKeyboardEnhancementFlags)?;
