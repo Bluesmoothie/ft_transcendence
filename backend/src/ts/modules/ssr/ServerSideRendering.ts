@@ -3,19 +3,7 @@ import { readFileSync } from 'fs';
 
 export class ServerSideRendering
 {
-	private static readonly pagePath = "/var/www/server/public/";
-	private static readonly cssPath = "/var/www/server/css/dist/";
 	private server: FastifyInstance;
-
-	private startPage:	string;
-	private lobbyPage:	string;
-	private loginPage:	string;
-	private gamePage:	string;
-
-	private startCss:	string;
-	// private loginCss:	string;
-	// private gameCss:	string;
-	private globalCss:	string;
 
 	constructor(server: FastifyInstance)
 	{
@@ -40,9 +28,18 @@ export class ServerSideRendering
 			reply.type('text/html').sendFile('lobby.html');
 		});
 
-		this.server.get('/', (request, reply) =>
+		this.server.get('/start', (request, reply) =>
 		{
 			reply.type('text/html').sendFile('start.html');
+		});
+
+		this.server.get('*', (request, reply) => // WARNING: this need to be the last route registered (or after all api routes)
+		{
+			if (request.url.startsWith("/api/")) // to api route where found previously
+			{
+				return reply.code(404).send({ message: 'route not found' });
+			}
+			reply.type('text/html').sendFile('index.html');
 		});
 
 		this.server.get('/game', (request, reply) =>
