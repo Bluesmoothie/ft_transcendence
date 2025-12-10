@@ -48,9 +48,9 @@
 			<div class="user-menu relative">
 				<select id="status"></select>
 				<div id="user-menu-container" class="hide absolute top-[90%] size-fit z-2">
-					<p id="profile_btn" class="btn text-left cursor-default">profile</p>
-					<p id="settings_btn" class="btn text-left cursor-default">settings</p>
-					<p id="logout_btn" class="btn text-left cursor-default">logout</p>
+					<p id="profile_btn" data-i18n="profile" class="btn text-left cursor-default">profile</p>
+					<p id="settings_btn" data-i18n="settings" class="btn text-left cursor-default">settings</p>
+					<p id="logout_btn" data-i18n="logout" class="btn text-left cursor-default">logout</p>
 				</div>
 				<div id="user-menu-btn" class="flex items-center gap-4 hover:text-(--green)">
 					<div id="avatar-name" class="text-[100%] font-bold select-none">
@@ -84,8 +84,8 @@
 
 			<div class="h-[90%] w-full flex flex-col gap-5 py-15 sm:flex-row md:px-5 lg:px-20">
 				<div class="">
-					<button id="user-list-btn" class="button-empty border-[--purple] text-[--purple]">users</button>
-					<button id="friend-list-btn" class="button-empty mt-3 border-[--purple] text-[--purple]">friends</button>
+					<button id="user-list-btn" data-i18n="user" class="button-empty border-[--purple] text-[--purple]">users</button>
+					<button id="friend-list-btn" data-i18n="friends" class="button-empty mt-3 border-[--purple] text-[--purple]">friends</button>
 				</div>
 
 				<div class="relative w-[35%] h-full border-4 border-[--blue] flex flex-col">
@@ -95,7 +95,7 @@
 					</div>
 					<div id="chat-out" class="flex h-full overflow-y-scroll flex-col-reverse align-bottom justify-start items-start bg-[--darker]">
 					</div>	
-					<input id="chat-in" wrap="soft" placeholder="enter message..."
+					<input id="chat-in" wrap="soft" data-i18n-placeholder="chat" placeholder="enter message..."
 						class="h-15 py-2 px-3 bg-[--dark] focus:outline-none
 						border-t-4 border-t-[--blue] border-b-0 hover:brightness-1">
 				</div>
@@ -103,14 +103,14 @@
 				<div class="border-4 flex flex-col border-[--red] w-[65%]">
 					<div class="w-full h-[85%]">
 						<section id="home" class="page px-[30%] bg-[--darkest] ">
-							<button class="btn w-full text-6xl font-bold" id="game"></button>
-							<button class="btn w-full text-6xl font-bold" id="tournament"></button>
+							<button class="btn w-full text-6xl font-bold" data-i18n="game" id="game">game</button>
+							<button class="btn w-full text-6xl font-bold" data-i18n="tournament" id="tournament">tournament</button>
 						</section>
 
 						<section id="game-menu" class="page px-[30%] bg-[--darkest]">
-							<button class="btn w-full text-6xl font-bold" id="local-game"></button>
-							<button class="btn w-full text-6xl font-bold" id="online-game"></button>
-							<button class="btn w-full text-6xl font-bold" id="bot-game"></button>
+							<button class="btn w-full text-6xl font-bold" data-i18n="local" id="local-game">local</button>
+							<button class="btn w-full text-6xl font-bold" data-i18n="online" id="online-game">online</button>
+							<button class="btn w-full text-6xl font-bold" data-i18n="bot" id="bot-game">bot</button>
 						</section>
 
 						<section id="game" class="relative game page bg-[--darkest] w-full box-sizing: content-box overflow-hidden flex justify-center align-middle items-center">
@@ -146,7 +146,7 @@
 						</section>
 
 						<section id="tournament-menu">
-							<h2 id="title"></h2>
+							<h2 id="title" data-i18n="text.tournament.players_num">Select the number of players</h2>
 							<button id="four"></button>
 							<button id="eight"></button>
 							<button id="sixteen"></button>

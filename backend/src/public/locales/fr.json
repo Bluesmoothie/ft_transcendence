@@ -1,19 +1,35 @@
 {
-  "play": "JOUER",
-  "user": "utilisateur",
-  "signup": "INSCRIPTION",
-  "login": "CONNEXION",
-  "confirm": "confirmer",
-  "guest": {
-	"button": "continuer en tant qu'invité",
-	"warning": "*toutes les données seront perdues à la déconnexion"
-  },
-  "placeholder": {
-	"email": "email...",
-	"username": "nom d'utilisateur...",
-	"password": "mot de passe...",
-	"confirm_password": "confirmation du mot de passe...",
-	"2fa": "code totp"
-  },
-  "back": "retour"
+	"capital": {
+		"play": "JOUER",
+		"signup": "INSCRIPTION",
+  		"login": "CONNEXION"
+	},
+	"text": {
+		"guest": "*toutes les données seront perdues à la déconnexion",
+		"tournament": {
+			"players_num": "Choisissez le nombre de participants"
+		}
+	},
+  	"placeholder": {
+		"email": "email...",
+		"username": "nom d'utilisateur...",
+		"password": "mot de passe...",
+		"confirm_password": "confirmation du mot de passe...",
+		"2fa": "code totp",
+		"chat": "entrez un message..."
+  	},
+	"guest_button": "continuer en tant qu'invité",
+	"confirm": "confirmer",
+	"back": "retour",
+	"user": "utilisateur",
+	"users": "utilisateurs",
+	"friends": "amis",
+	"profile": "profil",
+	"settings": "paramètres",
+	"logout": "déconnexion",
+	"game": "jouer",
+	"tournament": "tournoi",
+	"local": "locale",
+	"online": "en ligne",
+	"bot": "contre l'ia"
 }

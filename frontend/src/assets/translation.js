@@ -18,9 +18,9 @@ function translatePage() {
 	  el.textContent = i18n.t(key, options);
 	});
 	document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    	const key = el.getAttribute('data-i18n-placeholder');
+    	const key = `placeholder.${el.getAttribute('data-i18n-placeholder')}`;
     	el.placeholder = i18n.t(key);
-  });
+	});
 }
 
 function updateLanguageSelector() {
