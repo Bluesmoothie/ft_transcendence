@@ -1,0 +1,9 @@
+{
+  "signup": "SIGNUP",
+  "login": "LOGIN",
+  "confirm": "confirm",
+  "guest": {
+	"button": "continue as guest",
+	"warning": "*all data will be lost on logout"
+  }
+}
