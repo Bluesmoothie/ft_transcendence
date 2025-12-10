@@ -29,7 +29,7 @@ export class ServerSideRendering
 		<div class="bootup-mask"></div>
 		<div class="bootup-lines"></div>
 		<h1 class="bootup-text">HDMI-1</h1>
-		<div class="crt h-full">
+		<div class="crt h-full relative">
 			<div class="crt-mask"></div> 
 			<div class="scanline">
 				<div class="scan"></div>
@@ -37,10 +37,10 @@ export class ServerSideRendering
 			<div id="app" class="h-full">
 
 			</div>
-			<div>
-			<select id="language-selector" onchange="changeLanguage(this.value)">
-    					<option value="en">English</option>
-    					<option value="fr">Français</option>
+			<div class="language-selector-div">
+			<select id="language-selector" class="language-selector" onchange="changeLanguage(this.value)">
+    					<option value="en">🇬🇧 English</option>
+    					<option value="fr">🇫🇷 Français</option>
   			</select>
 			</div>
 		</div>
