@@ -22,8 +22,8 @@ use crossterm::{
   ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
 
-pub const NUM_ROWS: u16 = 30;
-pub const NUM_COLS: u16 = 10;
+pub const WIDTH: u16 = 90;
+pub const HEIGHT: u16 = 30;
 pub struct Infos {
   original_size: (u16, u16),
   location: String,
@@ -97,12 +97,16 @@ fn get_location() -> Result<String> {
 }
 
 pub async fn game_loop(game_main: &Infos, mut receiver: mpsc::Receiver<serde_json::Value>) -> Result<mpsc::Receiver<serde_json::Value>> {
-  
+  game_setup()?;
   loop {
-    game_setup()?;
     let event: Event = event::read()?;
-
-    if should_exit(&event)? == true {
+    if wrong_resize_game_page(&event)? == true {
+      stdout()
+        .execute(terminal::Clear(terminal::ClearType::All))?;
+      stdout()
+        .execute(cursor::MoveTo(0,0))?
+        .execute(Print("Wrong terminal size, please resize"))?;
+    } else if should_exit(&event)? == true {
       cleanup_and_quit(&game_main.original_size)?;
     } else if let Event::Key(key_event) = event {
         match key_event.code {
@@ -124,15 +128,27 @@ pub async fn game_loop(game_main: &Infos, mut receiver: mpsc::Receiver<serde_jso
   }
 }
 
-pub fn should_exit(event: &Event) -> Result<bool> {
-    if let Event::Key(key_event) = event {
-      if key_event.code == KeyCode::Esc || 
-      (key_event.code == KeyCode::Char('c') 
-      && key_event.modifiers == KeyModifiers::CONTROL) {
-        return Ok(true);
-      }
+pub fn wrong_resize_game_page(event: &Event) -> Result<bool> {
+  if let Event::Resize(x,y ) = event {
+    if *x < WIDTH || *y < HEIGHT {
+      return Ok(true);
     }
-    return Ok(false);
+    else {
+      game_setup()?;
+    }
+  }
+  Ok(false)
+}
+
+pub fn should_exit(event: &Event) -> Result<bool> {
+  if let Event::Key(key_event) = event {
+    if key_event.code == KeyCode::Esc || 
+    (key_event.code == KeyCode::Char('c') 
+    && key_event.modifiers == KeyModifiers::CONTROL) {
+      return Ok(true);
+    }
+  }
+  Ok(false)
 }
 
 pub fn cleanup_and_quit(original_size: &(u16, u16)) -> std::io::Result<()> {
@@ -157,9 +173,9 @@ pub fn clean_terminal(original_size: &(u16, u16)) -> Result<()> {
 fn display_error(message: &str) -> Result<()> {
 	stdout().execute(terminal::Clear(terminal::ClearType::All))?;
 	stdout()
-		.queue(cursor::MoveTo(NUM_ROWS / 2, NUM_COLS / 2))?
+		.queue(cursor::MoveTo(WIDTH / 2, HEIGHT / 2))?
 		.queue(Print(message))?
-		.queue(cursor::MoveTo(NUM_ROWS/2, NUM_COLS / 2 + 3))?
+		.queue(cursor::MoveTo(WIDTH/2, HEIGHT / 2 + 3))?
 		.queue(Print("Press Esc to continue"))?;
 	stdout().flush()?;
 	loop {

@@ -17,7 +17,7 @@ use std::{
 	io::{Write, stdout},
 };
 
-use crate::{game, welcome::{NUM_COLS, NUM_ROWS, borders}};
+use crate::{HEIGHT, WIDTH, welcome::borders};
 
 
 
@@ -108,7 +108,7 @@ async fn delete_friend(game_main: &Infos) -> Result<()> {
             match key_event.code {
                 KeyCode::Char(c) => {
                     let (x, _) = position()?;
-                    if x < NUM_ROWS - 1 {
+                    if x < WIDTH - 1 {
                         stdout().execute(Print(c))?;
                         friend_name.push(c);
                     }
@@ -150,7 +150,7 @@ async fn add_friend(game_main: &Infos) -> Result<()> {
             match key_event.code {
                 KeyCode::Char(c) => {
                     let (x, _) = position()?;
-                    if x < NUM_ROWS - 1 {
+                    if x < WIDTH - 1 {
                         stdout().execute(Print(c))?;
                         friend_name.push(c);
                     }
@@ -184,6 +184,11 @@ async fn send_delete_request(game_main: &Infos, friend_name: String) -> Result<(
         .get(url)
         .send()
         .await?;
+    stdout()
+        .queue(MoveTo(2, HEIGHT - 1))?
+        .queue(Print("                                                                                    "))?
+        .queue(MoveTo(2, HEIGHT - 1))?;
+    stdout().flush()?;
     match response.status().as_u16() {
         200 => {
             let body: serde_json::Value = response.json().await?;
@@ -191,7 +196,6 @@ async fn send_delete_request(game_main: &Infos, friend_name: String) -> Result<(
                 Some(id) => id,
                 _ => {
                     stdout().execute(Print("Error, friend does not exist"))?;
-                    // sleep(Duration::from_secs(2));
                     return Ok(());
                 }
             };
@@ -202,14 +206,15 @@ async fn send_delete_request(game_main: &Infos, friend_name: String) -> Result<(
                 .await?
                 .status()
                 .as_u16() {
-                    200 => {stdout().execute(Print("Friend successfully deleted"))?;},
-                    404 => {stdout().execute(Print("Failed to delete friend"))?;},
+                    200 => {stdout().execute(Print(format!("{} successfully deleted", friend_name)))?;},
+                    404 => {stdout().execute(Print("You are not friend with friend"))?;},
                     _ => {stdout().execute(Print("Error deleting friend: Server Error"))?;}
                 }
         },
         404 => {stdout().execute(Print("Error, friend does not exist"))?;},
         _ => {stdout().execute(Print("Error adding friend: Server error"))?;}
     }
+    sleep(Duration::from_secs(2));
     Ok(())
 }
 
@@ -225,24 +230,24 @@ async fn send_friend_request(game_main: &Infos, friend_name: String) -> Result<(
         .await?;
     
     stdout()
-        .queue(MoveTo(2, NUM_COLS - 1))?
+        .queue(MoveTo(2, HEIGHT - 1))?
         .queue(Print("                                                                                    "))?
-        .queue(MoveTo(2, NUM_COLS - 1))?;
+        .queue(MoveTo(2, HEIGHT - 1))?;
     match response.status().as_u16() {
         200 => {stdout().queue(Print("Friend request sent!"))?;},
         404 => {stdout().queue(Print("Error, friend does not exist"))?;},
         _ => {stdout().queue(Print("Error adding friend: Server error"))?;}
     }
     stdout().flush()?;
-    // sleep(Duration::from_secs(1));
+    sleep(Duration::from_secs(1));
     Ok(())
 }
 
 fn set_display_friend_adding() -> Result<()> {
     stdout()
-        .queue(cursor::MoveTo(2, NUM_COLS - 1))?
+        .queue(cursor::MoveTo(2, HEIGHT - 1))?
         .queue(Print("                                                                   "))?
-        .queue(cursor::MoveTo(2, NUM_COLS - 1))?
+        .queue(cursor::MoveTo(2, HEIGHT - 1))?
         .queue(Print("friend username: "))?
         .queue(Show)?
         .queue(SetCursorStyle::BlinkingUnderScore)?;
@@ -336,7 +341,7 @@ fn print_friends(friends: &Vec<(String, bool)>, index: &usize) -> Result<()> {
     stdout().execute(terminal::Clear(terminal::ClearType::All))?;
     borders()?;
     stdout()
-        .queue(cursor::MoveTo(NUM_ROWS / 2 - 10, 2))?
+        .queue(cursor::MoveTo(WIDTH / 2 - 10, 2))?
         .queue(Print("Your friends list"))?;
     let mut i: usize = 0;
     if index * 10 < friends.len(){
@@ -362,7 +367,7 @@ fn print_friends(friends: &Vec<(String, bool)>, index: &usize) -> Result<()> {
     }
     let menu = format!("Menu: 1. ADD   2. DELETE   3. DM   {} Previous   {} Next    ESC. Back", '←', '→');
     stdout()
-        .queue(cursor::MoveTo(2, NUM_COLS - 1))?
+        .queue(cursor::MoveTo(2, HEIGHT - 1))?
         .queue(Print(menu))?;
     stdout().flush()?;
     Ok(())

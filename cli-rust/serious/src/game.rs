@@ -20,7 +20,7 @@ use std::{
 	io::{Write, stdout},
 };
 
-use crate::welcome::{NUM_COLS, NUM_ROWS};
+use crate::{HEIGHT, WIDTH};
 
 
 
@@ -149,12 +149,24 @@ pub async fn create_game(game_main: &Infos, mode: &str, mut receiver: mpsc::Rece
 				match should_exit(&event) {
 					Ok(true) => {
 						if let Err(_) = send_remove_from_queue_request(game_main).await {
-							return Err(("error: could not send requets to remove from list".to_string(), receiver));
+							return Err(("error: could not send request to remove from list".to_string(), receiver));
 						};
 						return Ok(receiver);},
 					Ok(false) => {},
 					_ => return Err(("event error".to_string(), receiver))
 				}
+				// match wrong_resize_waiting_screen(&event) {
+				// 	Ok(true) => {
+				// 		if let Err(_) = stdout().execute(terminal::Clear(terminal::ClearType::All)) {
+				// 			return  Err(("Cleaning terminal".to_string(), receiver));
+				// 		};
+    			//   		if let Err(_) = stdout().execute(cursor::MoveTo(0,0)).and_then(|s| s.execute(Print("Wrong terminal size, please resize"))) {
+				// 			return  Err(("Writing to terminal".to_string(), receiver));
+				// 		};
+				// 		continue ;
+				// 	}
+					// _ => {},
+				// }
 			},
 			Ok(false) => {
 				if !receiver.is_empty() {
@@ -177,6 +189,16 @@ pub async fn create_game(game_main: &Infos, mode: &str, mut receiver: mpsc::Rece
 	};
 	Ok(receiver)
 }
+
+fn wrong_resize_waiting_screen(event: &Event) -> Result<bool> {
+  if let Event::Resize(x,y ) = event {
+    if *x < WIDTH || *y < HEIGHT {
+      return Ok(true);
+    }
+  }
+  Ok(false)
+}
+
 
 impl Game {
 	fn new(info: &Infos, value: serde_json::Value) -> Result<Game> {
@@ -325,10 +347,10 @@ impl Game {
 
 fn normalize(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> (u16, u16, u16, u16, f32, f32, u8, u8) {
     let (left_y, right_y, ball_x, ball_y, _speed_x, _speed_y, player1_score, player2_score) = message;
-    let my_left_y = (left_y * NUM_COLS as f32 / 100.0) as u16;
-    let my_right_y = (right_y * NUM_COLS as f32 / 100.0) as u16;
-    let my_ball_y = (ball_y * NUM_COLS as f32 / 100.0) as u16;
-    let my_ball_x = (ball_x * NUM_ROWS as f32 / 100.0) as u16;
+    let my_left_y = (left_y * HEIGHT as f32 / 100.0) as u16;
+    let my_right_y = (right_y * HEIGHT as f32 / 100.0) as u16;
+    let my_ball_y = (ball_y * HEIGHT as f32 / 100.0) as u16;
+    let my_ball_x = (ball_x * WIDTH as f32 / 100.0) as u16;
     (my_left_y, my_right_y, my_ball_x, my_ball_y, _speed_x, _speed_y, player1_score, player2_score)
 }
 
@@ -342,7 +364,7 @@ fn display(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> Result<()> {
         .queue(Print("o"))?
         .queue(cursor::MoveTo(1, left_y))?
         .queue(Print("I"))?
-        .queue(cursor::MoveTo(NUM_ROWS - 1, right_y))?
+        .queue(cursor::MoveTo(WIDTH - 1, right_y))?
         .queue(Print("I"))?;
     stdout().flush()?;
     Ok(())
@@ -360,9 +382,9 @@ fn waiting_screen() -> Result<()> {
 fn display_end_game(message: &str) -> Result<()> {
 	stdout().execute(terminal::Clear(terminal::ClearType::All))?;
 	stdout()
-		.queue(cursor::MoveTo(NUM_ROWS / 2, NUM_COLS / 2))?
+		.queue(cursor::MoveTo(WIDTH / 2, HEIGHT / 2))?
 		.queue(Print(message))?
-		.queue(cursor::MoveTo(NUM_ROWS/2, NUM_COLS / 2 + 3))?
+		.queue(cursor::MoveTo(WIDTH/2, HEIGHT / 2 + 3))?
 		.queue(Print("Press Esc to continue"))?;
 	stdout().flush()?;
 	loop {
