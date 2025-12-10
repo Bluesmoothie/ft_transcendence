@@ -12,10 +12,6 @@
 	</head>
 
 	<body>
-  		<select onchange="changeLanguage(this.value)">
-    		<option value="en">English</option>
-    		<option value="fr">Français</option>
-  		</select>
 		<template id="user-profile-template">
 				<div id="user-profile"
 					class="user-profile">
@@ -73,6 +69,10 @@
 				<div class="play-menu">
 					<button class="btn" id="play_btn" data-i18n="play"></button>
 					<button class="btn" id="play_btn" data-i18n="settings"></button>
+					<select id="language-selector" onchange="changeLanguage(this.value)">
+    					<option value="en">English</option>
+    					<option value="fr">Français</option>
+  					</select>
 				</div>
 				<div id="leaderboard">
 					tmp
@@ -86,6 +86,9 @@
   import i18n from 'https://cdn.skypack.dev/i18next';
   import Backend from 'https://cdn.skypack.dev/i18next-http-backend';
   import LanguageDetector from 'https://cdn.skypack.dev/i18next-browser-languagedetector';
+
+  const selectElement = document.getElementById('language-selector');
+
   i18n.use(Backend).use(LanguageDetector).init({
     fallbackLng: 'en',
     backend: {
@@ -99,8 +102,17 @@
       el.textContent = i18n.t(key, options);
     });
   }
-  i18n.on('initialized', translatePage);
-  i18n.on('languageChanged', translatePage);
+  function updateLanguageSelector() {
+	selectElement.value = i18n.language;
+  }
+  i18n.on('initialized', () => {
+	translatePage();
+	updateLanguageSelector();
+  });
+  i18n.on('languageChanged', () => {
+	translatePage();
+	updateLanguageSelector();
+  });
   window.changeLanguage = (lng) => i18n.changeLanguage(lng);
 </script>
 </html>
