@@ -73,7 +73,7 @@ services:
     container_name: grafana
     volumes:
       - ./monitoring/conf/grafana/defaults.ini:/usr/share/grafana/conf/defaults.ini
-    #   - monitoring/grafana-provisioning:/etc/grafana/provisioning
+      - ./monitoring/conf/grafana/grafana-provisioning:/etc/grafana/provisioning
     networks:
       - monitoring
     ports:
