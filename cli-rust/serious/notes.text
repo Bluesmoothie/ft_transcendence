@@ -38,3 +38,16 @@ Module Input - Gestion des contrôles
 
 
 https://blog.stackademic.com/rust-terminal-manipulation-with-crossterm-d14e76617a3d
+
+IValue: String("{\"type\":\"winner\",\"winner\":86}")
+
+
+friends: Response { url: "https://localhost:8081/api/friends/get?user_id=33", status: 200, headers: {"server": "nginx/1.26.3", "date": "Wed, 10 Dec 2025 09:23:59 GMT", "content-type": "application/json; charset=utf-8", "content-length": "2", "connection": "keep-alive", "keep-alive": "timeout=75", "access-control-allow-origin": "*", "strict-transport-security": "max-age=7200"} }
+
+Array [Object {"pending": Number(1), "sender_id": Number(34), "user1_id": Number(1), "user2_id": Number(34)}]
+
+Array [
+Object {"pending": Number(1), "sender_id": Number(34), "user1_id": Number(1),b "user2_id": Numer(34)}, 
+Object {"pending": Number(0), "sender_id": Number(34), "user1_id": Number(2), "user2_id": Number(34)}]
+Map: {"pending": Number(1), "sender_id": Number(47), "user1_id": Number(2), "user2_id": Number(47)}                                        ||
+||                                                Map: {"pending": Number(1), "sender_id": Number(47), "user1_id": Number(1), "user2_id": Number(47)}       

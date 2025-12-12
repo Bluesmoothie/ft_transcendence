@@ -1,2 +1,18 @@
-Create thread for Ctrl-C + Esc to leave game
-Timeout les await? 
+ To do 
+ - Clean unwrap() and error management
+ - Print scores
+ - Login
+ - Doc
+
+
+Problemes CLI
+- mouvement des paddles lents
+- le jeu commence avant pour le CLI que sur le Web
+
+Améliorations possibles
+- add/manage friends --> names of 30 characteres max
+- animations
+- aesthetics
+- chat 
+
+find . -type f -exec wc -l {} +
