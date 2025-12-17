@@ -12,22 +12,22 @@ export enum UserElementType
 
 export class UserElement
 {
-	private m_htmlAvatar:		HTMLImageElement;
-	private m_htmlStatusImg:	HTMLImageElement;
-	private m_htmlName:			HTMLElement;
-	private m_clone:			HTMLElement;
-	private	m_user:				User;
+	private m_htmlAvatar:		HTMLImageElement | null = null;
+	private m_htmlStatusImg:	HTMLImageElement | null = null;
+	private m_htmlName:			HTMLElement | null = null;
+	private m_clone:			HTMLElement | null = null;
+	private	m_user:				User | null;
 	private m_type:				UserElementType;
 
-	constructor(user: User, parent: HTMLElement, type: UserElementType, templateName: string = "user-profile-template")
+	constructor(user: User | null, parent: HTMLElement, type: UserElementType, templateName: string = "user-profile-template")
 	{
-		this.m_user = null;
+		this.m_user = user;
 		this.m_type = type;
 
 		const template = Router.getElementById(templateName) as HTMLTemplateElement;
 		if (!template)
 		{
-			console.error("no template found for user element");
+			console.warn("no template found for user element");
 			return ;
 		}
 
@@ -50,8 +50,15 @@ export class UserElement
 		this.updateHtml(user);
 	}
 
-	public getElement(id: string) : HTMLElement
+	/**
+	 * return a querySelector of id in the element
+	 * @param id to search
+	 * @returns the element found or null if element is null
+	 */
+	public getElement(id: string) : HTMLElement | null
 	{
+		if (!this.m_clone) return null;
+
 		return this.m_clone.querySelector(id);
 	}
 
@@ -59,7 +66,7 @@ export class UserElement
 	public get user()	{ return this.m_user; }
 	public get type()	{ return this.m_type; }
 
-	public static setStatusColor(user: User, statusElt: HTMLElement)
+	public static setStatusColor(user: User | null, statusElt: HTMLElement)
 	{
 		if (!user)
 		{
@@ -91,16 +98,25 @@ export class UserElement
 		}
 	}
 
-	public updateHtml(user: User) : void
+	/**
+	* update inner html of element with user
+	* @param user the user that will be show up
+	* @note give null in param to reset element
+	*/
+	public updateHtml(user: User | null) : void
 	{
-		UserElement.setStatusColor(user, this.m_htmlStatusImg);
+		if (!this.m_htmlStatusImg || !this.m_htmlAvatar || !this.m_htmlName)
+			return ;
+
 		if (!user)
 		{
+			this.m_htmlStatusImg.style.background = "black:"
 			this.m_htmlAvatar.src = "/public/avatars/default.png";
 			this.m_htmlName.innerText = "guest";
 			return ;
 		}
 
+		UserElement.setStatusColor(user, this.m_htmlStatusImg);
 		this.m_htmlAvatar.src = user.getAvatarPath();
 		this.m_htmlName.innerText = user.name;
 		this.m_user = user;

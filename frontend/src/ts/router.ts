@@ -23,16 +23,16 @@ export class GameRouter
 	currentClass: any = null;
 	pages: Map<string, HTMLDivElement> = new Map();
 	gameInstance: GameClient | null = null;
-	m_user:			User;
-	m_player1:		UserElement;
-	m_chat:			Chat;
-	m_gameMenu:		GameMenu = null;
+	m_user:			User | null = null;
+	m_player1:		UserElement | null = null;
+	m_chat:			Chat | null = null;
+	m_gameMenu:		GameMenu | null = null;
 
-	m_view:		ViewComponent;
+	m_view:		ViewComponent | null = null;
 
-	public get view(): ViewComponent { return this.m_view; }
+	public get view(): ViewComponent | null { return this.m_view; }
 
-	constructor(user: User = null, chat: Chat = null, view: ViewComponent = null)
+	constructor(user: User | null = null, chat: Chat | null = null, view: ViewComponent | null = null)
 	{
 		this.m_user = user;
 		this.m_chat = chat;
@@ -41,6 +41,8 @@ export class GameRouter
 		this.setUpWindowEventListeners();
 		this.showPage(this.currentPage, null);
 
+		if (!view)
+			return ;
 		view.addTrackListener(view.querySelector('#local-game'), "click", this.localGameClickHandler);
 		view.addTrackListener(view.querySelector('#online-game'), "click", this.onlineGameClickHandler);
 		view.addTrackListener(view.querySelector('#bot-game'), "click", this.botGameClickHandler);
@@ -98,6 +100,9 @@ export class GameRouter
 
 		window.addEventListener('keydown', async (e) =>
 		{
+			if (!this.m_user)
+					return ;
+
 			switch (e.key)
 			{
 				case GameRouter.EXIT_KEY:
@@ -138,7 +143,7 @@ export class GameRouter
 		this.showPage(page, mode);
 	}
 
-	private showPage(page: string, mode: string): void
+	private showPage(page: string, mode: string | null): void
 	{
 		if (this.currentClass && this.currentClass.destroy)
 		{
@@ -152,7 +157,7 @@ export class GameRouter
 	}
 
 
-	private getClass(mode: string)
+	private getClass(mode: string | null)
 	{
 		switch (this.currentPage)
 		{
@@ -162,7 +167,8 @@ export class GameRouter
 				this.m_gameMenu = new GameMenu(this)
 				return this.m_gameMenu;
 			case 'game':
-				return (new GameClient(this, mode!, this.m_user, this.m_chat));
+				if (this.m_chat && this.m_user)
+					return (new GameClient(this, mode!, this.m_user, this.m_chat));
 			case 'tournament-menu':
 				return (new TournamentMenu(this));
 			case 'tournament':

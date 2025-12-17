@@ -7,28 +7,29 @@ import { ProfileView } from "profile.js"
 
 export class Router
 {
-	private static m_instance: Router = null;
+	private static m_instance: Router | null = null;
 
 	private m_routes:		Route[];
 	private m_views:		Map<string, ViewComponent>;
-	private m_app:			HTMLElement = null;
+	private m_app:			HTMLElement;
 
-	private m_prevView:		ViewComponent = null;
-	private m_activeView:	ViewComponent = null;
+	private m_prevView:		ViewComponent | null = null;
+	private m_activeView:	ViewComponent | null = null;
 	
-	public static get Instance(): Router { return Router.m_instance; }
+	public static get Instance(): Router | null { return Router.m_instance; }
 
-	public get activeView(): ViewComponent { return this.m_activeView; }
-	public get prevView(): ViewComponent { return this.m_prevView; }
+	get activeView(): ViewComponent | null { return this.m_activeView; }
+	get prevView(): ViewComponent   | null { return this.m_prevView; }
 
 	constructor(routes: Route[])
 	{
 		if (Router.m_instance == null)
 			Router.m_instance = this;
 
-		this.m_app = document.getElementById("app");
-		if (this.m_app === null)
+		const app = document.getElementById("app");
+		if (app === null)
 			throw new Error("no app container found. Abording");
+		this.m_app = app;
 
 		this.m_views = new Map<string, ViewComponent>();
 		this.m_routes = routes;
@@ -56,19 +57,21 @@ export class Router
 			this.m_prevView = this.m_activeView;
 		}
 
-		this.m_activeView = this.m_views.get(viewName);
+		const view = this.m_views.get(viewName);
+		if (!view || view == undefined)
+			return ;
+		this.m_activeView = view;
 		this.m_activeView.enable();
 		this.m_activeView.style.display = "block";
 		this.m_activeView.style.height = "100%";
-
-		console.log(this.getCurrentURL())
 	}
 
 	/**
 	 * get an element by id in the active view (to user instead of document.getElementById)
 	 * @param {string} id the id to search for
+	 * @returns element or null if instance not set or no active view
 	*/
-	public static getElementById(id: string): HTMLElement
+	public static getElementById(id: string): HTMLElement | null
 	{
 		if (Router.Instance === null)
 			return null;
@@ -88,7 +91,7 @@ export class Router
 		if (Router.Instance === null || Router.Instance.m_activeView === null)
 			return ;
 
-		Router.Instance.activeView.addTrackListener(element, event, handler);
+		Router.Instance.activeView?.addTrackListener(element, event, handler);
 	}
 
 	/**
@@ -102,7 +105,7 @@ export class Router
 		if (Router.Instance === null || Router.Instance.m_activeView === null)
 			return ;
 
-		Router.Instance.activeView.removeTrackListener(element, event, handler);
+		Router.Instance.activeView?.removeTrackListener(element, event, handler);
 	}
 
 	public getCurrentURL()
@@ -111,7 +114,7 @@ export class Router
 		return path;
 	}
 
-	public matchUrlToRoute(urlSegs: string): Route
+	public matchUrlToRoute(urlSegs: string): Route | undefined
 	{
 		const urlNoQuery = urlSegs.split('?');
 		const matchedRoute = this.m_routes.find(route => route.path === urlNoQuery[0]);

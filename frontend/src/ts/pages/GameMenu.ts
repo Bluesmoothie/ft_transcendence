@@ -15,12 +15,11 @@ export class GameMenu
 
 	constructor(router: GameRouter)
 	{
-		router.view.querySelector
 		this.router = router;
 
-		this.button1Element = this.router.view.querySelector('#local-game') as HTMLButtonElement;
-		this.button2Element = this.router.view.querySelector('#online-game') as HTMLButtonElement;
-		this.button3Element = this.router.view.querySelector('#bot-game') as HTMLButtonElement;
+		this.button1Element = this.router.view?.querySelector('#local-game') as HTMLButtonElement;
+		this.button2Element = this.router.view?.querySelector('#online-game') as HTMLButtonElement;
+		this.button3Element = this.router.view?.querySelector('#bot-game') as HTMLButtonElement;
 
 		this.hydrateButtons();
 		this.setUpDocumentEventListeners();
@@ -72,7 +71,7 @@ export class GameMenu
 
 	public destroy(): void
 	{
-		const view: ViewComponent = this.router.view;
+		// const view: ViewComponent = this.router.view;
 		// view.removeTrackListener(view.querySelector('#local-game'), "click", this.localGameClickHandler);
 		// view.removeTrackListener(view.querySelector('#online-game'), "click", this.onlineGameClickHandler);
 		// view.removeTrackListener(view.querySelector('#bot-game'), "click", this.botGameClickHandler);

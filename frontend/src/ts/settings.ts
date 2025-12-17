@@ -6,23 +6,23 @@ import { Router } from "app.js"
 
 export class SettingsView extends ViewComponent
 {
-	private m_user: MainUser;
+	private m_user: MainUser | null = null;
 
-	private usernameInput:		HTMLInputElement;
-	private emailInput:			HTMLInputElement;
-	private currPassInput:		HTMLInputElement;
-	private newPassInput:		HTMLInputElement;
-	private avatarInput:		HTMLInputElement;
-	private request2faBtn:		HTMLButtonElement;
-	private confirm2faInput:	HTMLInputElement;
-	private logoutBtn:			HTMLButtonElement;
-	private delete2faBtn:		HTMLButtonElement;
-	private resetBtn:			HTMLButtonElement;
-	private deleteBtn:			HTMLButtonElement;
-	private holder:				HTMLElement;
-	private holderParent:		HTMLElement;
-	private holderClose:		HTMLElement;
-	private saveBtn:			HTMLButtonElement;
+	private usernameInput:		HTMLInputElement | null = null;
+	private emailInput:			HTMLInputElement | null = null;
+	private currPassInput:		HTMLInputElement | null = null;
+	private newPassInput:		HTMLInputElement | null = null;
+	private avatarInput:		HTMLInputElement | null = null;
+	private request2faBtn:		HTMLButtonElement | null = null;
+	private confirm2faInput:	HTMLInputElement | null = null;
+	private logoutBtn:			HTMLButtonElement | null = null;
+	private delete2faBtn:		HTMLButtonElement | null = null;
+	private resetBtn:			HTMLButtonElement | null = null;
+	private deleteBtn:			HTMLButtonElement | null = null;
+	private holder:				HTMLElement | null = null;
+	private holderParent:		HTMLElement | null = null;
+	private holderClose:		HTMLElement | null = null;
+	private saveBtn:			HTMLButtonElement | null = null;
 	
 	constructor()
 	{
@@ -33,16 +33,21 @@ export class SettingsView extends ViewComponent
 	{
 		this.m_user = new MainUser(this.querySelector("#user-container"));
 		await this.m_user.loginSession();
-		this.m_user.onLogout((user) => { Router.Instance.navigateTo("/") })
+		this.m_user.onLogout((user) => { Router.Instance?.navigateTo("/") })
 		if (this.m_user.id == -1) // user not login
-			Router.Instance.navigateTo("/");
+		{
+			Router.Instance?.navigateTo("/");
+			return ;
+		}
 
-		this.addTrackListener(this.querySelector("#banner"), "click", () => Router.Instance.navigateTo("/"));
-		this.addTrackListener(this.querySelector("#logout_btn"), "click", () => this.m_user.logout());
-		this.addTrackListener(this.querySelector("#profile_btn"), "click", () => Router.Instance.navigateTo("/profile"));
-		this.addTrackListener(this.querySelector("#settings_btn"), "click", () => Router.Instance.navigateTo("/settings"));
+		this.addTrackListener(this.querySelector("#banner"), "click", () => Router.Instance?.navigateTo("/"));
+		this.addTrackListener(this.querySelector("#logout_btn"), "click", () => this.m_user?.logout());
+		this.addTrackListener(this.querySelector("#profile_btn"), "click", () => Router.Instance?.navigateTo("/profile"));
+		this.addTrackListener(this.querySelector("#settings_btn"), "click", () => Router.Instance?.navigateTo("/settings"));
 		this.addTrackListener(this.querySelector("#user-menu-btn"), 'click', () => {
-			this.querySelector("#user-menu-container").classList.toggle("hide");
+			const container = this.querySelector("#user-menu-container");
+			if (container)
+				container.classList.toggle("hide");
 		});
 
 		this.usernameInput = this.querySelector("#username-input") as HTMLInputElement;
@@ -66,17 +71,19 @@ export class SettingsView extends ViewComponent
 		this.emailInput.placeholder = this.m_user.getEmail();
 
 		this.addTrackListener(this.request2faBtn, "click", () => { this.new_totp(); setPlaceHolderText("scan qrcode with auth app and confirm code") });
-		this.addTrackListener(this.delete2faBtn, "click", () => { this.m_user.delTotp(); setPlaceHolderText("2fa has been removed") });
-		this.addTrackListener(this.logoutBtn, "click", () => this.m_user.logout());
+		this.addTrackListener(this.delete2faBtn, "click", () => { this.m_user?.delTotp(); setPlaceHolderText("2fa has been removed") });
+		this.addTrackListener(this.logoutBtn, "click", () => this.m_user?.logout());
 		this.addTrackListener(this.saveBtn, "click", () => this.confirmChange());
-		this.addTrackListener(this.holderClose, "click", () => this.holderParent.classList.add("hide"));
-		this.addTrackListener(this.deleteBtn, "click", () => this.showConfirmPanel(() => this.m_user.deleteUser()));
+		this.addTrackListener(this.holderClose, "click", () => this.holderParent?.classList.add("hide"));
+		this.addTrackListener(this.deleteBtn, "click", () => this.showConfirmPanel(() => this.m_user?.deleteUser()));
 		this.addTrackListener(this.resetBtn, "click", () => this.showConfirmPanel(() => {
-			if (this.m_user.resetUser())
+			if (this.m_user?.resetUser())
 				setPlaceHolderText("all data has been reset");
 			else
 				setPlaceHolderText("error");
-			this.querySelector("#panel-holder").innerHTML = "";
+			const panel = this.querySelector("#panel-holder");
+			if (panel)
+				panel.innerHTML = "";
 		}));
 
 		this.hideForbiddenElement();
@@ -84,11 +91,21 @@ export class SettingsView extends ViewComponent
 
 	public async disable()
 	{
-		this.querySelector("#user-container").innerHTML = "";
+		const container = this.querySelector("#user-container");
+		if (container)
+			container.innerHTML = "";
+		if (this.m_user)
+		{
+			this.m_user.resetCallbacks();
+			this.m_user = null;
+		}
 	}
 
 	private hideForbiddenElement()
 	{
+		if (!this.m_user || !this.delete2faBtn)
+			return ;
+
 		if (this.m_user.source !== AuthSource.INTERNAL)
 		{
 			(<HTMLElement>this.querySelector("#email-settings")).style.display = "none";
@@ -101,12 +118,15 @@ export class SettingsView extends ViewComponent
 
 	private async confirmChange()
 	{
+		if (!this.m_user)
+			return ;
+
 		var error: boolean = false;
 
-		if (this.confirm2faInput.value !== "")
+		if (this.confirm2faInput && this.confirm2faInput.value !== "")
 			this.validate_totp(this.m_user);
 
-		if (this.avatarInput.files && this.avatarInput.files[0])
+		if (this.avatarInput && this.avatarInput.files && this.avatarInput.files[0])
 		{
 			console.log("updating avatar");
 			const file = this.avatarInput.files[0];
@@ -115,7 +135,8 @@ export class SettingsView extends ViewComponent
 			this.m_user.setAvatar(formData);
 		}
 
-		if (this.newPassInput.value !== "" && this.currPassInput.value !== "")
+		if (this.newPassInput && this.currPassInput && 
+			this.newPassInput.value !== "" && this.currPassInput.value !== "")
 		{
 			console.log("updating password");
 			const res = await fetch("/api/user/update/passw", {
@@ -137,7 +158,7 @@ export class SettingsView extends ViewComponent
 			console.log(res.status, data);
 		}
 
-		if (this.usernameInput.value !== "")
+		if (this.usernameInput && this.usernameInput.value !== "")
 		{
 			console.log("updating name");
 			const res = await fetch("/api/user/update/name", {
@@ -158,7 +179,7 @@ export class SettingsView extends ViewComponent
 			console.log(res.status, data);
 		}
 
-		if (this.emailInput.value !== "")
+		if (this.emailInput && this.emailInput.value !== "")
 		{
 			console.log("updating email");
 			const res = await fetch("/api/user/update/email", {
@@ -187,7 +208,14 @@ export class SettingsView extends ViewComponent
 
 	private async new_totp()
 	{
-		const { status, data } = await this.m_user.newTotp();
+		if (!this.m_user)
+			return ;
+
+		const result = await this.m_user.newTotp();
+		if (!result || !this.holderParent || !this.holder)
+			return ;
+
+		const { status, data } = result;
 		this.holderParent.classList.remove("hide");
 		var qrcode = data.qrcode;
 		if (!qrcode)
@@ -208,9 +236,15 @@ export class SettingsView extends ViewComponent
 		const holder = this.querySelector("#panel-holder") as HTMLElement;
 
 		holder.innerHTML = "";
+
 		const clone = template.content.cloneNode(true) as HTMLElement;
-		clone.querySelector("#cancel-btn").addEventListener("click", () => { holder.innerHTML = "" });
-		clone.querySelector("#confirm-input").addEventListener("keypress", (e: KeyboardEvent) => {
+		const cancelBtn = clone.querySelector("#cancel-btn") as HTMLButtonElement;
+		const confirmIn = clone.querySelector("#confirm-input") as HTMLInputElement;
+		if (!cancelBtn || !confirmIn)
+			return ;
+
+		cancelBtn.addEventListener("click", () => { holder.innerHTML = "" });
+		confirmIn.addEventListener("keypress", (e: KeyboardEvent) => {
 			const target = e.target as HTMLInputElement;
 			if (e.key == "Enter" && target.value != "")
 			{

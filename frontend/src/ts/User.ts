@@ -29,7 +29,7 @@ async function getUserInfoFromId(id: number): Promise<Response> {
 	return response;
 }
 
-export async function getUserFromName(name: string): Promise<User> {
+export async function getUserFromName(name: string): Promise<User | null> {
 	var response = await fetch(`/api/user/get_profile_name?profile_name=${name}`);
 	if (response.status != 200)
 		return null
@@ -42,7 +42,7 @@ export async function getUserFromName(name: string): Promise<User> {
 	return user;
 }
 
-export async function getUserFromId(id: number): Promise<User> {
+export async function getUserFromId(id: number): Promise<User | null> {
 	const response = await getUserInfoFromId(id);
 	if (response.status != 200)
 		return null
@@ -65,21 +65,21 @@ export interface Stats {
 
 export class User {
 	/* public vars */
-	public name: string;
+	public name: string = "";
 
 	/* private vars */
-	private m_id: number;
+	protected m_id: number = -1;
 
-	private m_email: string;
-	private m_avatarPath: string;
+	private m_email:		string	= "";
+	private m_avatarPath:	string = "";
+	private m_status:		UserStatus = UserStatus.UNKNOW;
+	private m_created_at:	string = "";
+	private m_stats:		Stats;
+	private m_source:		AuthSource;
 
-	private m_friends: User[]; // accepted request
-	private m_pndgFriends: Map<User, number>; // pending requests (number == sender)
-	private m_status: UserStatus;
-	private m_created_at: string;
-
-	private m_stats:	Stats;
-	private m_source:	AuthSource;
+	private m_blockUsr:		User[];
+	private m_friends:		User[] = []; // accepted request
+	private m_pndgFriends = new Map<User, number>(); // pending requests (number == sender)
 
 	constructor() {
 		this.setUser(
@@ -90,6 +90,7 @@ export class User {
 			UserStatus.UNKNOW
 		);
 
+		this.m_blockUsr = [];
 		this.m_stats = { gamePlayed: 0, gameWon: 0, currElo: 0, maxElo: 0, avrTime: "", shortTime: "" };
 		this.m_source = AuthSource.GUEST;
 	}
@@ -101,20 +102,20 @@ export class User {
 		this.m_avatarPath = avatar;
 		this.m_status = status;
 		this.m_friends = [];
+		this.m_blockUsr = [];
 		this.m_pndgFriends = new Map<User, number>();
 	}
 
-	public getStatus(): UserStatus { return this.m_status; }
-	public get friends(): User[] { return this.m_friends; }
-	public get pndgFriends(): Map<User, number> { return this.m_pndgFriends; }
-	public get id(): number { return this.m_id; }
-	public getEmail(): string { return this.m_email; }
-	// public getAvatarPath() : string { return this.m_avatarPath + "?" + new Date().getTime(); }
-	public getAvatarPath(): string { return this.m_avatarPath; }
-	
-	get		created_at(): string	{ return this.m_created_at; }
-	get		stats(): Stats			{ return this.m_stats; }
-	get		source(): AuthSource	{ return this.m_source; }
+	public getStatus(): UserStatus			{ return this.m_status; }
+	public getEmail(): string				{ return this.m_email; }
+	public getAvatarPath(): string			{ return this.m_avatarPath; }
+	get blockUsr(): User[]					{ return this.m_blockUsr; }
+	get friends(): User[]					{ return this.m_friends; }
+	get pndgFriends(): Map<User, number>	{ return this.m_pndgFriends; }
+	get id(): number						{ return this.m_id; }
+	get	created_at(): string				{ return this.m_created_at; }
+	get	stats(): Stats						{ return this.m_stats; }
+	get	source(): AuthSource				{ return this.m_source; }
 
 	public async setStatus(status: UserStatus): Promise<Response> {
 		this.m_status = status;
@@ -145,7 +146,8 @@ export class User {
 		return response;
 	}
 
-	public async updateFriendList(): Promise<number> {
+	public async updateFriendList(): Promise<number>
+	{
 		this.m_friends = [];
 		this.m_pndgFriends = new Map<User, number>();
 
@@ -158,15 +160,48 @@ export class User {
 			const element = data[i];
 			
 			var id = element.user1_id == this.id ? element.user2_id : element.user1_id;
+			const user = await getUserFromId(id);
+			if (user == null)
+			{
+				console.warn("failed to get user");
+				return -1;
+			}
 			if (data[i].pending)
-				this.m_pndgFriends.set(await getUserFromId(id), data[i].sender_id);
+				this.m_pndgFriends.set(user, data[i].sender_id);
 			else
-				this.m_friends.push(await getUserFromId(id));
+				this.m_friends.push(user);
 		}
 		return 0;
 	}
 
-	public async updateSelf(): Promise<number> {
+	public async updateBlockList(): Promise<number>
+	{
+		this.m_blockUsr = [];
+		const response = await fetch('/api/user/blocked_users');
+		if (response.status != 200)
+			return response.status;
+
+		const data = await response.json();
+
+			console.log(data);
+		for (let i = 0; i < data.length; i++)
+		{
+			console.log(data[i]);
+			const id = data[i].user2_id;
+			const tmp = await getUserFromId(id);
+			if (!tmp)
+			{
+				console.error("failed to get user from following id:", id);
+				return -1;
+			}
+			this.m_blockUsr.push(tmp);
+		}
+
+		return 0;
+	}
+
+	public async updateSelf(): Promise<number>
+	{
 		if (this.id == -1)
 			return 1;
 
@@ -186,6 +221,7 @@ export class User {
 		this.m_stats.currElo = data.elo;
 
 		await this.updateFriendList();
+		await this.updateBlockList();
 
 		return response.status;
 	}
@@ -228,17 +264,17 @@ function newOption(optionName: string) : HTMLOptionElement
 export class MainUser extends User
 {
 
-	private m_userElement: UserElement;
+	private m_userElement: UserElement | null = null;
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
 
-	constructor(parent: HTMLElement)
+	constructor(parent: HTMLElement | null)
 	{
 		super()
 		
 		if (parent)
 		{
-			this.m_userElement = new UserElement(null, parent, UserElementType.MAIN);
+			this.m_userElement = new UserElement(this, parent, UserElementType.MAIN);
 
 			const statusSelect = this.m_userElement.getElement("#status") as HTMLSelectElement;
 			statusSelect.prepend(newOption("available"));
@@ -248,6 +284,12 @@ export class MainUser extends User
 			statusSelect.addEventListener("change", () => this.updateStatus(statusSelect.value, this, this.m_userElement));
 		}
 
+		this.m_onLoginCb = [];
+		this.m_onLogoutCb = [];
+	}
+	
+	public resetCallbacks()
+	{
 		this.m_onLoginCb = [];
 		this.m_onLogoutCb = [];
 	}
@@ -291,6 +333,8 @@ export class MainUser extends User
 
 			this.m_onLoginCb.forEach(cb => cb(this));
 		}
+		else
+			this.m_id = -1;
 	}
 
 	public async login(email: string, passw: string, totp: string): Promise<{ status: number, data: any }> {
@@ -331,8 +375,10 @@ export class MainUser extends User
 			this.m_userElement.updateHtml(this);
 	}
 
-	private async updateStatus(newStatus: string, user: User, userHtml: UserElement)
+	private async updateStatus(newStatus: string, user: User, userHtml: UserElement | null)
 	{
+		if (!userHtml) return;
+
 		switch (newStatus) {
 			case "available":
 				await user.setStatus(UserStatus.AVAILABLE);
@@ -370,26 +416,29 @@ export class MainUser extends User
 		return 0;
 	}
 
-	public async removeFriend(user: User): Promise<Response> {
+	public async removeFriend(user: User): Promise<number> {
+		console.log("removing friend")
 		const url = `/api/friends/remove/${this.id}/${user.id}`;
 		const response = await fetch(url, { method: "DELETE" });
 
 		await this.updateSelf();
 
-		return response;
+		return response.status;
 	}
 
-	public async acceptFriend(user: User): Promise<Response> {
+	public async acceptFriend(user: User): Promise<number> {
+		console.log("accepting friend")
 		const url = `/api/friends/accept/${this.id}/${user.id}`;
 		const response = await fetch(url, { method: "POST" });
 
 		await this.updateSelf();
 
-		return response;
+		return response.status;
 	}
 
 
 	public async addFriend(friend_name: string): Promise<number> {
+		console.log("adding friend")
 		if (!friend_name || friend_name == "")
 			return 1;
 		if (this.id == -1)
@@ -401,7 +450,7 @@ export class MainUser extends User
 		return status;
 	}
 
-	public async newTotp() : Promise<{status: number, data: any}>
+	public async newTotp() : Promise<{status: number, data: any} | null>
 	{
 		if (this.id == -1)
 			return null;
@@ -478,6 +527,20 @@ export class MainUser extends User
 				id: this.id
 			})
 		});
+		return res.status;
+	}
+
+	public async blockUser(id: number): Promise<number>
+	{
+		console.log("blocking");
+		const res = await fetch(`/api/user/block/${id}`, { method: "POST" });
+		return res.status;
+	}
+
+	public async unblockUser(id: number): Promise<number>
+	{
+		console.log("unblocking");
+		const res = await fetch(`/api/user/unblock/${id}`, { method: "DELETE" });
 		return res.status;
 	}
 }

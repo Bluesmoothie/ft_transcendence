@@ -4,6 +4,9 @@ import { ViewComponent } from 'ViewComponent.js';
 
 export class StartView extends ViewComponent
 {
+	private m_profileContainer: HTMLElement | null = null;
+	private m_user: MainUser | null = null;
+
 	constructor()
 	{
 		super();
@@ -11,20 +14,34 @@ export class StartView extends ViewComponent
 
 	public async enable()
 	{
-		this.addTrackListener(this.querySelector("#play_btn"), "click", () => {
-			if (user.id == -1)
-				Router.Instance.navigateTo("/login");
+		const playBtn = this.querySelector("#play_btn") as HTMLElement;
+		this.m_profileContainer = this.querySelector("#profile-container") as HTMLElement;
+
+		if (!playBtn) throw new Error("play btn not found"); 
+		if (!this.m_profileContainer) throw new Error("profile container not found"); 
+
+		this.addTrackListener(playBtn, "click", () => {
+			if (this.m_user && this.m_user.id == -1)
+				Router.Instance?.navigateTo("/login");
 			else
-				Router.Instance.navigateTo("/lobby");
+				Router.Instance?.navigateTo("/lobby");
 		});
 
-		var user: MainUser = new MainUser(this.querySelector("#profile-container"));
-		await user.loginSession();
+		this.m_user = new MainUser(this.m_profileContainer);
+		await this.m_user.loginSession();
 	}
 
 	public async disable()
 	{
-		this.querySelector("#profile-container").innerHTML = "";
+		if (!this.m_profileContainer) throw new Error("profile container not found"); 
+
+		if (this.m_user)
+		{
+			this.m_user.resetCallbacks();
+			this.m_user = null;
+		}
+
+		this.m_profileContainer.innerHTML = "";
 		this.clearTrackListener();
 	}
 }

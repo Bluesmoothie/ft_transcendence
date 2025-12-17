@@ -69,16 +69,16 @@ export class GameClient extends Utils
 	private playerSide:		string | null = null;
 	private keysToSend:		string = '';
 
-	private m_user:				User | null;
-	private m_user2:			User;
-	private m_player1:			UserElement;
-	private m_player2:			UserElement;
-	private m_playerContainer:	HTMLElement;
-	private	m_prevP1Score:		number;
-	private	m_prevP2Score:		number;
+	private m_user:				User | null = null;
+	private m_user2:			User | null = null;
+	private m_player1:			UserElement | null = null;
+	private m_player2:			UserElement | null = null;
+	private m_playerContainer:	HTMLElement | null = null;
+	private	m_prevP1Score:		number | null = null;
+	private	m_prevP2Score:		number | null = null;
 	private m_router:			GameRouter;
 
-	constructor(router: GameRouter, private mode: string, user: User = null, chat: Chat = null)
+	constructor(router: GameRouter, private mode: string, user?: User, chat?: Chat)
 	{
 		super();
 
@@ -90,7 +90,8 @@ export class GameClient extends Utils
 			return ;
 		}
 
-		this.m_user = user;
+		if (user)
+			this.m_user = user;
 		this.createPlayerHtml();
 		if (chat)
 			chat.onGameCreated((json) => this.createGameFeedback(json));
@@ -104,6 +105,8 @@ export class GameClient extends Utils
 
 	private createPlayerHtml()
 	{
+		if (!this.m_playerContainer)
+			return ;
 		this.m_playerContainer.innerHTML = "";
 		this.m_player1 = new UserElement(this.m_user, this.m_playerContainer, UserElementType.STANDARD, "user-game-template");
 		this.m_player2 = new UserElement(this.m_user2, this.m_playerContainer, UserElementType.STANDARD, "user-game-template");
@@ -156,13 +159,15 @@ export class GameClient extends Utils
 		this.playerSide = json.playerSide;
 		console.log(this.playerSide);
 		this.createPlayerHtml();
-		this.m_player2.updateHtml(this.m_user2);
+		this.m_player2?.updateHtml(this.m_user2);
 
 		this.launchCountdown();
 	}
 
 	private async createGame(): Promise<void>
 	{
+		if (!this.m_user)
+			return ;
 		try
 		{
 			window.addEventListener('beforeunload', this.beforeUnloadHandler);
@@ -184,7 +189,7 @@ export class GameClient extends Utils
 
 			this.m_user2 = await getUserFromId(data.opponentId);
 			this.createPlayerHtml();
-			this.m_player2.updateHtml(this.m_user2);
+			this.m_player2?.updateHtml(this.m_user2);
 
 			this.launchCountdown();
 		}
@@ -230,7 +235,8 @@ export class GameClient extends Utils
 		this.setContent('score-right', '0', true);
 		this.show('net');
 
-		this.m_player2.updateHtml(this.m_user2);
+		if (this.m_player2)
+			this.m_player2.updateHtml(this.m_user2);
 	}
 
 	private async startGame(): Promise<void>
@@ -311,6 +317,8 @@ export class GameClient extends Utils
 
 	private send(): void
 	{
+		if (!this.socket)
+			return ;
 		this.keysToSend = '';
 
 		if (this.mode === 'online' || this.mode === 'bot')
@@ -387,13 +395,13 @@ export class GameClient extends Utils
 		if (gameState.player1Score != this.m_prevP1Score)
 		{
 			let score = document.querySelector("#score-left");
-			score.animate(scoreAnimation, scoreAnimationParams);
+			score?.animate(scoreAnimation, scoreAnimationParams);
 		}
 
 		if (gameState.player2Score != this.m_prevP2Score)
 		{
 			let score = document.querySelector("#score-right");
-			score.animate(scoreAnimation, scoreAnimationParams);
+			score?.animate(scoreAnimation, scoreAnimationParams);
 		}
 
 		this.m_prevP1Score = gameState.player1Score;
@@ -414,7 +422,8 @@ export class GameClient extends Utils
 		if (winner >= 1) // db id start at 1
 		{
 			const usr = await getUserFromId(winner);
-			winnerName = usr.name;
+			if (usr)
+				winnerName = usr.name;
 		}
 		this.setColors(Params.BACKGROUND_OPACITY);
 		this.hide('net');

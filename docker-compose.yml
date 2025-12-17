@@ -9,7 +9,7 @@ services:
       - "3000:3000"
     volumes:
       - sqlite:/var/lib/sqlite
-      - ./backend/src/public:/var/www/server/public
+      # - ./backend/src/public:/var/www/server/public # remove comment for working on webpage
     networks:
       - db
     develop:

@@ -11,22 +11,21 @@ export class LoginView extends ViewComponent
 	constructor()
 	{
 		super();
+		this.m_user = new MainUser(null);
 	}
 
 	public async enable()
 	{
-		this.m_user = new MainUser(null);
 		await this.m_user.loginSession();
 		if (this.m_user.id != -1)
 		{
-			if (Router.Instance.prevView.routePath == "/lobby")
+			if (Router.Instance?.prevView && Router.Instance.prevView.routePath == "/lobby")
 				Router.Instance.navigateTo("/");
 			else
-				Router.Instance.navigateTo("/lobby");
-
+				Router.Instance?.navigateTo("/lobby");
 		}
 
-		this.m_user.onLogin((user) => { Router.Instance.navigateTo("/lobby") })
+		this.m_user.onLogin((user) => { Router.Instance?.navigateTo("/lobby") })
 
 		this.addTrackListener(this.querySelector("#create_btn"), "click", () => this.submitNewUser());
 		this.addTrackListener(this.querySelector("#login_btn"), 'click', () => this.login());
@@ -35,8 +34,16 @@ export class LoginView extends ViewComponent
 		this.addTrackListener(this.querySelector("#guest_log_btn"), "click", () => this.logAsGuest());
 
 		this.addTrackListener(this.querySelector("#home_btn"), "click", () => { 
-			Router.Instance.navigateTo("/");
+			Router.Instance?.navigateTo("/");
 		});
+	}
+
+	public async disable()
+	{
+		if (this.m_user)
+		{
+			this.m_user.resetCallbacks();
+		}
 	}
 
 	private async login()

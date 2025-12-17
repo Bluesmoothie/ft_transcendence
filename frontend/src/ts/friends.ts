@@ -4,15 +4,15 @@ import { Router } from 'app.js'
 
 export class FriendManager
 {
-	private m_pndgContainer:	HTMLElement;
-	private m_friendsContainer:	HTMLElement;
+	private m_pndgContainer:	HTMLElement | null;
+	private m_friendsContainer:	HTMLElement | null;
 	private m_friends:			UserElement[];
 	private m_pndg:				UserElement[];
 	private m_user:				User;
 	private m_main:				MainUser;
 	private m_template:			string;
 
-	constructor(user: User, pndgContainer: string, friendContainer: string, main: MainUser = null, templateName: string = "user-friend-template")
+	constructor(user: User, pndgContainer: string, friendContainer: string, main: MainUser, templateName: string = "user-friend-template")
 	{
 		this.m_user = user;
 		this.m_main = main;
@@ -27,45 +27,64 @@ export class FriendManager
 
 	public refreshContainers()
 	{
+		if (!this.m_friendsContainer || !this.m_pndgContainer || !this.m_user)
+			return ;
+
 		this.m_pndgContainer.innerHTML = "";
 		this.m_friendsContainer.innerHTML = "";
 
 		const pdng: UserElement[] = this.addFriends(this.m_pndgContainer, UserElementType.FRIEND_PNDG);
 		const friends: UserElement[] = this.addFriends(this.m_friendsContainer, UserElementType.FRIEND);
 		
+		const requestTitle = Router.getElementById("request-title");
 		if (this.m_main.id != this.m_user.id)
 		{
-			if (Router.getElementById("request-title"))
-				Router.getElementById("request-title").style.display = "none";
+			if (requestTitle)
+				requestTitle.style.display = "none";
 			this.m_pndgContainer.style.display = "none";
 			return ;
 		}
 		else
 		{
-			if (Router.getElementById("request-title"))
-				Router.getElementById("request-title").style.display = "flex";
+			if (requestTitle)
+				requestTitle.style.display = "flex";
 			this.m_pndgContainer.style.display = "flex";
 		}
 
 		pdng.forEach(elt => {
-			if (elt.type !== UserElementType.REQUEST)
-				elt.getElement("#green-btn").style.display = "flex";
+			const redBtn = elt.getElement("#red-btn");
+			const greenBtn = elt.getElement("#green-btn");
+			if (!redBtn || !greenBtn)
+			{
+				console.warn("no redBtn or greenBtn");
+				return ;
+			}
 
-			elt.getElement("#red-btn").style.display = "flex";
-			elt.getElement("#green-btn").addEventListener("click", async () => {
+			if (elt.type !== UserElementType.REQUEST)
+				greenBtn.style.display = "flex";
+
+			redBtn.style.display = "flex";
+			greenBtn.addEventListener("click", async () => {
+				if (!elt.user) return;
 				await this.m_main.acceptFriend(elt.user)
 				this.refreshContainers();
 			});
-			elt.getElement("#red-btn").addEventListener("click", async () => {
+			redBtn.addEventListener("click", async () => {
+				if (!elt.user) return;
 				await this.m_main.removeFriend(elt.user)
 				this.refreshContainers();
 			});
 		})
 
 		friends.forEach(elt => {
-			elt.getElement("#red-btn").style.display = "flex";
-			elt.getElement("#red-btn").innerText = "remove";
-			elt.getElement("#red-btn").addEventListener("click", async () => {
+			const redBtn = elt.getElement("#red-btn");
+			if (!redBtn)
+				return ;
+
+			redBtn.style.display = "flex";
+			redBtn.innerText = "remove";
+			redBtn.addEventListener("click", async () => {
+				if (!elt.user) return;
 				await this.m_main.removeFriend(elt.user)
 				this.refreshContainers();
 			});
@@ -75,8 +94,7 @@ export class FriendManager
 	public addFriendsPndg(container: HTMLElement, type: UserElementType): UserElement[]
 	{
 		const	pndg: Map<User, number> = this.m_user.pndgFriends;
-		console.log(pndg)
-		var		htmlUser = [];
+		var		htmlUser: UserElement[] = [];
 
 		pndg.forEach((sender: number, friend: User) => {
 			var elt: UserElement;
@@ -86,9 +104,13 @@ export class FriendManager
 				elt = new UserElement(friend, container, UserElementType.REQUEST, this.m_template);
 
 			elt.updateHtml(friend);
-			elt.getElement("#profile").addEventListener("click", () => { Router.Instance.navigateTo(`/profile?username=${friend.name}`) });
-			elt.getElement("#green-btn").style.display = "none";
-			elt.getElement("#red-btn").style.display = "none";
+			const redBtn = elt.getElement("#red-btn");
+			const greenBtn = elt.getElement("#green-btn");
+			if (!redBtn || !greenBtn)
+				return ;
+			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
+			redBtn.style.display = "none";
+			greenBtn.style.display = "none";
 			htmlUser.push(elt);
 		});
 		return htmlUser;
@@ -99,17 +121,21 @@ export class FriendManager
 		if (type == UserElementType.FRIEND_PNDG)
 			return this.addFriendsPndg(container, type);
 
-		const	elt: User[] = this.m_user.friends;
-		var		htmlUser = [];
+		const	friends: User[] = this.m_user.friends;
+		var		htmlUser: UserElement[] = [];
 
-		elt.forEach(friend => {
-			const userElt = new UserElement(friend, container, type, this.m_template);
+		friends.forEach(friend => {
+			const elt = new UserElement(friend, container, type, this.m_template);
 
-			userElt.getElement("#profile").addEventListener("click", () => { Router.Instance.navigateTo(`/profile?username=${friend.name}`) });
-			userElt.updateHtml(friend);
-			userElt.getElement("#green-btn").style.display = "none";
-			userElt.getElement("#red-btn").style.display = "none";
-			htmlUser.push(userElt);
+			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
+			elt.updateHtml(friend);
+			const redBtn = elt.getElement("#red-btn");
+			const greenBtn = elt.getElement("#green-btn");
+			if (!redBtn || !greenBtn)
+				return ;
+			redBtn.style.display = "none";
+			greenBtn.style.display = "none";
+			htmlUser.push(elt);
 		});
 		return htmlUser;
 	}

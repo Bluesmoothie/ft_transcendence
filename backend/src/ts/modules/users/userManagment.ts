@@ -264,15 +264,11 @@ export async function uploadAvatar(request: FastifyRequest, reply: any, db: Data
 	}
 }
 
-export async function blockUser(user_id: number, loginToBlock: string, db: Database) : Promise<DbResponse>
+export async function blockUser(userId: number, target: number, db: Database) : Promise<DbResponse>
 {
-	const res = await getUserByName(loginToBlock, db);
-	if (res.code != 200)
-		return res;
-
 	const sql = "INSERT INTO blocked_usr (user1_id, user2_id) VALUES(?, ?)";
 	try {
-		await db.run(sql, [user_id, res.data.id]);
+		await db.run(sql, [userId, target]);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {
@@ -284,15 +280,11 @@ export async function blockUser(user_id: number, loginToBlock: string, db: Datab
 	}
 }
 
-export async function unBlockUser(user_id: number, loginToUnBlock: string, db: Database) : Promise<DbResponse>
+export async function unBlockUser(userId: number, target: number, db: Database) : Promise<DbResponse>
 {
-	const res = await getUserByName(loginToUnBlock, db);
-	if (res.code != 200)
-		return res;
-
 	const sql = "DELETE from blocked_usr WHERE user1_id = ? AND user2_id = ?";
 	try {
-		await db.run(sql, [user_id, res.data.id]);
+		await db.run(sql, [userId, target]);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {

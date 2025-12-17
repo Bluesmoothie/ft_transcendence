@@ -133,7 +133,7 @@ export async function getBlockedUsrById(id: number, db: Database) : Promise<DbRe
 	try {
 		const rows = await db.all(sql, [id]);
 		if (!rows || rows.length == 0)
-			return { code: 404, data: { message: "no blocked users" }};
+			return { code: 200, data: [] };
 		return { code: 200, data: rows };
 	}
 	catch (err) {

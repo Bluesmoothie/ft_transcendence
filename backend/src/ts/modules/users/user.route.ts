@@ -5,13 +5,14 @@ import { GameRes } from 'modules/users/user.js';
 
 export async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
-
 	fastify.get('/get_history_name/:username', async (request: FastifyRequest, reply: FastifyReply) => {
 		return await user.getUserHistByName(request, reply, core.db);
 	})
 
-	fastify.get('/get_blocked_users/:userid', async (request: FastifyRequest, reply: FastifyReply) => {
-		const { userid } = request.params as { userid: number };
+	fastify.get('/blocked_users', async (request: FastifyRequest, reply: FastifyReply) => {
+		const userid: number = request.session.user;
+		if (!userid)
+			return reply.code(400).send({ message: "missing user session" });
 
 		const res = await user.getBlockedUsrById(userid, core.db);
 		return reply.code(res.code).send(res.data);

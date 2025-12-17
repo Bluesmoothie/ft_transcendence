@@ -31,12 +31,12 @@
 		@apply flex-1 flex justify-center flex-col items-center gap-6;
 	}
 	
+}
 	input {
 		@apply	bg-dark border-b-2 border-blue px-7 py-3
 		focus:outline-none focus:brightness-[1.4]
 		hover:brightness-[1.2];
 	}
-}
 
 @layer components
 {

@@ -37,3 +37,4 @@ export function setPlaceHolderText(msg: string)
 	placeholder.classList.remove("hide");
 	placeholder.innerText = msg;
 }
+

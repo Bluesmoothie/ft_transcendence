@@ -27,17 +27,20 @@ export class Message
 		if (this.m_isCmd && await this.execLocalCommand(chat) === true) return;
 
 		const packet = { username: this.m_sender.name, message: this.m_msg, isCmd: this.m_isCmd };
-		chat.getWs().send(JSON.stringify(packet));
+		chat.ws?.send(JSON.stringify(packet));
 	}
 
-	public toHtml() : HTMLElement
+	/**
+	* convert the msg to html
+	* @returns an html version of a message or null if no template is found
+	*/
+	public toHtml() : HTMLElement | null
 	{
-
 		const template = Router.getElementById("chat-item-template") as HTMLTemplateElement;
 		if (!template)
 		{
 			console.error("no template found for user element");
-			return ;
+			return null;
 		}
 
 		const clone = template.content.cloneNode(true) as HTMLElement;
@@ -56,37 +59,41 @@ export class Message
 		return clone;
 	}
 
-	public async execLocalCommand(chat: Chat) : Promise<boolean>
+	public async execLocalCommand(chat: Chat) : Promise<boolean | null>
 	{
 		if (!this.m_isCmd) return false;
 
 		const args: string[] = this.m_msg.split(/\s+/);
 		var code: number;
+		if (!chat.user)
+			return null;
+
 		switch (args[0])
 		{
 			case "/block":
-				chat.displayMessage(await usr.block(chat.getUser().id, args[1]));
+				chat.displayMessage(await usr.block(chat.user.id, args[1]));
 				return true;
 			case "/unblock":
-				chat.displayMessage(await usr.unblock(chat.getUser().id, args[1]));
+				chat.displayMessage(await usr.unblock(chat.user.id, args[1]));
 				return true;
 			case "/getblock":
-				chat.displayMessage(await usr.getBlocked(chat.getUser().id));
+				chat.displayMessage(await usr.getBlocked(chat.user.id));
 				return true;
 			case "/clear":
-				chat.getChatbox().innerHTML = "";
+				if (chat.chatbox)
+					chat.chatbox.innerHTML = "";
 				return true;
 			case "/help":
 				chat.displayMessage(utils.serverReply(utils.helpMsg))
 				return true;
 			case "/addFriend":
-				if (args.length != 2) return ;
-				code = await chat.getUser()?.addFriend(args[1]);
+				if (args.length != 2) return null;
+				code = await chat.user?.addFriend(args[1]);
 				if (code == 404) chat.displayMessage(utils.serverReply("user not found"))
 				if (code == 200) chat.displayMessage(utils.serverReply("request sent"))
 				return true;
 			case "/hist":
-				if (args.length != 2) return ;
+				if (args.length != 2) return null;
 				var response = await fetch(`/api/user/get_history_name/${args[1]}`, { method : "GET" })
 				var data = await response.json();
 				code = response.status;
@@ -94,7 +101,7 @@ export class Message
 				if (code == 200) chat.displayMessage(utils.serverReply(JSON.stringify(data, null, 2)));
 				return true;
 			case "/getfriends":
-				var res = await fetch(`/api/friends/get?user_id=${chat.getUser().id}`);
+				var res = await fetch(`/api/friends/get?user_id=${chat.user.id}`);
 				var data = await res.json();
 				chat.displayMessage(utils.serverReply(JSON.stringify(data)));
 				return true;
@@ -104,7 +111,7 @@ export class Message
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({
-						login: chat.getUser().name,
+						login: chat.user.name,
 						username: args[1],
 						msg: match ? match[1] : "is whispering to you!!",
 					})
@@ -113,7 +120,7 @@ export class Message
 				chat.displayMessage(utils.serverReply(JSON.stringify(data)))
 				return true;
 			case "/addGame":
-				if (args.length != 5) return ;
+				if (args.length != 5) return null;
 				var response = await fetch(`/api/user/add_game_history`, {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
@@ -128,23 +135,23 @@ export class Message
 				chat.displayMessage(utils.serverReply(JSON.stringify(data)))
 				return true;
 			case "/deleteMe":
-				if (chat.getUser().id == -1) return true; // not login
+				if (chat.user.id == -1) return true; // not login
 				var response = await fetch ('api/user/delete', {
 					method: "DELETE",
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ user_id: chat.getUser().id })
+					body: JSON.stringify({ user_id: chat.user.id })
 				});
 				var data = await response.json();
 				chat.displayMessage(utils.serverReply(JSON.stringify(data)))
-				chat.getUser().logout();
+				chat.user.logout();
 				return true;
 			case "/UpdateMe":
-				if (chat.getUser().id == -1) return true; // not login
+				if (chat.user.id == -1) return true; // not login
 				var response = await fetch(`/api/user/update`, {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({
-						oldName: chat.getUser().name,
+						oldName: chat.user.name,
 						oldPassw: await hashString(args[2]),
 						name: args[3],
 						email: args[4],
@@ -153,8 +160,8 @@ export class Message
 				});
 				var data = await response.json();
 				chat.displayMessage(utils.serverReply(JSON.stringify(data)))
-				if (chat.getUser().name == args[1])
-					chat.getUser().logout();
+				if (chat.user.name == args[1])
+					chat.user.logout();
 				return true;
 		}
 		return false; // command is not local
@@ -163,17 +170,20 @@ export class Message
 
 export class Chat
 {
-	private m_chatbox:		HTMLElement;
-	private m_chatInput:	HTMLInputElement;
-	private m_user:			MainUser;
-	private	m_ws:			WebSocket;
-	private m_connections:	User[];
+	private m_chatbox:		HTMLElement | null = null;
+	private m_chatInput:	HTMLInputElement | null = null;
+	private m_user:			MainUser | null = null;
+	private	m_ws:			WebSocket | null = null;
+	private m_connections:	User[] = [];
 
 	private m_onStartGame:		Array<(json: any) => void>;
 	private m_onConnRefresh:	Array<(conns: User[]) => void>;
 
 	constructor(user: MainUser, chatbox: HTMLElement, chatInput: HTMLInputElement)
 	{
+		this.m_onStartGame = [];
+		this.m_onConnRefresh = [];
+
 		if (!chatbox || !chatInput || !user)
 		{
 			console.error("chatbox, user or chatInput invalid");
@@ -182,14 +192,11 @@ export class Chat
 		this.m_chatbox = chatbox;
 		this.m_chatInput = chatInput;
 		this.m_user = user;
-		this.m_onStartGame = [];
-		this.m_onConnRefresh = [];
 
 		user.onLogin((user: MainUser) => this.resetChat(user));
 		user.onLogout((user: MainUser) => this.resetChat(user));
 
 		// TODO: merge with resetChat
-		// console.log(`connecting to chat websocket: ${window.location.host}`)
 		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
 
 		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
@@ -199,29 +206,35 @@ export class Chat
 	public onGameCreated(cb: ((json: any) => void)) { this.m_onStartGame.push(cb); }
 	public onConnRefresh(cb: ((conns: User[]) => void)) { this.m_onConnRefresh.push(cb); }
 
-	public getChatbox(): HTMLElement	{ return this.m_chatbox; }
-	public getUser(): MainUser			{ return this.m_user; }
-	public getWs(): WebSocket			{ return this.m_ws; }
-	public get conns(): User[]			{ return this.m_connections; }
+	get chatbox(): HTMLElement | null 	{ return this.m_chatbox; }
+	get user(): MainUser | null			{ return this.m_user; }
+	get ws(): WebSocket | null			{ return this.m_ws; }
+	get conns(): User[] | null			{ return this.m_connections; }
 
 	public resetChat(user: MainUser) : void
 	{
-		this.m_ws.close();
-		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${this.m_user.id}`);
-
-		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
+		this.m_ws?.close();
+		if (this.m_user)
+		{
+			this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${this.m_user.id}`);
+			this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
+		}
 	}
 
 	public disconnect()
 	{
-		this.m_user.removeFromQueue();
-		this.m_chatbox.innerHTML = "";
-		this.m_ws.close();
+		this.m_user?.removeFromQueue();
+		this.m_ws?.close();
+		if (this.m_chatbox)
+			this.m_chatbox.innerHTML = "";
 	}
 
 	private sendMsgFromInput(event: any)
 	{
-		if (event.key == 'Enter' && this.m_chatInput.value != "")
+		if (!this.m_user)
+			return ;
+
+		if (event.key == 'Enter' && this.m_chatInput && this.m_chatInput.value != "")
 		{
 			this.sendMsg(this.m_user, this.m_chatInput.value);
 			this.m_chatInput.value = "";
@@ -231,6 +244,8 @@ export class Chat
 	private async populateConnections(connectionsId: number[])
 	{
 		this.m_connections = [];
+		if (!this.m_user)
+			return ;
 
 		for (let i = 0; i < connectionsId.length; i++)
 		{
@@ -238,7 +253,12 @@ export class Chat
 			if (id == this.m_user.id || id == -1)
 				continue;
 
-			const tmp: User = await getUserFromId(id);
+			const tmp: User | null = await getUserFromId(id);
+			if (!tmp)
+			{
+				console.warn("failed to get user");
+				return ;
+			}
 			this.m_connections.push(tmp);
 		}
 		this.m_onConnRefresh.forEach(cb => { cb(this.m_connections) });
@@ -269,14 +289,18 @@ export class Chat
 
 	public displayMessage(newMsg: Message)
 	{
-		this.m_chatbox.prepend(newMsg.toHtml());
+		const html = newMsg.toHtml();
+		if (this.m_chatbox && html)
+			this.m_chatbox.prepend(html);
 	}
 
 	public async sendMsg(sender: User, msg: string)
 	{
 		var newMsg = new Message(sender, msg);
 
-		this.m_chatbox.prepend(newMsg.toHtml());
+		const html = newMsg.toHtml();
+		if (this.m_chatbox && html)
+			this.m_chatbox.prepend(html);
 		await newMsg.sendToAll(this);
 	}
 }
