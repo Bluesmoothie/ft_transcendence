@@ -43,7 +43,7 @@ export async function new_totp(request: any, reply: any, db: Database): Promise<
 		const url = await qrcode.toDataURL(otpauth)
 		return { code: 200, data: { qrcode: `${url}` }};
 	}
-	catch (err)
+	catch (err: any)
 	{
 		return { code: 500, data: { message: `error: ${err.message}` }};
 	}
@@ -59,7 +59,7 @@ export async function del_totp(request: any, reply: any, db: Database)
 		const row = await db.get(sql, user_id);
 		reply.code(200).send({ message: "ok"});
 	}
-	catch (err)
+	catch (err: any)
 	{
 		reply.code(500).send({ message: `database error: ${err.message}` });
 	}
@@ -82,7 +82,7 @@ export async function validate_totp(request: any, reply: any, db: Database)
 		else
 			reply.code(404).send({ message: "failed to validate totp" });
 	}
-	catch (err)
+	catch (err: any)
 	{
 		reply.code(500).send({ message: `database error: ${err.message}` });
 	}

@@ -13,8 +13,8 @@ export interface DbResponse {
 // directory of avatars
 export const uploadDir : string = "/var/www/server/public/"
 
-export var db:		Database		= null;
-export var fastify:	FastifyInstance = null;
+export var db:		Database;
+export var fastify:	FastifyInstance;
 export var sessionKey: string;
  
 declare module '@fastify/session' {

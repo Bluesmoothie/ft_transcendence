@@ -10,7 +10,7 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 	})
 
 	fastify.get('/blocked_users', async (request: FastifyRequest, reply: FastifyReply) => {
-		const userid: number = request.session.user;
+		const userid = request.session.user;
 		if (!userid)
 			return reply.code(400).send({ message: "missing user session" });
 
@@ -30,9 +30,14 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		var res = await user.getUserByName(user1_name, core.db);
 		if (res.code == 200)
 			user1_id = res.data.id;
+		else
+			return reply.code(500).send({ message: "could not get user" });
+
 		var res = await user.getUserByName(user2_name, core.db);
 		if (res.code == 200)
 			user2_id = res.data.id;
+		else
+			return reply.code(500).send({ message: "could not get user" });
 
 		var game: GameRes = { user1_id, user2_id, user1_score, user2_score };
 

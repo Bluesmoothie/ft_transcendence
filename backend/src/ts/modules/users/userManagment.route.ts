@@ -150,7 +150,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 
 	fastify.post('/block/:id', async (request: FastifyRequest, reply: FastifyReply) => {
 		const { id } = request.params as { id: number };
-		const userId: number = request.session.user;
+		const userId = request.session.user;
 		if (!userId)
 			return reply.code(400).send({ message: "missing user session" });
 
@@ -160,7 +160,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 
 	fastify.delete('/unblock/:id', async (request: FastifyRequest, reply: FastifyReply) => {
 		const { id } = request.params as { id: number };
-		const userId: number = request.session.user;
+		const userId = request.session.user;
 		if (!userId)
 			return reply.code(400).send({ message: "missing user session" });
 

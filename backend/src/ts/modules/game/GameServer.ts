@@ -103,7 +103,8 @@ export class GameServer
 
 					if (game.mode === 'bot')
 					{
-						this.bots.set(gameId, new Bot(gameId, game.reversedBuffer));
+						if (game.reversedBuffer)
+							this.bots.set(gameId, new Bot(gameId, game.reversedBuffer));
 					}
 				}
 				else
@@ -152,10 +153,12 @@ export class GameServer
 					switch (playerId)
 					{
 						case '1':
-							connection.send(game.state);
+							if (game.state)
+								connection.send(game.state);
 							break ;
 						case '2':
-							connection.send(game.reversedState);
+							if (game.reversedState)
+								connection.send(game.reversedState);
 							break ;
 						default:
 							throw new Error('Invalid player ID');

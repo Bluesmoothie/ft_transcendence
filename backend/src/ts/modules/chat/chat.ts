@@ -8,7 +8,7 @@ import { GameInstance } from 'modules/game/GameInstance.js'
 
 //TODO: if a user block someone everyone is blocked ?
 export const connections = new Map<WebSocket, number>(); // websocket => user login
-var matchQueue = [];
+var matchQueue: number[] = [];
 
 function serverMsg(str: string): string
 {
@@ -18,7 +18,7 @@ function serverMsg(str: string): string
 
 // TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
 // TODO: move to front
-async function handleCommand(str: string, connection) : Promise<string>
+async function handleCommand(str: string) : Promise<string>
 {
 	const args: string[] = str.split(/\s+/);
 	var response: any;
@@ -68,12 +68,14 @@ export function removePlayerFromQueue(playerId: number)
 	console.log(playerId, "has been removed from matchQueue");
 }
 
-export async function addPlayerToQueue(playerId: number, server: GameServer): Promise<string>
+export async function addPlayerToQueue(playerId: number, server: GameServer): Promise<string | null>
 {
 	if (matchQueue.length + 1 >= 2) // run match
 	{
-		const player1 = playerId;
+		const player1: number = playerId;
 		const player2 = matchQueue.shift();
+		if (!player2)
+			return null;
 
 		console.log(`${player1} will play against ${player2}`);
 		const gameId = crypto.randomUUID();
@@ -96,7 +98,7 @@ async function onMessage(message: any, connection: WebSocket)
 		const json = JSON.parse(message);
 		if (json.isCmd === true)
 		{
-			const result = await handleCommand(json.message, connection);
+			const result = await handleCommand(json.message);
 			if (result == "") // no server feedback
 				return ;
 			const str = serverMsg(result);
@@ -131,7 +133,10 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 		})
 
 		ws.on('close', (code: any, reason: any) => {
-			removePlayerFromQueue(connections.get(ws));
+			const conn = connections.get(ws);
+			if (!conn)
+				return ;
+			removePlayerFromQueue(conn);
 			connections.delete(ws);
 			broadcast(serverMsg(`${login} has left the room`), ws);
 			console.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
@@ -167,9 +172,13 @@ async function isBlocked(blockedUsr: any, key: WebSocket, sender: WebSocket): Pr
 	return 0;
 }
 
-async function broadcast(message: any, sender: WebSocket = null)
+async function broadcast(message: any, sender: WebSocket)
 {
-	const blockedUsrSender = await getBlockUsr(connections.get(sender));
+	const conn = connections.get(sender);
+	if (!conn)
+		return ;
+
+	const blockedUsrSender = await getBlockUsr(conn);
 	connections.forEach(async (id: number, conn: WebSocket) => {
 
 		if (conn === sender || conn.readyState !== conn.OPEN)

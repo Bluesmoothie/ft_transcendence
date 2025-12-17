@@ -139,7 +139,14 @@ export class GameInstance
 			console.log(`${this._winner} won the game (mode: ${this.mode})`);
 			if (this.mode == 'online')
 			{
-				var res: GameRes = { user1_id: this._Player1Id, user2_id: this._Player2Id, user1_score: this._gameState.player1Score, user2_score: this._gameState.player2Score};
+				if (!this._Player1Id || !this._Player2Id)
+					return ;
+
+				var res: GameRes = {
+					user1_id: this._Player1Id,
+					user2_id: this._Player2Id,
+					user1_score: this._gameState.player1Score,
+					user2_score: this._gameState.player2Score};
 				addGameToHist(res, core.db);
 			}
 		}
@@ -208,9 +215,9 @@ export class GameInstance
 		this._keysPressed.clear();
 	}
 
-	get state(): Buffer					{ return (this._gameState ? Buffer.from(this._gameState.stateBuffer) : null); }
-	get reversedState(): Buffer			{ return (this._gameState ? Buffer.from(this._gameState.reversedStateBuffer) : null); }
-	get reversedBuffer(): ArrayBuffer	{ return (this._gameState ? this._gameState.reversedStateBuffer : null); }
+	get state(): Buffer | null					{ return (this._gameState ? Buffer.from(this._gameState.stateBuffer) : null); }
+	get reversedState(): Buffer | null			{ return (this._gameState ? Buffer.from(this._gameState.reversedStateBuffer) : null); }
+	get reversedBuffer(): ArrayBuffer | null	{ return (this._gameState ? this._gameState.reversedStateBuffer : null); }
 	get mode(): string | null			{ return (this._gameMode); }
 	get ballY(): number					{ return (this._gameState.ballY); }
 	get leftPaddleY(): number			{ return (this._gameState.leftPaddleY); }
@@ -232,6 +239,6 @@ export class GameInstance
 	{
 		clearInterval(this._interval);
 		this._keysPressed.clear();
-		this._gameState = null;
+		// this._gameState = null; // TODO check if issues
 	}
 }

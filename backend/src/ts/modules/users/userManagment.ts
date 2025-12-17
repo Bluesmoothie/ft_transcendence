@@ -114,6 +114,8 @@ export async function createUserOAuth2(email: string, name: string, id: string, 
 
 export async function updateUserRank(userId: number, newRank: number, login: string) : Promise<DbResponse>
 {
+	return { code: 200, data: { message: "route is deprecated"}}
+
 	const res = await getUserById(userId, core.db);
 	if (res.code != 200) return res;
 
@@ -134,6 +136,8 @@ export async function createUser(email: string, passw: string, username: string,
 
 	try {
 		const result = await db.run(sql, [username, email, passw, source, getSqlDate()]);
+		if (!result.lastID)
+			throw new Error("failed to create user");
 		console.log(`Inserted row with id ${result.lastID}`);
 		await updateAvatarPath(result.lastID, 'default.png');
 		return { code: 200, data: { message: "Success", id: result.lastID }};
@@ -155,6 +159,7 @@ export async function resetUser(user_id: number)
 		sql = "DELETE FROM games WHERE user1_id = ? OR user2_id = ?";
 		await core.db.run(sql, user_id);
 		console.log(`user: ${user_id} has reseted his account`);
+		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err)
 	{
@@ -233,9 +238,12 @@ export async function uploadAvatar(request: FastifyRequest, reply: any, db: Data
 {
 	const data = await request.file();
 	if (!data)
-		return reply.code(400).send({ error: "no file uploaded" });
+		return reply.code(400).send({ message: "no file uploaded" });
 
-	const res = await getUserById(request.session.user, db);
+	const userId = request.session.user;
+	if (!userId)
+		return reply.code(400).send({ message: "no user in session" });
+	const res = await getUserById(userId, db);
 	if (res.code != 200)
 		return reply.code(res.code).send(res.data);
 
@@ -267,11 +275,13 @@ export async function uploadAvatar(request: FastifyRequest, reply: any, db: Data
 export async function blockUser(userId: number, target: number, db: Database) : Promise<DbResponse>
 {
 	const sql = "INSERT INTO blocked_usr (user1_id, user2_id) VALUES(?, ?)";
-	try {
+	try
+	{
 		await db.run(sql, [userId, target]);
 		return { code: 200, data: { message: "Success" }};
 	}
-	catch (err) {
+	catch (err: any)
+	{
 		console.log(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "user already blocked" }};
@@ -283,11 +293,13 @@ export async function blockUser(userId: number, target: number, db: Database) : 
 export async function unBlockUser(userId: number, target: number, db: Database) : Promise<DbResponse>
 {
 	const sql = "DELETE from blocked_usr WHERE user1_id = ? AND user2_id = ?";
-	try {
+	try
+	{
 		await db.run(sql, [userId, target]);
 		return { code: 200, data: { message: "Success" }};
 	}
-	catch (err) {
+	catch (err: any)
+	{
 		console.log(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
@@ -318,7 +330,7 @@ export async function updateName(user_id: number, name: string): Promise<DbRespo
 		await core.db.run(sql, [name, user_id]);
 		return { code: 200, data: { message: "name updated" }};
 	}
-	catch (err)
+	catch (err: any)
 	{
 		console.log(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
@@ -335,7 +347,7 @@ export async function updateEmail(user_id: number, email: string): Promise<DbRes
 		await core.db.run(sql, [email, user_id]);
 		return { code: 200, data: { message: "name updated" }};
 	}
-	catch (err)
+	catch (err: any)
 	{
 		console.log(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
