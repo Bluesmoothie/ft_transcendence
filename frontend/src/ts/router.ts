@@ -2,7 +2,8 @@ import { Home } from 'pages/Home.js';
 import { GameMenu } from 'pages/GameMenu.js';
 import { GameClient } from 'pages/GameClient.js';
 import { TournamentMenu } from 'pages/TournamentMenu.js';
-import { Tournament } from 'pages/Tournament.js';
+import { TournamentCreate } from 'pages/TournamentCreate.js';
+import { TournamentJoin } from 'pages/TournamentJoin.js';
 import { User } from "User.js";
 import { Chat } from '@modules/chat';
 import { UserElement } from 'UserElement.js';
@@ -13,11 +14,13 @@ export class GameRouter
 {
 	private static readonly EXIT_KEY: string = 'Escape';
 	private static readonly HOME_KEY: string = 'h';
-	private static readonly GAME_KEY: string = 'g';
+	private static readonly GAME_MENU_KEY: string = 'g';
 	private static readonly GAME_ONLINE_KEY: string = 'o';
 	private static readonly GAME_LOCAL_KEY: string = 'l';
 	private static readonly GAME_BOT_KEY: string = 'b';
-	private static readonly TOURNAMENT_KEY: string = 't';
+	private static readonly TOURNAMENT_MENU_KEY: string = 't';
+	private static readonly TOURNAMENT_CREATE_KEY: string = 'c';
+	private static readonly TOURNAMENT_JOIN_KEY: string = 'j';
 
 	currentPage: string = 'home';
 	currentClass: any = null;
@@ -100,41 +103,52 @@ export class GameRouter
 
 		window.addEventListener('keydown', async (e) =>
 		{
-			if (!this.m_user)
-					return ;
-
-			switch (e.key)
+			const targetElement = e.target as HTMLElement;
+			if (!targetElement)
 			{
-				case GameRouter.EXIT_KEY:
-					await fetch("/api/chat/removeQueue", { 
-							method: "DELETE",
-							headers: { 'content-type': 'application/json' },
-							body: JSON.stringify({
-								id: this.m_user.id
-							})
-						});
-					this.navigateTo('home', '');
-					break ;
-				// case Router.HOME_KEY:
-				// 	this.navigateTo('home', '');
-				// 	break ;
-				// case Router.GAME_KEY:
-				// 	this.navigateTo('game-menu', '');
-				// 	break ;
-				// case Router.GAME_ONLINE_KEY:
-				// 	this.navigateTo('game', 'online');
-				// 	break ;
-				// case Router.GAME_LOCAL_KEY:
-				// 	this.navigateTo('game', 'local');
-				// 	break ;
-				// case Router.GAME_BOT_KEY:
-				// 	this.navigateTo('game', 'bot');
-				// 	break ;
-				// case Router.TOURNAMENT_KEY:
-				// 	this.navigateTo('tournament-menu', '');
-				// 	break ;
+				return ;
+			}
+
+			const tagName = targetElement.tagName.toLowerCase();
+			if (tagName && tagName !== 'input' && tagName !== 'textarea')
+			{
+				this.handleEventKey(e.key);
 			}
 		});
+	}
+
+	private handleEventKey(key: string): void
+	{
+		switch (key)
+		{
+			case GameRouter.EXIT_KEY:
+				history.back();
+				break ;
+			case GameRouter.HOME_KEY:
+				this.navigateTo('home', '');
+				break ;
+			case GameRouter.GAME_MENU_KEY:
+				this.navigateTo('game-menu', '');
+				break ;
+			case GameRouter.GAME_ONLINE_KEY:
+				this.navigateTo('game', 'online');
+				break ;
+			case GameRouter.GAME_LOCAL_KEY:
+				this.navigateTo('game', 'local');
+				break ;
+			case GameRouter.GAME_BOT_KEY:
+				this.navigateTo('game', 'bot');
+				break ;
+			case GameRouter.TOURNAMENT_MENU_KEY:
+				this.navigateTo('tournament-menu', '');
+				break ;
+			case GameRouter.TOURNAMENT_CREATE_KEY:
+				this.navigateTo('tournament-create', '');
+				break ;
+			case GameRouter.TOURNAMENT_JOIN_KEY:
+				this.navigateTo('tournament-join', '');
+				break ;
+		}
 	}
 
 	public navigateTo(page: string, mode: string): void
@@ -171,11 +185,14 @@ export class GameRouter
 					return (new GameClient(this, mode!, this.m_user, this.m_chat));
 			case 'tournament-menu':
 				return (new TournamentMenu(this));
-			case 'tournament':
-				return (new Tournament(mode!));
+			case 'tournament-create':
+				if (this.m_user)
+					return (new TournamentCreate(this.m_user));
+			case 'tournament-join':
+				if (this.m_user)
+					return (new TournamentJoin(this.m_user));
 			default:
 				return (null);
 		}
 	}
 }
-

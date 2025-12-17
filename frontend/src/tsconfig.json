@@ -13,6 +13,6 @@
 			"@modules/*": ["modules/*"]
 		}
 	},
-	"include": ["ts/*.ts", "ts/pages/GameState.ts", "ts/pages/Tournament.ts"],
+	"include": ["ts/**/*.ts"],
 	"exclude": ["node_modules"]
 }

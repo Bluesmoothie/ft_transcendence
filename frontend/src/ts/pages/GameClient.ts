@@ -53,7 +53,7 @@ enum Msgs
 {
 	SEARCHING = 'Searching for opponent...',
 	WIN = 'wins !',
-	PLAY_AGAIN = `Press ${Keys.PLAY_AGAIN} to go back`,
+	PLAY_AGAIN = `Press ${Keys.PLAY_AGAIN} to play again`,
 }
 
 export class GameClient extends Utils
@@ -131,25 +131,6 @@ export class GameClient extends Utils
 		});
 
 		this.setContent('searching-msg', Msgs.SEARCHING, true);
-		this.setColors('1');
-	}
-
-	private setColors(opacity: string): void
-	{
-		// TODO NEEDS A REWORK
-
-		// this.HTMLelements.get('game')!.style.borderBlockColor = `rgba(${Params.COLOR}, ${opacity})`;
-		// for (const element of this.HTMLelements.values())
-		// {
-		// 	if (element.tagName === 'DIV')
-		// 	{
-		// 		element.style.backgroundColor = `rgba(${Params.COLOR}, ${opacity})`;
-		// 	}
-		// 	else if (element)
-		// 	{
-		// 		element.style.color = `rgba(${Params.COLOR}, ${opacity})`;
-		// 	}
-		// }
 	}
 
 	private async createGameFeedback(json: any)
@@ -170,7 +151,7 @@ export class GameClient extends Utils
 			return ;
 		try
 		{
-			window.addEventListener('beforeunload', this.beforeUnloadHandler);
+			window.addEventListener('beforeunload', this.destroy);
 
 			const response = await fetch(`https://${window.location.host}/api/create-game`,
 			{
@@ -241,7 +222,6 @@ export class GameClient extends Utils
 
 	private async startGame(): Promise<void>
 	{
-
 		console.log(this.playerSide);
 		const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
 		{
@@ -288,25 +268,13 @@ export class GameClient extends Utils
 		document.addEventListener('keyup', this.keyupHandler);
 	}
 
-	private beforeUnloadHandler = async (): Promise<void> =>
-	{
-		await fetch(`https://${window.location.host}/api/delete-player`,
-		{
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ gameId: this.gameId, playerId: this.playerSide }),
-		});
-
-		this.destroy();
-	}
-
 	private keydownHandler = (event: KeyboardEvent): void =>
 	{
 		this.keysPressed.add(event.key);
 
 		if (event.key === Keys.PLAY_AGAIN && this.end)
 		{
-			this.m_router.navigateTo("home", "");
+			this.m_router.navigateTo("game", this.mode);
 		}
 	}
 
@@ -330,7 +298,7 @@ export class GameClient extends Utils
 			this.keysPressed.forEach((key) => { this.getKeyToSend2Player(key); });
 		}
 
-		this.socket.send(this.keysToSend);
+		this.socket!.send(this.keysToSend);
 	}
 
 	private getKeyToSend1Player(key: string): void
@@ -378,7 +346,15 @@ export class GameClient extends Utils
 		}
 		else
 		{
-			this.updateDisplay(new GameState(data));
+			try
+			{
+				this.updateDisplay(new GameState(data));
+			}
+			catch (error)
+			{
+				console.error('Error updating game state:', error, '. Exiting game loop');
+				this.destroy();
+			}
 		}
 	}
 
@@ -425,7 +401,6 @@ export class GameClient extends Utils
 			if (usr)
 				winnerName = usr.name;
 		}
-		this.setColors(Params.BACKGROUND_OPACITY);
 		this.hide('net');
 		this.hide('ball');
 		this.hide('paddle-left');
@@ -436,16 +411,30 @@ export class GameClient extends Utils
 		this.setColor('play-again-msg', Params.COLOR, undefined, true);
 	}
 
-	public destroy(): void
+	private removeQueue = async (): Promise<void> =>
+	{
+		if (!this.m_user)
+			return ;
+
+		await fetch("/api/chat/removeQueue",
+		{
+			method: "DELETE",
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ id: this.m_user.id })
+		});
+	}
+
+	public async destroy(): Promise<void>
 	{
 		if (this.countdownInterval)
 		{
 			clearInterval(this.countdownInterval);
 		}
 
+		this.removeQueue();
 		this.socket?.close();
 		this.stopGameLoop();
-		window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+		window.removeEventListener('beforeunload', this.destroy);
 		document.removeEventListener('keydown', this.keydownHandler);
 		document.removeEventListener('keyup', this.keyupHandler);
 		this.keysPressed.clear();

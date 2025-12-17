@@ -30,7 +30,7 @@ export class Bot
 	private async init(gameState: ArrayBuffer)
 	{
 		const res = await getUserByName("bot", core.db);
-		
+
 		this.gameInstance = new GameInstance('dev', res.data.id, -1);
 		this.gameInstance.state = new GameState(gameState);
 		this.gameInstance.running = true;
@@ -75,7 +75,14 @@ export class Bot
 		}
 		else
 		{
-			this.gameInstance.state = new GameState(data);
+			try
+			{
+				this.gameInstance.state = new GameState(data);
+			}
+			catch (error)
+			{
+				console.error('Error updating game state:', error);
+			}
 		}
 	}
 
@@ -87,7 +94,7 @@ export class Bot
 			this.calculateOutput();
 			this.socket.send(Array.from(this.keysPressed).join(''));
 			this.keysPressed = new Set(Array.from(this.keysPressed).map(key => '1' + key));
-			this.gameInstance.handleKeyPress(this.keysPressed);
+			this.gameInstance.keysPressed = new Set([...this.gameInstance.keysPressed, ...this.keysPressed]);
 		}
 	}
 
