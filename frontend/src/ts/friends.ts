@@ -6,20 +6,18 @@ export class FriendManager
 {
 	private m_pndgContainer:	HTMLElement | null;
 	private m_friendsContainer:	HTMLElement | null;
-	private m_friends:			UserElement[];
-	private m_pndg:				UserElement[];
+	private m_blockContainer:	HTMLElement | null;
 	private m_user:				User;
 	private m_main:				MainUser;
 	private m_template:			string;
 
-	constructor(user: User, pndgContainer: string, friendContainer: string, main: MainUser, templateName: string = "user-friend-template")
+	constructor(user: User, pndgContainer: string, friendContainer: string, blockContainer: string, main: MainUser, templateName: string = "user-friend-template")
 	{
 		this.m_user = user;
 		this.m_main = main;
 		this.m_pndgContainer = Router.getElementById(pndgContainer);
 		this.m_friendsContainer = Router.getElementById(friendContainer);
-		this.m_friends = [];
-		this.m_pndg = [];
+		this.m_blockContainer = Router.getElementById(blockContainer);
 		this.m_template = templateName;
 
 		this.refreshContainers();
@@ -27,29 +25,40 @@ export class FriendManager
 
 	public refreshContainers()
 	{
-		if (!this.m_friendsContainer || !this.m_pndgContainer || !this.m_user)
+		if (!this.m_friendsContainer || !this.m_pndgContainer || !this.m_blockContainer || !this.m_user)
 			return ;
 
 		this.m_pndgContainer.innerHTML = "";
 		this.m_friendsContainer.innerHTML = "";
+		this.m_blockContainer.innerHTML = "";
 
 		const pdng: UserElement[] = this.addFriends(this.m_pndgContainer, UserElementType.FRIEND_PNDG);
 		const friends: UserElement[] = this.addFriends(this.m_friendsContainer, UserElementType.FRIEND);
 		
-		const requestTitle = Router.getElementById("request-title");
 		if (this.m_main.id != this.m_user.id)
 		{
-			if (requestTitle)
-				requestTitle.style.display = "none";
-			this.m_pndgContainer.style.display = "none";
+			if (this.m_pndgContainer.parentElement)
+				this.m_pndgContainer.parentElement.style.display = "none";
+			if (this.m_blockContainer.parentElement)
+				this.m_blockContainer.parentElement.style.display = "none";
 			return ;
 		}
 		else
 		{
-			if (requestTitle)
-				requestTitle.style.display = "flex";
-			this.m_pndgContainer.style.display = "flex";
+			if (this.m_blockContainer.parentElement)
+				this.m_blockContainer.parentElement.style.display = "block";
+			if (this.m_pndgContainer.parentElement)
+				this.m_pndgContainer.parentElement.style.display = "block";
 		}
+
+		this.m_user.blockUsr.forEach((block: User) => {
+			if (!this.m_blockContainer)
+				return ;
+
+			const elt = new UserElement(block, this.m_blockContainer, UserElementType.STANDARD, this.m_template);
+			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${block.name}`) });
+			elt.updateHtml(block);
+		})
 
 		pdng.forEach(elt => {
 			const redBtn = elt.getElement("#red-btn");

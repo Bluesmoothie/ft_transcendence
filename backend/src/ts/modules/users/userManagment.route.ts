@@ -158,15 +158,13 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		return reply.code(res.code).send(res.data);
 	})
 
-	fastify.delete('/unblock/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+	fastify.post('/unblock/:id', async (request: FastifyRequest, reply: FastifyReply) => {
 		const { id } = request.params as { id: number };
 		const userId = request.session.user;
 		if (!userId)
 			return reply.code(400).send({ message: "missing user session" });
 
 		const res = await mgmt.unBlockUser(userId, id, core.db);
-		if (res.code == 200)
-			request.session.destroy(); // destroy session or user will be reconnected
 		return reply.code(res.code).send(res.data);
 	})
 }

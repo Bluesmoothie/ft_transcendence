@@ -111,7 +111,7 @@
 	}
 
 	.header-small {
-		@apply w-full h-25 bg-dark flex align-middle justify-between items-center;
+		@apply w-full h-25 bg-dark flex align-middle justify-between items-center fixed z-3;
 	}
 
 	.banner-small {
@@ -147,7 +147,7 @@
 	}
 
 	.main {
-		@apply flex-1 flex justify-around items-center align-middle w-full;
+		@apply flex-1 flex justify-around items-center align-middle w-full overflow-clip;
 	}
 
 	.play-menu {

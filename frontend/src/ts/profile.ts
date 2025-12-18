@@ -33,7 +33,7 @@ export class ProfileView extends ViewComponent
 		if (!this.m_user) return;
 
 		const stats: Stats = this.m_user.stats;
-		new FriendManager(this.m_user, "pndg-container", "friend-container", this.m_main);
+		new FriendManager(this.m_user, "pndg-container", "friend-container", "blocked-container", this.m_main);
 		this.setBtn();
 		this.addMatch(this.m_user);
 
@@ -45,7 +45,6 @@ export class ProfileView extends ViewComponent
 				UserElement.setStatusColor(this.m_user, status);
 			(<HTMLImageElement>profile_extended.querySelector("#avatar-img")).src = this.m_user.getAvatarPath();
 			(<HTMLElement>profile_extended.querySelector("#name")).textContent = this.m_user.name;
-			(<HTMLElement>profile_extended.querySelector("#created_at")).innerText	= `created at: ${this.m_user.created_at.split(' ')[0]}`;
 			(<HTMLElement>profile_extended.querySelector("#created_at")).innerText	= `created at: ${this.m_user.created_at.split(' ')[0]}`;
 		}
 
@@ -143,9 +142,12 @@ export class ProfileView extends ViewComponent
 			blockBtn.style.display = "none";
 			return ;
 		}
+		
+		addBtn.style.display = "block";
+		blockBtn.style.display = "block";
 
-		this.setFriendBtn(addBtn);
-		this.setBlockBtn(blockBtn);
+		await this.setFriendBtn(addBtn);
+		await this.setBlockBtn(blockBtn);
 	}
 
 	private async setBlockBtn(blockBtn: HTMLButtonElement)
@@ -156,12 +158,12 @@ export class ProfileView extends ViewComponent
 		const clone = blockBtn.cloneNode(true) as HTMLElement;
 		blockBtn.parentNode?.replaceChild(clone, blockBtn);
 
-		console.log(this.m_main.blockUsr);
+		var found = false;
 
-		for (let i = 0; i < this.m_main.blockUsr.length; i++)
-		{
-			const block = this.m_user.blockUsr[i];
-			console.log(block, i, this.m_user.blockUsr[i])
+		this.m_main.blockUsr.forEach((block: User) => {
+		
+			if (!this.m_user) return ;
+
 			if (block.id == this.m_user.id) // user is already blocked
 			{
 				clone.innerText = "unblock";
@@ -169,13 +171,17 @@ export class ProfileView extends ViewComponent
 					if (!this.m_user) return;
 					await this.m_main?.unblockUser(this.m_user.id); this.setBtn();
 				});
+				found = true;
 				return ;
 			}
-		}
+		})
+		if (found)
+			return;
 		clone.innerText = "block";
 		this.addTrackListener(clone, "click", async () => {
 			if (!this.m_user) return;
-			await this.m_main?.blockUser(this.m_user.id); this.setBtn();
+			await this.m_main?.blockUser(this.m_user.id);
+			await this.setBtn();
 		});
 	}
 	
@@ -229,22 +235,31 @@ export class ProfileView extends ViewComponent
 		const template = this.querySelector("#match-template") as HTMLTemplateElement;
 		const clone: HTMLElement = template.content.cloneNode(true) as HTMLElement;
 
-		const matchup = clone.querySelector("#matchup") as HTMLElement;
+		const player1 = clone.querySelector("#player1") as HTMLElement;
+		const player2 = clone.querySelector("#player2") as HTMLElement;
 		const status = clone.querySelector("#status") as HTMLElement;
 		const score = clone.querySelector("#score") as HTMLElement;
 		const date = clone.querySelector("#date") as HTMLElement;
+		if (!player1 || !player2 || !status || !score || !date)
+		{
+			console.warn("failed to retreive one or more element of match template");
+			return clone;
+		}
 
 		const player2Id = json.user1_id === user.id ? json.user2_id : json.user1_id;
 		const player2Score = json.user1_id === user.id ? json.user2_score: json.user1_score;
 		const player1Score = json.user1_id === user.id ? json.user1_score: json.user2_score;
 
-		const player2: User | null = await getUserFromId(player2Id);
-		if (!player2)
+		const user2: User | null = await getUserFromId(player2Id);
+		if (!user2)
 		{
 			console.warn("failed to get player2");
 			return clone;
 		}
-		matchup.innerText = `${user.name} - ${player2.name}`;
+		player1.innerText = `${user.name}`;
+		player2.innerText = `${user2.name}`;
+		player1.addEventListener("click", () => Router.Instance?.navigateTo(`/profile?username=${user.name}`))
+		player2.addEventListener("click", () => Router.Instance?.navigateTo(`/profile?username=${user2.name}`))
 		status.innerText = `${player1Score > player2Score ? "won" : "lost" }`;
 		status.style.color = `${player1Score > player2Score ? "var(--green)" : "var(--red)" }`;
 		score.innerText = `${player1Score} - ${player2Score}`;

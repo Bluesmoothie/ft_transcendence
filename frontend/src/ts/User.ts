@@ -183,10 +183,8 @@ export class User {
 
 		const data = await response.json();
 
-			console.log(data);
 		for (let i = 0; i < data.length; i++)
 		{
-			console.log(data[i]);
 			const id = data[i].user2_id;
 			const tmp = await getUserFromId(id);
 			if (!tmp)
@@ -540,7 +538,7 @@ export class MainUser extends User
 	public async unblockUser(id: number): Promise<number>
 	{
 		console.log("unblocking");
-		const res = await fetch(`/api/user/unblock/${id}`, { method: "DELETE" });
+		const res = await fetch(`/api/user/unblock/${id}`, { method: "POST" });
 		return res.status;
 	}
 }

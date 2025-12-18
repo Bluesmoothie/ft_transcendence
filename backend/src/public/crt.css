@@ -112,7 +112,7 @@
 				before:bg-size-[100%_2px,3px_100%]
 				before:bg-pixel-mask before:z-99
 				
-				after:content-[''] after:block after:absolute after:z-2
+				after:content-[''] after:block after:absolute after:z-98
 				after:top-0 after:left-0 after:bottom-0 after:right-0
 				after:bg-px-black after:opacity-0
 				after:pointer-events-none
@@ -148,6 +148,7 @@
 		@apply	absolute
 				w-full h-full
 				pointer-events-none
+				z-3
 				animate-[scan_6s_infinite];
 	}
 

@@ -1,10 +1,14 @@
 <template id="profile-template">
 	<template id="match-template">
 		<div class="w-full flex flex-row justify-around align-middle px-2">
-			<p id="matchup" class="text-blue w-[50%]">user - test-user</p>
+			<div class="flex justify-start gap-3 w-[40%] text-center items-center">
+				<p id="player1" class="text-blue cursor-pointer hover:underline">tmp1</p>
+				<p> - </p>
+				<p id="player2" class="text-blue cursor-pointer hover:underline">tmp2</p>
+			</div>
 			<p id="status" class="text-green w-[10%]">win</p>
 			<p id="score" class="w-[10%]">1 - 10</p>
-			<p id="date" class="w-[25%]">2025-12-02</p>
+			<p id="date" class="w-[20%]">2025-12-02</p>
 		</div>
 	</template>
 
@@ -31,7 +35,7 @@
 	</template>
 
 	<template id="user-friend-template">
-		<div class="relative flex gap-2 items-center justify-between h-20 w-full max-w-90 border-2 border-white p-2">
+		<div class="relative flex gap-2 items-center justify-between h-20 w-[90%] border-2 border-white p-2">
 			<div id="profile" class="flex flex-row w-full items-center gap-2 hover:brightness-[1.2]">
 				<div class="relative">
 					<img
@@ -51,7 +55,7 @@
 
 	</template>
 
-	<div class="h-full">
+	<div class="h-full overflow-hidden overflow-y-hidden">
 
 		<header class="header-small">
 			<div id="banner" class="banner-small">
@@ -67,7 +71,7 @@
 			</div>
 		</header>
 
-		<div class="h-full w-full flex flex-col justify-start align-middle items-center">
+		<div class="h-full w-full flex flex-col justify-start align-middle items-center pt-25 overflow-y-scroll">
 
 			<!-- profile expended -->
 			<div class="flex flex-row h-72 w-[95%] bg-dark my-5 px-15 border-white border-2">
@@ -109,8 +113,7 @@
 			</div>
 
 			<!-- stats -->
-			<div class="flex justify-center align-middle my-5 w-1/2 h-32 gap-5">
-
+			<div class="flex justify-center align-middle my-5 w-1/2 min-h-32 gap-5">
 				<div class="h-full w-1/2 bg-dark">
 					<div class="stat-container">
 						<div class="stat-item">
@@ -127,27 +130,35 @@
 			</div>
 
 			<!-- history / friends -->
-			<div class="w-[80%] flex flex-row justify-center mt-5 align-middle gap-5">
-				<h1 class="w-[50%] font-bold text-xl">History</h1>
-				<h1 class="w-[30%] font-bold text-xl">Friends</h1>
-				<h1 id="request-title" class="w-[30%] font-bold text-xl">Request</h1>
-			</div>
-			<div class="h-80 w-[80%] flex flex-row justify-center my-5 align-middle gap-5">
 
-				<div id="history-container" class="h-full w-[50%] bg-dark overflow-y-scroll py-5">
-					<div class="w-full flex flex-row justify-around align-middle px-2">
-						<p class="underline w-[50%]">match</p>
-						<p class="underline w-[10%]">result</p>
-						<p class="underline w-[10%]">score</p>
-						<p class="underline w-[25%]">played at</p>
+			<div class="flex w-[95%] gap-10 flex-col h-screen min-h-screen mb-10">
+
+				<div class="flex h-[45%] w-full justify-center items-center gap-5">
+					<div id="friends" class="h-full w-1/3">
+						<h1 class="w-full font-bold text-xl">Friends</h1>
+						<div id="friend-container" class="h-full flex flex-col justify-start items-center align-top w-full bg-dark py-3"></div>
+					</div>
+					<div id="pending" class="h-full w-1/3">
+						<h1 id="request-title" class="w-full font-bold text-xl">Request</h1>
+						<div id="pndg-container" class="h-full flex flex-col justify-start items-center align-top w-full bg-dark py-3 gap-3"></div>
+					</div>
+					<div id="blocked" class="h-full w-1/3">
+						<h1 id="block-title" class="w-full font-bold text-xl">Blocked</h1>
+						<div id="blocked-container" class="h-full flex flex-col justify-start items-center align-top w-full bg-dark py-3 gap-3"></div>
 					</div>
 				</div>
 
-				<div id="friend-container" class="h-full flex flex-col justify-start items-center align-top w-[30%] bg-dark py-3">
-
+				<div id="history" class="h-[50%]">
+					<h1 class="w-full font-bold text-xl">History</h1>
+					<div id="history-container" class="h-full w-full bg-dark overflow-y-scroll py-5">
+						<div class="w-full flex flex-row justify-around align-middle px-2">
+							<p class="underline w-[50%]">match</p>
+							<p class="underline w-[10%]">result</p>
+							<p class="underline w-[10%]">score</p>
+							<p class="underline w-[25%]">played at</p>
+						</div>
+					</div>
 				</div>
-
-				<div id="pndg-container" class="h-full flex flex-col justify-start items-center align-top w-[30%] bg-dark py-3 gap-3"></div>
 			</div>
 		</div>
 </template>
