@@ -84,7 +84,17 @@ impl ScreenDisplayer for Infos {
         print_block(instructions, area, buf);
     }
     async fn display_friends_screen(&self, area: Rect, buf: &mut Buffer) -> Result<()> {
-        self.display_friends(area, buf).await?;
+        let list = self.get_indexed_friends(area, buf).await?;
+        let instructions = Line::from(vec![
+            "1. ".bold(),
+            "ADD FRIEND ".blue(),
+            "2. ".bold(),
+            "DELETE FRIEND ".blue(),
+            "LEFT ".bold(),
+            "LEFT ".blue(),
+            "ESC. ".bold(),
+            "Quit".blue(),
+    ]);
         Ok(())
     }
 }
