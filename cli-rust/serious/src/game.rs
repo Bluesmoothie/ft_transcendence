@@ -41,16 +41,6 @@ use crate::Infos;
 use tokio::sync::mpsc;
 use tokio::net::TcpStream;
 
-struct Game {
-	location: String,
-	original_size: (u16, u16),
-	id: u64,
-	client: Client,
-	game_id: String,
-	opponent_id: u64,
-	player_side: u64,
-}
-
 // struct Infos {
 //   original_size: (u16, u16),
 //   location: String,
@@ -92,6 +82,74 @@ struct Game {
 // 	WIN = "wins !",
 // 	PLAY_AGAIN = "Press ${Keys.PLAY_AGAIN} to play again",
 // }
+
+pub struct Game {
+	location: String,
+	original_size: (u16, u16),
+	id: u64,
+	started: bool,
+	client: Client,
+	game_id: String,
+	opponent_id: u64,
+	player_side: u64,
+}
+
+pub trait Gameplay {
+	async fn create_game(self, mode: &str, receiver: mpsc::Receiver<serde_json::Value>) 
+										-> Result<(Infos, mpsc::Receiver<serde_json::Value>), (String, Infos, mpsc::Receiver<serde_json::Value>)>;
+}
+
+impl Gameplay for Infos {
+	async fn create_game(self, mode: &str, mut receiver: mpsc::Receiver<serde_json::Value>) 
+										-> Result<(Infos, mpsc::Receiver<serde_json::Value>), (String, Infos, mpsc::Receiver<serde_json::Value>)> {
+		if let Err(_) = send_post_game_request(&self, mode).await {
+			return Err(("error, no data received from server".to_string(), self, receiver));
+		};
+		if let Err(_) = waiting_screen() {
+			return Err(("error, no data received from server".to_string(), self, receiver));
+		};
+		loop {
+			match poll(Duration::from_millis(16)) {
+				Ok(true) => {
+					if !receiver.is_empty() {
+						break ;
+					}
+					let event = match event::read() {
+					Ok(event) => event,
+					_ => return Err(("error in read".to_string(), self, receiver))
+					};
+					match should_exit(&event) {
+						Ok(true) => {
+							if let Err(_) = send_remove_from_queue_request(&self).await {
+								return Err(("error: could not send request to remove from list".to_string(), self, receiver));
+							};
+							return Ok(receiver);},
+						Ok(false) => {},
+						_ => return Err(("event error".to_string(), self, receiver))
+					}
+				},
+				Ok(false) => {
+					if !receiver.is_empty() {
+						break ;
+					}
+				},
+				_ => return Err(("error in poll".to_string(), self, receiver))
+			};
+		}
+		let response = match receiver.recv().await {
+			Some(value) => value,
+			_ => return Err(("error, no data received from server".to_string(), self, receiver)),
+		};
+		let game = match Game::new(&self, response) {
+			Ok(game) => game,
+			_ => return Err(("error creating game".to_string(), self, receiver)),
+		};
+		if let Err(e) = game.start_game().await {
+			return Err((e.to_string(), self, receiver));
+		};
+		Ok((self, receiver))
+	}
+}
 
 async fn send_post_game_request(game_main: &Infos, mode: &str) -> Result<()> {
 	let mut map = HashMap::new();
@@ -188,6 +246,18 @@ pub async fn create_game(game_main: &Infos, mode: &str, mut receiver: mpsc::Rece
 
 
 impl Game {
+	pub fn default() -> Game {
+		Game {
+			location: String::new(), 
+			original_size: (0, 0), 
+			id: 0, 
+			started: false,
+			client: Client::new(), 
+			game_id: String::new(), 
+			opponent_id: 0, 
+			player_side: 0
+		}
+	}
 	fn new(info: &Infos, value: serde_json::Value) -> Result<Game> {
 		let game_id: String = match value["gameId"].as_str() {
 			Some(id) => id.to_string(),
@@ -201,7 +271,7 @@ impl Game {
 			Some(nbr) => nbr,
 			_ => return Err(anyhow!("No player Id in response")),
 		};
-		Ok(Game{location: info.location.clone(), original_size: info.original_size, id: info.id, client: info.client.clone(), game_id, opponent_id, player_side})
+		Ok(Game{location: info.location.clone(), original_size: info.original_size, id: info.id, started: true, client: info.client.clone(), game_id, opponent_id, player_side})
 	}
 	// async fn launch_countdown(&self) -> Result<()> {
 	// 	//3...2....1....0 -->

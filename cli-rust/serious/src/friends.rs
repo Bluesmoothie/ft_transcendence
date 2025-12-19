@@ -26,6 +26,7 @@ use crate::LOGO;
 use super::{should_exit, Infos};
 
 use ratatui::{
+    text::Span,
     buffer::Buffer,
     layout::Rect,
     style::Stylize,
@@ -39,15 +40,13 @@ pub const WIDTH: u16 = 90;
 pub const HEIGHT: u16 = 30;
 
 pub trait FriendsDisplay {
-    async fn get_indexed_friends(&self, area: Rect, buf: &mut Buffer) -> Result<Vec<String>>;
+    async fn get_indexed_friends(&self) -> Result<Vec<String>>;
     // fn print_friends(&self, area: Rect, buf: &mut Buffer, friends: &Vec<(String, bool)>) -> Result<Vec<String>>;
 }
 
 impl FriendsDisplay for Infos  {
-    async fn get_indexed_friends(&self, area: Rect, buf: &mut Buffer) -> Result<Vec<String>> {
-        // let mut index: usize = 0;
+    async fn get_indexed_friends(&self) -> Result<Vec<String>> {
         let friends = get_all_friends(&self).await?;
-        // let result = self.print_friends(area, buf, &friends_list)?;
         let mut printable: Vec<String> = vec![];
         let mut i: usize = 0;
         if self.index * 10 < friends.len() {
@@ -67,13 +66,7 @@ impl FriendsDisplay for Infos  {
         }
         if i == 10 && friends.len() > self.index * 10 + i {
             printable.push("...".to_string());
-            // stdout()
-            //     .queue(cursor::MoveTo(4, 24))?
-            //     .queue(Print("..."))?;
-
         }
-
-
         Ok(printable)
         // loop {
         //     if (poll(Duration::from_millis(16)))? {

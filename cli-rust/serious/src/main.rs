@@ -22,16 +22,18 @@ use crate::game::{create_game};
 
 mod login;
 use crate::login::{create_guest_session};
-use tokio::{net::unix::pipe::Receiver, sync::mpsc};
+use crate::game::{Game, Gameplay};
+use tokio::{net::unix::pipe::Receiver, sync::mpsc, time::Duration};
 
 
 use crossterm::{
-  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
+  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
 
 use welcome::LOGO;
 
 use ratatui::{
+    text::Span,
     buffer::Buffer,
     layout::Rect,
     style::Stylize,
@@ -52,7 +54,8 @@ pub enum CurrentScreen {
   Welcome,
   GameChoice,
   SocialLife,
-  Game,
+  CreateGame,
+  PlayGame,
   FriendsDisplay,
 }
 pub struct Infos {
@@ -63,6 +66,8 @@ pub struct Infos {
   exit: bool,
   screen: CurrentScreen,
   index: usize,
+  friends: Vec<String>,
+  game: Game,
 }
 
 #[tokio::main]
@@ -81,7 +86,8 @@ async fn main() -> Result<()> {
       return Err(anyhow!("{}", e));
     },
   };
-  let game_main = Infos {original_size, location, id: num, client, exit: false, screen: CurrentScreen::Welcome, index: 0};
+  let game_main = Infos::new(original_size, location, num, client);
+  // let mut game_main = Infos {original_size, location, id: num, client, exit: false, screen: CurrentScreen::Welcome, index: 0, friends: vec![]};
   let mut terminal = ratatui::init();
   let app_result = game_main.run(&mut terminal, receiver).await;
   ratatui::restore();
@@ -96,10 +102,25 @@ async fn main() -> Result<()> {
 }
 
 impl Infos {
+  pub fn new(original_size: (u16, u16), location: String, id: u64, client: Client) -> Infos {
+    Infos {
+      original_size,
+      location,
+      id,
+      client,
+      exit: false,
+      screen: CurrentScreen::Welcome,
+      index: 0,
+      friends: vec![],
+      game: Game::default(),
+    }
+  }
   pub async fn run(mut self, terminal: &mut DefaultTerminal, mut receiver: mpsc::Receiver<serde_json::Value>) -> Result<()> {
     while !self.exit {
-      terminal.draw(|frame| self.draw(frame))?;
-      (self, receiver) = self.handle_events(receiver).await?;
+      if poll(Duration::from_millis(16))? == true {
+        terminal.draw(|frame| self.draw(frame))?;
+        (self, receiver) = self.handle_events(receiver).await?;
+      }
     }
     Ok(())
   }
@@ -112,9 +133,19 @@ impl Infos {
     match self.screen {
       CurrentScreen::Welcome => {self = self.handle_welcome_events()?},
       CurrentScreen::GameChoice => {self = self.handle_gamechoice_events()?},
-      CurrentScreen::SocialLife => {self = self.handle_social_events()?},
+      CurrentScreen::SocialLife => {self = self.handle_social_events().await?},
       CurrentScreen::FriendsDisplay => {},
-      CurrentScreen::Game => {},
+      CurrentScreen::CreateGame => {},    
+      CurrentScreen::PlayGame => {},    
+      // CurrentScreen::FriendsDisplay => {self = self.handle_friends_display().await?},
+      CurrentScreen::CreateGame => {(self, receiver) = match self.create_game("online", receiver).await {
+        Ok((info, receiver)) => (info, receiver),
+        Err((error, info, receiver)) => {
+                display_error(&error)?;
+                (info, receiver)
+              }
+      }},
+      // CurrentScreen::PlayGame => {self = self.handle_game_events().await?},
     }
   Ok((self, receiver))
   }
@@ -127,7 +158,10 @@ impl Widget for &Infos {
       CurrentScreen::GameChoice => {self.display_gamechoice_screen(area, buf);}, 
       CurrentScreen::SocialLife => {self.display_social_screen(area, buf);}, 
       CurrentScreen::FriendsDisplay => {self.display_friends_screen(area, buf);}, 
-      CurrentScreen::Game => {}, 
+      CurrentScreen::CreateGame => {},    
+      // CurrentScreen::CreateGame => {self.display_waiting_screen(area, buf);},    
+      CurrentScreen::PlayGame => {}, 
+      // CurrentScreen::PlayGame => {self.display_game_screen(area, buf);}, 
     }
   }
 }

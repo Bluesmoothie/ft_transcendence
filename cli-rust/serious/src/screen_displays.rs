@@ -15,7 +15,7 @@ use crate::game::{create_game};
 use crate::login::{create_guest_session};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc};
 
-use thread::{sleep, Duration};
+use std::thread::{sleep};
 
 use crossterm::{
   ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
@@ -45,7 +45,7 @@ pub trait ScreenDisplayer: FriendsDisplay {
     fn display_welcome_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_gamechoice_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_social_screen(&self, area: Rect, buf: &mut Buffer);
-    async fn display_friends_screen(&self, area: Rect, buf: &mut Buffer) -> Result<()>;
+    fn display_friends_screen(&self, area: Rect, buf: &mut Buffer);
 }
 
 impl ScreenDisplayer for Infos {
@@ -86,13 +86,7 @@ impl ScreenDisplayer for Infos {
     ]);
         print_block(instructions, area, buf);
     }
-    async fn display_friends_screen(&self, area: Rect, buf: &mut Buffer) -> Result<()> {
-        let list = self.get_indexed_friends(area, buf).await?;
-        let mut spanlist: Vec<Span> = vec![];
-        for line in list {
-            let newline = line.bold();
-            spanlist.push(newline);
-        }
+    fn display_friends_screen(&self, area: Rect, buf: &mut Buffer){
         let instructions = Line::from(vec![
             "1. ".bold(),
             "ADD FRIEND ".blue(),
@@ -106,14 +100,18 @@ impl ScreenDisplayer for Infos {
             "Quit".blue(),
         ]);
         let block = Block::bordered()
-                // .title(Line::from("Your Friends"))
+                .title(Line::from("Your Friends").bold().centered())
                 .title_bottom(instructions.centered())
                 .border_set(border::THICK);
+        let mut spanlist: Vec<Span> = vec![];
+        for line in &self.friends {
+            let newline = line.clone().bold();
+            spanlist.push(newline);
+        }
         Paragraph::new(Line::from(spanlist))
                 .centered()
                 .block(block)
                 .render(area, buf);
-    Ok(())
     }
 }
 

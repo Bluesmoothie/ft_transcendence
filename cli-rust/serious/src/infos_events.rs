@@ -21,7 +21,9 @@ use crossterm::{
 
 use crate::LOGO;
 use crate::CurrentScreen;
+use crate::friends::FriendsDisplay;
 use ratatui::{
+    text::Span,
     buffer::Buffer,
     layout::Rect,
     style::Stylize,
@@ -39,7 +41,7 @@ use super::{Infos, should_exit};
 pub trait EventHandler {
     fn handle_welcome_events(self) -> Result<Infos>;
     fn handle_gamechoice_events(self) -> Result<Infos>;
-    fn handle_social_events(self) -> Result<Infos>;
+    async fn handle_social_events(self) -> Result<Infos>;
 }
 
 impl EventHandler for Infos {
@@ -68,7 +70,7 @@ impl EventHandler for Infos {
         if key_event.kind == KeyEventKind::Press {
             match key_event.code {
                 // KeyCode::Char('1') => {self.screen = CurrentScreen::GameChoice;},
-                KeyCode::Char('2') => {self.screen = CurrentScreen::Game;},
+                KeyCode::Char('2') => {self.screen = CurrentScreen::CreateGame;},
                 KeyCode::Char('4') => {self.screen = CurrentScreen::Welcome;},
                 _ => {},
             }
@@ -76,7 +78,7 @@ impl EventHandler for Infos {
       }
       Ok(self)
     }
-    fn handle_social_events(mut self) -> Result<Infos> {
+    async fn handle_social_events(mut self) -> Result<Infos> {
         let event = event::read()?;
 
         if should_exit(&event)? == true {
@@ -85,7 +87,12 @@ impl EventHandler for Infos {
         else if let Event::Key(key_event) = event {
             match key_event.code {
             // KeyCode::Char('1') => {display_friends(game_main).await?;},
-            KeyCode::Char('1') => {self.screen = CurrentScreen::FriendsDisplay},
+            KeyCode::Char('1') => {
+              let mut list: Vec<String> = self.get_indexed_friends().await?;
+              list.push("test".to_string());
+              self.friends = list;              
+              self.screen = CurrentScreen::FriendsDisplay
+            },
             KeyCode::Char('2') => {
                 //chat();
             },
