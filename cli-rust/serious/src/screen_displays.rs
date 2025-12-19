@@ -15,6 +15,8 @@ use crate::game::{create_game};
 use crate::login::{create_guest_session};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc};
 
+use thread::{sleep, Duration};
+
 use crossterm::{
   ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
@@ -31,6 +33,7 @@ use ratatui::{
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget},
     DefaultTerminal, Frame,
+    text::Span,
 };
 
 pub const WIDTH: u16 = 90;
@@ -85,19 +88,36 @@ impl ScreenDisplayer for Infos {
     }
     async fn display_friends_screen(&self, area: Rect, buf: &mut Buffer) -> Result<()> {
         let list = self.get_indexed_friends(area, buf).await?;
+        let mut spanlist: Vec<Span> = vec![];
+        for line in list {
+            let newline = line.bold();
+            spanlist.push(newline);
+        }
         let instructions = Line::from(vec![
             "1. ".bold(),
             "ADD FRIEND ".blue(),
             "2. ".bold(),
             "DELETE FRIEND ".blue(),
-            "LEFT ".bold(),
-            "LEFT ".blue(),
+            "← ".bold(),
+            "Previous ".blue(),
+            "→ ".bold(),
+            "Next ".blue(),
             "ESC. ".bold(),
             "Quit".blue(),
-    ]);
-        Ok(())
+        ]);
+        let block = Block::bordered()
+                // .title(Line::from("Your Friends"))
+                .title_bottom(instructions.centered())
+                .border_set(border::THICK);
+        Paragraph::new(Line::from(spanlist))
+                .centered()
+                .block(block)
+                .render(area, buf);
+    Ok(())
     }
 }
+
+    //     // let menu = format!("Menu: 1. ADD   2. DELETE   3. DM   {} Previous   {} Next    ESC. Back", '←', '→');
 
 fn print_block(instructions: Line, area: Rect, buf: &mut Buffer) {
     let block = Block::bordered()

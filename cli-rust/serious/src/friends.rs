@@ -40,15 +40,41 @@ pub const HEIGHT: u16 = 30;
 
 pub trait FriendsDisplay {
     async fn get_indexed_friends(&self, area: Rect, buf: &mut Buffer) -> Result<Vec<String>>;
-    fn print_friends(&self, area: Rect, buf: &mut Buffer, friends: &Vec<(String, bool)>) -> Result<Vec<String>>;
+    // fn print_friends(&self, area: Rect, buf: &mut Buffer, friends: &Vec<(String, bool)>) -> Result<Vec<String>>;
 }
 
 impl FriendsDisplay for Infos  {
     async fn get_indexed_friends(&self, area: Rect, buf: &mut Buffer) -> Result<Vec<String>> {
         // let mut index: usize = 0;
-        let friends_list = get_all_friends(&self).await?;
-        let result = self.print_friends(area, buf, &friends_list)?;
-        Ok(result)
+        let friends = get_all_friends(&self).await?;
+        // let result = self.print_friends(area, buf, &friends_list)?;
+        let mut printable: Vec<String> = vec![];
+        let mut i: usize = 0;
+        if self.index * 10 < friends.len() {
+            let mut str_tmp: String = String::new();
+            for element in &friends[self.index * 10..] {
+                if (self.index * 10 + i) as usize > friends.len() || i > 9 {
+                    break;
+                } else {
+                    str_tmp = element.0.clone();
+                    if element.1 == false {
+                        str_tmp = str_tmp + " (Pending)";
+                    }
+                }
+                printable.push(str_tmp);
+                i += 1;
+            }
+        }
+        if i == 10 && friends.len() > self.index * 10 + i {
+            printable.push("...".to_string());
+            // stdout()
+            //     .queue(cursor::MoveTo(4, 24))?
+            //     .queue(Print("..."))?;
+
+        }
+
+
+        Ok(printable)
         // loop {
         //     if (poll(Duration::from_millis(16)))? {
         //         let event: Event = event::read()?;
@@ -78,40 +104,40 @@ impl FriendsDisplay for Infos  {
         //     }
         // }
     }
-    fn print_friends(&self, area: Rect, buf: &mut Buffer, friends: &Vec<(String, bool)>) -> Result<Vec<String>> {
-        let mut printable: Vec<String> = vec![];
-        let mut i: usize = 0;
-        if self.index * 10 < friends.len() {
-            let mut str_tmp: String = String::new();
-            for element in &friends[self.index * 10..] {
-                if (self.index * 10 + i) as usize > friends.len() || i > 9 {
-                    break;
-                } else {
-                    str_tmp = element.0.clone();
-                    if element.1 == false {
-                        str_tmp = str_tmp + " (Pending)";
-                    }
-                }
-                printable.push(str_tmp);
-                i += 1;
-            }
-        }
-        if i == 10 && friends.len() > self.index * 10 + i {
-            printable.push("...".to_string());
-            // stdout()
-            //     .queue(cursor::MoveTo(4, 24))?
-            //     .queue(Print("..."))?;
+    // fn print_friends(&self, area: Rect, buf: &mut Buffer, friends: &Vec<(String, bool)>) -> Result<Vec<String>> {
+    //     let mut printable: Vec<String> = vec![];
+    //     let mut i: usize = 0;
+    //     if self.index * 10 < friends.len() {
+    //         let mut str_tmp: String = String::new();
+    //         for element in &friends[self.index * 10..] {
+    //             if (self.index * 10 + i) as usize > friends.len() || i > 9 {
+    //                 break;
+    //             } else {
+    //                 str_tmp = element.0.clone();
+    //                 if element.1 == false {
+    //                     str_tmp = str_tmp + " (Pending)";
+    //                 }
+    //             }
+    //             printable.push(str_tmp);
+    //             i += 1;
+    //         }
+    //     }
+    //     if i == 10 && friends.len() > self.index * 10 + i {
+    //         printable.push("...".to_string());
+    //         // stdout()
+    //         //     .queue(cursor::MoveTo(4, 24))?
+    //         //     .queue(Print("..."))?;
 
-        }
+    //     }
 
 
-        // let menu = format!("Menu: 1. ADD   2. DELETE   3. DM   {} Previous   {} Next    ESC. Back", '←', '→');
-        // stdout()
-        //     .queue(cursor::MoveTo(2, HEIGHT - 1))?
-        //     .queue(Print(menu))?;
-        // stdout().flush()?;
-        Ok(printable)
-    }
+    //     // let menu = format!("Menu: 1. ADD   2. DELETE   3. DM   {} Previous   {} Next    ESC. Back", '←', '→');
+    //     // stdout()
+    //     //     .queue(cursor::MoveTo(2, HEIGHT - 1))?
+    //     //     .queue(Print(menu))?;
+    //     // stdout().flush()?;
+    //     Ok(printable)
+    // }
         
 }
 
