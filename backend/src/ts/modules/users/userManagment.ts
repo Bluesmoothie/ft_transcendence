@@ -12,6 +12,7 @@ import { hashString } from "@modules/sha256.js";
 import { check_totp } from "@modules/2fa/totp.js";
 import { AuthSource } from "@modules/oauth2/routes.js";
 import { getSqlDate } from "utils.js";
+import { jwtVerif } from "@modules/jwt/jwt.js";
 
 
 function validate_email(email:string)
@@ -45,8 +46,18 @@ export async function createGuest(): Promise<DbResponse>
 
 }
 
-export async function loginSession(id: string, db: Database) : Promise<DbResponse>
+export async function loginSession(token: string, db: Database) : Promise<DbResponse>
 {
+	console.log("token", token);
+	const data: any = await jwtVerif(token, core.sessionKey);
+	if (!data)
+	{
+		console.log("invalid", data);
+		return { code: 400, data: { message: "jwt token invalid" }};
+	}
+
+	var id = data.id
+	console.log("res", data, id);
 	var sql = 'UPDATE users SET is_login = 1 WHERE id = ? RETURNING *';
 
 	try {

@@ -1,3 +1,4 @@
+import { setCookie } from 'utils.js';
 import { hashString } from './sha256.js'
 import { UserElement, UserElementType } from './UserElement.js';
 
@@ -357,6 +358,9 @@ export class MainUser extends User
 
 	public async logout()
 	{
+		// document.cookie = "jwt_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+		console.log("hello")
+		setCookie("jwt_session", "", 0);
 		await this.logoutDB();
 		if (this.m_userElement)
 			this.m_userElement.updateHtml(null);

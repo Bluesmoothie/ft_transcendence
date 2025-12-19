@@ -1,5 +1,11 @@
 import * as base64Url from '@modules/jwt/base64Url.js'
 
+/**
+ * create new jwt token
+ * @param payload json to encode
+ * @param secret encryption key
+ * @returns new jwt string
+ */
 export async function jwtCreate(payload: any, secret: string): Promise<string>
 {
 	const header =
@@ -27,7 +33,12 @@ export async function jwtCreate(payload: any, secret: string): Promise<string>
 	return `${toSign}.${signature}`
 }
 
-//	Return null si token invalide
+/**
+ * verify if jwt is valid
+ * @param token jwt token to verify
+ * @param secret secret used in jwtCreate
+ * @returns a json containing data or null if jwt invalid
+ */
 export async function jwtVerif(token: string, secret: string): Promise<string | null>
 {
 	try

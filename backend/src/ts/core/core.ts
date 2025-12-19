@@ -23,7 +23,6 @@ declare module '@fastify/session' {
 	}
 }
 
-
 export async function createServer()
 {
 	db = await open({
@@ -32,7 +31,14 @@ export async function createServer()
 	});
 
 	fastify = Fastify({ logger: false });
-	sessionKey = randomBytes(64).toString('hex');
+	// sessionKey = randomBytes(64).toString('hex');
+	if (process.env.JWT_SECRET)
+		sessionKey = process.env.JWT_SECRET;
+	else
+	{
+		console.error("CRITICAL: no jwt secret in env, aborting now");
+		shutdown();	
+	}
 	console.log("server created");
 }
 

@@ -1,16 +1,20 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify'
 import * as core from '@core/core.js';
-import * as mgmt from '@modules/users/userManagment.js'
+import * as mgmt from '@modules/users/userManagment.js';
+import * as jwt from 'modules/jwt/jwt.js';
 
 //
 // User managment
 //
 export async function userManagmentRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
-	fastify.get('/get_session', async (request: any, reply) => {
-		if (request.session.user)
+	fastify.get('/get_session', async (request: FastifyRequest, reply) => {
+		const token = request.cookies.jwt_session;
+		if (token)
 		{
-			const res = await mgmt.loginSession(request.session.user, core.db);
+			const res = await mgmt.loginSession(token, core.db);
+			if (res.code != 200)
+				return reply.code(res.code).send(res.data);
 			console.log("user is login has:", res.data.name);
 			return reply.code(res.code).send(res.data);
 		}
@@ -24,8 +28,8 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		const res = await mgmt.createGuest();
 		if (res.code == 200)
 		{
-			request.session.user = res.data.id;
-			return reply.code(res.code).send({ message: "Success" });
+			const token = await jwt.jwtCreate({ id: res.data.id }, core.sessionKey);
+			return reply.code(200).send({ token: token });
 		}
 
 		return reply.code(res.code).send(res.data);
@@ -52,8 +56,10 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		const res = await mgmt.login(email, passw, totp, core.db);
 		if (res.code == 200)
 		{
-			request.session.user = res.data.id;
-			return reply.code(200).send({ message: "Success" });
+			// request.session.user = res.data.id;
+			const token = await jwt.jwtCreate({ id: res.data.id }, core.sessionKey);
+			console.log("creating new token:", token);
+			return reply.code(200).send({ token: token });
 		}
 		return reply.code(res.code).send(res.data);
 	})
@@ -110,7 +116,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 	}, async (request: FastifyRequest, reply: FastifyReply) => {
 		const { oldPass, newPass } = request.body as { oldPass: string, newPass: string };
 		const id = request.session.user;
-		console.log("hello", id, request.session.user);
 		if (!id)
 			return reply.code(400).send({ message: "user session not found" });
 

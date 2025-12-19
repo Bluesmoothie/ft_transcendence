@@ -1,6 +1,6 @@
 import { hashString } from 'sha256.js'
 import { MainUser } from './User.js';
-import { setPlaceHolderText } from 'utils.js';
+import { setCookie, setPlaceHolderText, getUrlVar } from 'utils.js';
 import { ViewComponent } from 'ViewComponent.js';
 import { Router } from 'app.js';
 
@@ -16,6 +16,14 @@ export class LoginView extends ViewComponent
 
 	public async enable()
 	{
+		const vars = getUrlVar();
+		if (vars.get("oauth_token"))
+		{
+			console.log("session:", vars.get("oauth_token"))
+			setCookie("jwt_session", vars.get("oauth_token"), 10);
+			window.history.replaceState({}, document.title, "/login");
+		}
+
 		await this.m_user.loginSession();
 		if (this.m_user.id != -1)
 		{
@@ -53,6 +61,11 @@ export class LoginView extends ViewComponent
 		var totpInput = this.querySelector("#login_totp") as HTMLInputElement;
 
 		const { status, data } = await this.m_user.login(emailInput.value, passwInput.value, totpInput.value);
+		if (status == 200)
+		{
+			console.log("session:", data.token)
+			setCookie("jwt_session", data.token, 10);
+		}
 		if (status == -1)
 		{
 			setPlaceHolderText("please logout first.");
@@ -71,8 +84,11 @@ export class LoginView extends ViewComponent
 			method: "POST",
 		})
 
+		const data = await res.json();
 		if (res.status == 200)
 		{
+			console.log("session:", data.token)
+			setCookie("jwt_session", data.token, 10);
 			this.m_user.loginSession();
 		}
 	}
