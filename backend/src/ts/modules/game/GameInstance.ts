@@ -26,7 +26,7 @@ enum Parameters
 	MAX_ANGLE = 1.5,
 	SPEED = 1.0,
 	SPEED_INCREMENT = 0.1,
-	POINTS_TO_WIN = 11,
+	POINTS_TO_WIN = 3,
 	FPS = 60,
 	FRAME_TIME = 1000 / FPS,
 }

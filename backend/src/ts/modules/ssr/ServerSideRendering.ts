@@ -13,17 +13,17 @@ export class ServerSideRendering
     <link rel="icon" type="image/x-icon" href="/public/favicon.ico">
 	<title>FT_transcendence</title>
 	<link href="/public/output.css" rel="stylesheet">
-	<link href="/public/output_crt.css" rel="stylesheet">
+	<link href="/public/test.css" rel="stylesheet">
 	</head>
 	<body class="h-screen">
 	`
 
-			// <div class="crt-mask"></div> 
 	private readonly htmlFooter = `
 		<!-- must be here for crt effect -->
 		<div class="bootup-mask"></div>
 		<div class="bootup-lines"></div>
 		<h1 class="bootup-text">HDMI-1</h1>
+		<div class="crt-mask"></div> 
 		<div class="crt h-screen">
 			<div id="app" class="h-full">
 

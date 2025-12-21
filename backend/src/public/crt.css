@@ -131,11 +131,12 @@
 		@apply absolute z-2
 				w-full h-[110%]
 				bg-radial from-transparent from-90% to-black
-				pointer-events-none;
+				pointer-events-none
+				animate-[bootup-screen_6s_linear]
 	}
 
 	.bootup-text {
-		@apply	absolute z-3
+		@apply	absolute z-99
 				text-[62px] text-green-700 invisible
 				select-none
 				bg-black

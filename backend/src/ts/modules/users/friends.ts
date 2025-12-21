@@ -17,17 +17,12 @@ export async function removeFriend(user1: number, user2: number, db: Database) :
 	}
 }
 
-export async function addFriend(user_id: string, friend_name: string, db: Database)
+export async function addFriend(user_id: number, friend_id: number, db: Database)
 {
 	const sender_id = user_id;
 
 	var sql = 'SELECT id FROM users WHERE name = ?';
 	try {
-		var row = await db.get(sql, [friend_name])
-		if (!row)
-			return { code: 404, data: { message: 'user not found' }};
-
-		var friend_id = row.id;
 		if (Number(user_id) > Number(friend_id))
 			[user_id, friend_id] = [friend_id, user_id];
 

@@ -236,13 +236,13 @@ export class User {
 		return response.status;
 	}
 
-	protected async addFriendToDB(friend_name: string): Promise<number> {
+	protected async addFriendToDB(friendId: number): Promise<number> {
 		var response = await fetch("/api/friends/send_request", {
 			method: "POST",
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
-				friend_name: friend_name
+				token: this.m_token,
+				friend_id: friendId
 			})
 		});
 		return response.status;
@@ -432,8 +432,16 @@ export class MainUser extends User
 
 	public async removeFriend(user: User): Promise<number> {
 		console.log("removing friend")
-		const url = `/api/friends/remove/${this.id}/${user.id}`;
-		const response = await fetch(url, { method: "DELETE" });
+		const url = `/api/friends/remove`;
+		const response = await fetch(url, {
+			method: "DELETE",
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				token: this.m_token,
+				friend_id: user.id
+			})
+
+		});
 
 		await this.updateSelf();
 
@@ -442,8 +450,15 @@ export class MainUser extends User
 
 	public async acceptFriend(user: User): Promise<number> {
 		console.log("accepting friend")
-		const url = `/api/friends/accept/${this.id}/${user.id}`;
-		const response = await fetch(url, { method: "POST" });
+		const url = `/api/friends/accept`;
+		const response = await fetch(url, {
+			method: "POST",
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				token: this.m_token,
+				friend_id: user.id
+			})
+		});
 
 		await this.updateSelf();
 
@@ -451,6 +466,7 @@ export class MainUser extends User
 	}
 
 
+	// TODO; funciton as changed, send id not name
 	public async addFriend(friend_name: string): Promise<number> {
 		console.log("adding friend")
 		if (!friend_name || friend_name == "")
@@ -458,7 +474,12 @@ export class MainUser extends User
 		if (this.id == -1)
 			return 2;
 
-		const status = await this.addFriendToDB(friend_name);
+		const res = await fetch(`/api/user/get_profile_name?profile_name=${friend_name}`)
+		if (res.status != 200)
+			return res.status;
+
+		const json = await res.json();
+		const status = await this.addFriendToDB(json.id);
 		await this.updateSelf();
 
 		return status;
