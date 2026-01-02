@@ -40,6 +40,14 @@ export class Router
 		window.addEventListener('popstate', () => {
 			this.loadInitialRoute();
 		});
+
+		// if url contain hash, browser will scroll to it which shift everything up
+		if (window.location.hash)
+		{
+			setTimeout(() => {
+				window.scrollTo(0, 0);
+			}, 0);
+		}
 	}
 
 	/**

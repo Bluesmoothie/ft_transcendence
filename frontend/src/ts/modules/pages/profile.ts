@@ -102,7 +102,6 @@ export class ProfileView extends ViewComponent
 			{
 				if (sender == this.m_main.id)
 				{
-					// TODO: set color to orange
 					addBtn.innerText = "cancel request";
 					this.addTrackListener(addBtn, "click", async () => { await this.m_main?.removeFriend(pndg), this.setBtn(); });
 				}

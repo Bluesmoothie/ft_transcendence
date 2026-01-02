@@ -6,7 +6,8 @@ import { FastifyRequest } from 'fastify';
 import { GameServer } from 'modules/game/GameServer.js';
 import { GameInstance } from 'modules/game/GameInstance.js'
 
-//TODO: if a user block someone everyone is blocked ?
+// TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
+// TODO: if a user block someone everyone is blocked ?
 export const connections = new Map<WebSocket, number>(); // websocket => user login
 var matchQueue: number[] = [];
 
@@ -14,27 +15,6 @@ function serverMsg(str: string): string
 {
 	const val = Array.from(connections.values());
 	return JSON.stringify({ username: "<SERVER>", message: str, connections: val });
-}
-
-// TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
-// TODO: move to front
-async function handleCommand(str: string) : Promise<string>
-{
-	const args: string[] = str.split(/\s+/);
-	var response: any;
-	switch (args[0])
-	{
-		case "/inspect":
-			response = await getUserByName(args[1], core.db);
-			return JSON.stringify(response.data);
-		case "/stats":
-			response = await getUserStats(args[1], core.db);
-			return JSON.stringify(response[1]);
-		case "/ping":
-			return "pong";
-		default:
-			return "Command not found"
-	}
 }
 
 function sendTo(userId: number, msg: string)
@@ -95,17 +75,6 @@ async function onMessage(message: any, connection: WebSocket)
 	try
 	{
 		const msg = message.toString();
-		const json = JSON.parse(message);
-		if (json.isCmd === true)
-		{
-			const result = await handleCommand(json.message);
-			if (result == "") // no server feedback
-				return ;
-			const str = serverMsg(result);
-			console.log(str);
-			connection.send(str);
-			return ;
-		}
 		await broadcast(msg, connection);
 	}
 	catch (err)

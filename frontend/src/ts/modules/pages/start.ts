@@ -3,6 +3,8 @@ import { Router } from 'modules/router/Router.js';
 import { Leaderboard } from 'modules/user/Leaderboard.js';
 import { ViewComponent } from 'modules/router/ViewComponent.js';
 
+// TODO quand on vas sur le profile d'un mec puis que on revien au start, des event listener sont pas clear et ca pete des trucs
+
 export class StartView extends ViewComponent
 {
 	private m_profileContainer: HTMLElement | null = null;
@@ -48,6 +50,7 @@ export class StartView extends ViewComponent
 
 		this.m_profileContainer.innerHTML = "";
 		this.clearTrackListener();
+		this.m_leaderboard?.cleanContainer();
 	}
 }
 

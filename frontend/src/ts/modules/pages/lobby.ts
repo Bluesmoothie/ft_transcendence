@@ -53,6 +53,9 @@ export class LobbyView extends ViewComponent
 		this.m_gameRouter = new GameRouter(this.m_user, this.m_chat, this);
 
 		const userMenuContainer = this.querySelector("#user-menu-container");
+		const container = this.querySelector("#user-list-container") as HTMLElement;
+		if (container)
+			container.innerHTML = "";
 
 		this.addTrackListener(this.querySelector("#user-list-btn"), "click", () => {
 			if (!this.m_chat || !this.m_user) return;

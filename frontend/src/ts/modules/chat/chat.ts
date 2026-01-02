@@ -1,6 +1,8 @@
 import { strToCol, hashString } from 'modules/utils/sha256.js';
+import { ChatCommand } from './Command.js';
 import { User, UserStatus, MainUser, getUserFromId } from 'modules/user/User.js'
 import { Router } from 'modules/router/Router.js';
+import { registerCmds } from './chatCommands.js';
 import * as usr from './chat_user.js';
 import * as utils from './chat_utils.js'
 
@@ -175,9 +177,12 @@ export class Chat
 	private m_user:			MainUser | null = null;
 	private	m_ws:			WebSocket | null = null;
 	private m_connections:	User[] = [];
+	private m_chatCmd:		ChatCommand = new ChatCommand(this);
 
 	private m_onStartGame:		Array<(json: any) => void>;
 	private m_onConnRefresh:	Array<(conns: User[]) => void>;
+
+	get chatCmd():	ChatCommand { return this.m_chatCmd; }
 
 	constructor(user: MainUser, chatbox: HTMLElement, chatInput: HTMLInputElement)
 	{
@@ -201,6 +206,7 @@ export class Chat
 
 		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
 		Router.addEventListener(chatInput, "keypress", (e) => this.sendMsgFromInput(e));
+		registerCmds(this);
 	}
 
 	public onGameCreated(cb: ((json: any) => void)) { this.m_onStartGame.push(cb); }
@@ -301,6 +307,13 @@ export class Chat
 		const html = newMsg.toHtml();
 		if (this.m_chatbox && html)
 			this.m_chatbox.prepend(html);
+		
+		if (msg.charAt(0) == '/')
+		{
+			this.m_chatCmd.run(msg);
+			return ;
+		}
+
 		await newMsg.sendToAll(this);
 	}
 }

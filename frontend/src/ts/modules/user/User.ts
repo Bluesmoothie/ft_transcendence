@@ -77,7 +77,6 @@ export class User {
 	private m_created_at:	string = "";
 	private m_stats:		Stats;
 	private m_source:		AuthSource;
-	private m_elo:			number = 0;
 
 	private m_blockUsr:		User[];
 	private m_friends:		User[] = []; // accepted request
@@ -122,6 +121,7 @@ export class User {
 	get gamePlayed(): number				{ return this.m_stats.gamePlayed; }
 	get	stats(): Stats						{ return this.m_stats; }
 	get	source(): AuthSource				{ return this.m_source; }
+	get token(): string						{ return this.m_token; }
 	set token(token: string)				{ this.m_token = token; }
 
 	get winrate(): number
@@ -232,7 +232,7 @@ export class User {
 		var data = await response.json();
 		this.name = data.name;
 		this.m_avatarPath = data.avatar;
-		this.m_status = data.status;
+		this.m_status = data.is_login ? data.status : UserStatus.UNAVAILABLE;
 		this.m_created_at = data.created_at;
 		this.m_source = data.source;
 
@@ -346,7 +346,8 @@ export class MainUser extends User
 		const response = await fetch("/api/user/get_session");
 		const data = await response.json();
 
-		if (response.status == 200) {
+		if (response.status == 200)
+		{
 			var status = data.status;
 			this.setUser(data.id, data.name, data.email, data.avatar, status);
 			this.setStatus(this.getStatus());
@@ -596,6 +597,7 @@ export class MainUser extends User
 				id: id
 			})
 		});
+		await this.updateSelf();
 		return res.status;
 	}
 }

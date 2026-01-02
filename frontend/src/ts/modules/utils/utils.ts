@@ -32,7 +32,7 @@ export function getCookie(name: string)
 	const match = document.cookie.match(regex)
 	if (match)
 	{
-		return match[2]
+		return match[2];
 	}
 }
 

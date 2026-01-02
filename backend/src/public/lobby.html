@@ -83,25 +83,27 @@
 		</header>
 
 		<div class="h-full w-full flex flex-col gap-5 py-15 sm:flex-row md:px-5 lg:px-20 pt-36">
-			<div class="">
-				<button id="user-list-btn" class="button-empty border-purple text-purple">users</button>
-				<button id="friend-list-btn" class="button-empty mt-3 border-purple text-purple">friends</button>
-			</div>
 
-			<div class="relative w-[35%] h-full border-4 border-blue flex flex-col">
-				<div id="user-list-parent" class="hide absolute top-0 left-0 w-full z-2 h-full bg-dark">
+			<div class="relative w-[40%] h-full border-4 border-blue flex flex-col">
+				<div id="user-list-parent" class="hide absolute top-0 left-0 w-full z-2 h-[90%] bg-darkest">
 					<div id="user-list-container" class="flex-1 flex flex-col items-center py-4 gap-2">
 					</div>
 				</div>
-				<div id="chat-out" class="flex h-full overflow-y-scroll flex-col-reverse align-bottom justify-start items-start bg-darker">
+				<div id="chat-out" class="flex h-[90%] overflow-y-scroll flex-col-reverse align-bottom justify-start items-start bg-darker">
 				</div>
-				<input id="chat-in" wrap="soft" placeholder="enter message..."
-					class="h-15 py-2 px-3 bg-dark focus:outline-none
-					border-t-4 border-t-blue border-b-0 hover:brightness-1">
+				<div class="bg-dark w-full h-[10%] flex gap-2 border-t-2 border-blue">
+					<input id="chat-in" wrap="soft" placeholder="enter message..."
+						class="flex-1 h-full py-2 px-3 focus:outline-none
+						border-r-2 border-y-0 focus:brightness-100 hover:brightness-100">
+					<div class="w-[15%] flex flex-col justify-between">
+						<button id="user-list-btn" class="button-empty border-purple text-purple">users</button>
+						<button id="friend-list-btn" class="button-empty border-purple text-purple">friends</button>
+					</div>
+				</div>
 			</div>
 
-			<div class="border-4 flex flex-col border-red w-[65%]">
-				<div class="w-full h-[85%]">
+			<div class="border-4 flex flex-col border-red w-[70%]">
+				<div class="w-full flex-1">
 					<section id="home" class="page px-[30%] bg-darkest ">
 						<button class="btn w-full text-6xl font-bold" id="game"></button>
 						<button class="btn w-full text-6xl font-bold" id="tournament"></button>
@@ -155,7 +157,7 @@
 					</section>
 
 				</div>
-				<div id="player-container" class="h-[15%] w-full bg-dark border-t-4 border-t-red
+				<div id="player-container" class="h-32 w-full bg-dark border-t-4 border-t-red
 					flex flex-row-reverse justify-around items-center align-middle">
 				</div>
 				<!-- <script>var exports = {};</script> -->

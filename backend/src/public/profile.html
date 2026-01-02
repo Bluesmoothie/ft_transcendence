@@ -35,8 +35,9 @@
 	</template>
 
 	<template id="user-friend-template">
-		<div class="relative flex gap-2 items-center justify-between h-20 w-[90%] border-2 border-white p-2">
-			<div id="profile" class="flex flex-row w-full items-center gap-2 hover:brightness-[1.2]">
+		<div class="relative flex gap-4 items-center justify-between h-20 w-[90%]">
+			<div id="profile" class="flex flex-1 flex-row w-full items-center gap-2 hover:bg-white hover:cursor-grab hover:text-darker
+				p-2 border-2 border-white hover:border-white hover:border-2">
 				<div class="relative">
 					<img
 						id="avatar-img"
@@ -45,14 +46,36 @@
 						class="avatar-img"/>
 					<div id="user-status" class="user-status right-0 top-[70%]"></div>
 				</div>
-				<h1 id="avatar-name" class="text-[100%] font-bold select-none break-all">user</h1>
+				<div class="w-full h-full flex justify-between">
+					<h1 id="avatar-name" class="text-[100%] w-2/3 truncate font-bold select-none break-all">user</h1>
+				</div>
 			</div>
-			<div class="flex items-center gap-2 mr-[5%]">
+			<div class="flex h-3/4 gap-3 justify-center">
 				<button id="green-btn" class="button-empty border-green text-green">Y</button>
 				<button id="red-btn" class="button-empty border-red text-red">N</button>
 			</div>
 		</div>
 	</template>
+
+	<!-- <template id="user-friend-template"> -->
+	<!-- 	<div class="relative flex gap-2 items-center justify-between h-20 w-[90%] border-2 border-white p-2"> -->
+	<!-- 		<div id="profile" class="flex flex-row w-full items-center gap-2 hover:brightness-[1.2]"> -->
+	<!-- 			<div class="relative"> -->
+	<!-- 				<img -->
+	<!-- 					id="avatar-img" -->
+	<!-- 					src=""  -->
+	<!-- 					alt="Profile"  -->
+	<!-- 					class="avatar-img"/> -->
+	<!-- 				<div id="user-status" class="user-status right-0 top-[70%]"></div> -->
+	<!-- 			</div> -->
+	<!-- 			<h1 id="avatar-name" class="text-[100%] font-bold select-none break-all">user</h1> -->
+	<!-- 		</div> -->
+	<!-- 		<div class="flex items-center gap-2 mr-[5%]"> -->
+	<!-- 			<button id="green-btn" class="button-empty border-green text-green">Y</button> -->
+	<!-- 			<button id="red-btn" class="button-empty border-red text-red">N</button> -->
+	<!-- 		</div> -->
+	<!-- 	</div> -->
+	<!-- </template> -->
 
 	<div class="h-full overflow-hidden overflow-y-hidden">
 

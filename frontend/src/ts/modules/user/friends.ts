@@ -25,6 +25,7 @@ export class FriendManager
 
 	public refreshContainers()
 	{
+		console.log("hello")
 		if (!this.m_friendsContainer || !this.m_pndgContainer || !this.m_blockContainer || !this.m_user)
 			return ;
 
@@ -58,6 +59,23 @@ export class FriendManager
 			const elt = new UserElement(block, this.m_blockContainer, UserElementType.STANDARD, this.m_template);
 			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${block.name}`) });
 			elt.updateHtml(block);
+
+			const redBtn = elt.getElement("#red-btn");
+			const greenBtn = elt.getElement("#green-btn");
+			if (!redBtn || !greenBtn)
+			{
+				console.warn("no redBtn or greenBtn");
+				return ;
+			}
+
+			greenBtn.style.display = "none";
+			redBtn.innerText = "X";
+			redBtn.addEventListener("click", async () => {
+				if (!elt.user) return;
+				await this.m_main.unblockUser(elt.user.id);
+				this.refreshContainers();
+			});
+
 		})
 
 		pdng.forEach(elt => {
@@ -70,9 +88,11 @@ export class FriendManager
 			}
 
 			if (elt.type !== UserElementType.REQUEST)
-				greenBtn.style.display = "flex";
+				greenBtn.style.display = "block";
+			else
+				redBtn.innerText = "X";
 
-			redBtn.style.display = "flex";
+			redBtn.style.display = "block";
 			greenBtn.addEventListener("click", async () => {
 				if (!elt.user) return;
 				await this.m_main.acceptFriend(elt.user)

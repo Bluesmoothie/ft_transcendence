@@ -36,7 +36,15 @@ export class Leaderboard
 		this.m_users.sort((a: User, b: User) => { return Number(a.elo < b.elo) })
 	}
 
-	public RefreshContainer()
+	public async cleanContainer()
+	{
+		if (!this.m_container)
+			return ;
+
+		this.m_container.innerHTML = "";
+	}
+
+	public async RefreshContainer()
 	{
 		if (!this.m_container)
 			return ;
@@ -52,6 +60,7 @@ export class Leaderboard
 				console.warn("no container");
 				return ;
 			}
+			await user.updateSelf();
 			const elt = new UserElement(user, this.m_container, UserElementType.STANDARD, "user-leaderboard-template");
 			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${user.name}`) });
 			const elo = elt.getElement("#elo");

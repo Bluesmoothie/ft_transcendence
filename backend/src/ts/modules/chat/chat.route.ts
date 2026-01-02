@@ -12,6 +12,11 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		});
 	});
 
+	fastify.get('/api/chat/ping', (request: FastifyRequest, reply: FastifyReply) => {
+		return reply.code(200).send({ message: "pong" });
+	})
+
+	// TODO change to jwt
 	fastify.delete('/api/chat/removeQueue', async (request: FastifyRequest, reply: FastifyReply) => {
 		const { id } = request.body as {
 			id: number
