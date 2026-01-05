@@ -24,7 +24,7 @@ mod login;
 use crate::login::{create_guest_session};
 use crate::game::{Game, Gameplay};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc, time::Duration};
-
+use crate::login::Auth;
 
 use crossterm::{
   ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
@@ -51,8 +51,10 @@ pub const HEIGHT: u16 = 30;
 // }
 
 pub enum CurrentScreen {
+  FirstScreen,
   Welcome,
   Login,
+  SignUp,
   GameChoice,
   SocialLife,
   CreateGame,
@@ -72,8 +74,8 @@ pub struct Infos {
   index: usize,
   friends: Vec<String>,
   game: Game,
-  token: String,
-  receiver: Option<mpsc::Receiver<serde_json::Value>>
+  auth: Auth,
+  receiver: Option<mpsc::Receiver<serde_json::Value>>,
 }
 
 #[tokio::main]
@@ -91,7 +93,7 @@ async fn main() -> Result<()> {
 
 impl Default for CurrentScreen {
   fn default() -> Self {
-      CurrentScreen::Login
+      CurrentScreen::FirstScreen
   }
 }
 
@@ -99,6 +101,7 @@ impl Infos {
   pub fn new(location: String) -> Infos {
     Infos {
       location,
+      client: Client::builder().danger_accept_invalid_certs(true).build().expect("Impossible to build new client, try again"),
       ..Default::default()
     }
   }
@@ -116,14 +119,18 @@ impl Infos {
 
   async fn handle_events(&mut self) -> Result<()> {
     match self.screen {
-      CurrentScreen::Login => {self.handle_login_events().await?},
+      CurrentScreen::FirstScreen => {self.handle_first_events().await?},
+      // CurrentScreen::SignUp => {},
+      CurrentScreen::SignUp => {self.handle_signup_events().await?},
+      CurrentScreen::Login => {},
       CurrentScreen::Welcome => {self.handle_welcome_events()?},
       CurrentScreen::GameChoice => {self.handle_gamechoice_events()?},
       CurrentScreen::SocialLife => {self.handle_social_events().await?},
       CurrentScreen::FriendsDisplay => {},
       CurrentScreen::StartGame => {self.launch_game().await?},
-      CurrentScreen::EndGame => {},
-      CurrentScreen::CreateGame => {self.create_game("online",).await?},
+      // CurrentScreen::EndGame => {},
+      CurrentScreen::EndGame => {self.handle_endgame()?},
+      CurrentScreen::CreateGame => {self.create_game("online").await?},
       CurrentScreen::PlayGame => {self.handle_game_events().await?},
     }
   Ok(())
@@ -133,13 +140,16 @@ impl Infos {
 impl Widget for &Infos {
   fn render(self, area: Rect, buf: &mut Buffer) {
     match self.screen {
-      CurrentScreen::Login => {self.display_login_screen(area, buf);},
+      CurrentScreen::FirstScreen => {self.display_first_screen(area, buf);},
+      CurrentScreen::SignUp => {self.display_signup_screen(area, buf)},
+      CurrentScreen::Login => {},
       CurrentScreen::Welcome => {self.display_welcome_screen(area, buf);}, 
       CurrentScreen::GameChoice => {self.display_gamechoice_screen(area, buf);}, 
       CurrentScreen::SocialLife => {self.display_social_screen(area, buf);}, 
       CurrentScreen::FriendsDisplay => {self.display_friends_screen(area, buf);},
       CurrentScreen::StartGame => {},
-      CurrentScreen::EndGame => {},
+      // CurrentScreen::EndGame => {},
+      CurrentScreen::EndGame => {self.display_endgame(area, buf);},
       CurrentScreen::CreateGame => {self.display_waiting_screen(area, buf);},
       CurrentScreen::PlayGame => {self.display_played_game(area, buf);},
     }

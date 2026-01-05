@@ -21,19 +21,25 @@ use crossterm::{
   ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
 
+use crate::login::Field;
 use crate::friends::FriendsDisplay;
 use crate::game::GameStats;
 use crate::LOGO;
 use crate::CurrentScreen;
 use ratatui::widgets::canvas::{Circle, Shape, Rectangle};
 use ratatui::{
-    prelude::Color,
+    prelude::{
+        Color,
+        Layout,
+        Constraint,
+        Direction,
+    },
     buffer::Buffer,
-    layout::Rect,
-    style::Stylize,
+    layout::{Rect, Alignment},
+    style::{Style, Modifier, Stylize},
     symbols::{border, Marker},
     text::{Line, Text},
-    widgets::{Block, Paragraph, Widget, canvas::Canvas},
+    widgets::{Block, Paragraph, Widget, canvas::Canvas, Borders},
     DefaultTerminal, Frame,
     text::Span,
 };
@@ -49,12 +55,14 @@ pub trait ScreenDisplayer: FriendsDisplay {
     fn display_social_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_friends_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_waiting_screen(&self, area: Rect, buf: &mut Buffer);
-    fn display_login_screen(&self, area: Rect, buf: &mut Buffer);
+    fn display_first_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_played_game(&self, area: Rect, buf: &mut Buffer);
+    fn display_endgame(&self, area: Rect, buf: &mut Buffer);
+    fn display_signup_screen(&self, area: Rect, buf: &mut Buffer);
 }
 
 impl ScreenDisplayer for Infos {
-    fn display_login_screen(&self, area: Rect, buf: &mut Buffer) {
+    fn display_first_screen(&self, area: Rect, buf: &mut Buffer) {
         let instructions = Line::from(vec![
                 "1. ".bold(),
                 "SIGNUP ".blue(),
@@ -140,8 +148,15 @@ impl ScreenDisplayer for Infos {
                 .render(area, buf);
     }
     fn display_played_game(&self, area: Rect, buf: &mut Buffer) {
+        let layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints(vec![
+                            Constraint::Fill(1),
+                            Constraint::Max(3),
+                        ])
+                        .split(area);
         Canvas::default()
-            .block(Block::bordered().title("Pong"))
+            .block(Block::bordered().title("Pong".bold()))
             .marker(Marker::Braille)
             .x_bounds([0.0, 100.0])
             .y_bounds([0.0, 100.0])
@@ -167,6 +182,69 @@ impl ScreenDisplayer for Infos {
                     color: Color::Green,
                 });
             })
+            .render(layout[0], buf);
+            let line = Line::from(vec![
+                    format!("YOU: {}", self.game.game_stats.player1_score).bold(),
+                    "    |     ".bold(),
+                    format!("ENEMY: {}", self.game.game_stats.player2_score).bold(),
+                ]);
+            Paragraph::new(line)
+                .block(Block::bordered().border_set(border::THICK).title("Score".bold()))
+                .centered()
+                .render(layout[1], buf);
+            }
+    fn display_endgame(&self, area: Rect, buf: &mut Buffer) {
+        let sentence: &str;
+        match self.game.game_stats.winner {
+            true => {sentence = "You Win :)"},
+            false => {sentence = "You lose :("},
+        }
+        let block = Block::bordered().border_set(border::THICK);
+        let spanlist: Vec<Span> = vec![sentence.bold(), " Press Enter to Continue".bold()];
+        Paragraph::new(Line::from(spanlist))
+            .centered()
+            .block(block)
+            .render(area, buf);
+    }
+    fn display_signup_screen(&self, area: Rect, buf: &mut Buffer) {
+        let mail = format!("{}{}", 
+            self.auth.get_email(),
+            if self.auth.blinks(Field::Mail) {"|"} else {""}
+            );
+        let username = format!("{}{}", 
+            self.auth.get_username(),
+            if self.auth.blinks(Field::Username) {"|"} else {""}
+            );
+        let password = format!("{}{}", 
+            self.auth.get_password(),
+            if self.auth.blinks(Field::Password) {"|"} else {""}
+            );
+        let content = vec![
+            Line::from(Span::styled(
+                "Create an account",
+                Style::default().add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Email:     ", Style::default().fg(Color::Gray)),
+                Span::raw(mail),
+            ]),
+            Line::from(vec![
+                Span::styled("Username:  ", Style::default().fg(Color::Gray)),
+                Span::raw(username),
+            ]),
+            Line::from(vec![
+                Span::styled("Password:  ", Style::default().fg(Color::Gray)),
+                Span::raw(password),
+            ]),
+        ];
+        Paragraph::new(content)
+            .block(
+                Block::default()
+                    .title("Signup")
+                    .borders(Borders::ALL),
+            )
+            .alignment(Alignment::Left)
             .render(area, buf);
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-  io::{Write, stdout},
+  io::{Write, stdout}, time::Duration,
 };
 
 use anyhow::{Result, anyhow};
@@ -8,7 +8,7 @@ use serde_json;
 use reqwest::{Client};
 use tokio_tungstenite::tungstenite::protocol::frame;
 
-use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
+use crate::{login::Authentify, welcome::{draw_welcome_screen, game_setup, setup_terminal}};
 // use crate::game::{create_game};
 // use crate::friends::social_life;
 
@@ -16,9 +16,9 @@ use crate::login::{create_guest_session};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc};
 
 use crossterm::{
-  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
+  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
-
+use crate::login::Field;
 use crate::LOGO;
 use crate::CurrentScreen;
 use crate::friends::FriendsDisplay;
@@ -43,7 +43,8 @@ pub trait EventHandler {
     fn handle_welcome_events(&mut self) -> Result<()>;
     fn handle_gamechoice_events(&mut self) -> Result<()>;
     async fn handle_social_events(&mut self) -> Result<()>;
-    async fn handle_login_events(&mut self) -> Result<()>;
+    async fn handle_first_events(&mut self) -> Result<()>;
+    async fn handle_signup_events(&mut self) -> Result<()>;
 }
 
 impl EventHandler for Infos {
@@ -80,7 +81,7 @@ impl EventHandler for Infos {
     }
     Ok(())
   }
-  async fn handle_login_events(&mut self) -> Result<()> {
+  async fn handle_first_events(&mut self) -> Result<()> {
     let event = event::read()?;
     if should_exit(&event)? == true {
       self.exit = true;
@@ -88,8 +89,8 @@ impl EventHandler for Infos {
     else if let Event::Key(key_event) = event {
       if key_event.kind == KeyEventKind::Press {
           match key_event.code {
-              KeyCode::Char('1') => {self.screen = CurrentScreen::GameChoice;},
-              KeyCode::Char('2') => {self.screen = CurrentScreen::CreateGame;},
+              KeyCode::Char('1') => {self.screen = CurrentScreen::SignUp;},
+              KeyCode::Char('2') => {self.screen = CurrentScreen::Login;},
               KeyCode::Char('3') => {
                 let (num, client, receiver) = match create_guest_session(&self.location).await {
                   Ok(res) => res,
@@ -131,5 +132,25 @@ impl EventHandler for Infos {
         }
     }
     Ok(()) 
+  }
+  async fn handle_signup_events(&mut self) -> Result<()> {
+      if poll(Duration::from_millis(500))? == true {
+        let event = event::read()?;
+        if should_exit(&event)? {
+          self.auth.clear();
+          self.screen = CurrentScreen::FirstScreen;
+        } else if let Event::Key(eventkey) = event {
+          match eventkey.code {
+            KeyCode::Up => {self.auth.up_field()},
+            KeyCode::Down => {self.auth.down_field()},
+            KeyCode::Char(c) => {self.auth.add(c)},
+            KeyCode::Backspace => {self.auth.pop();},
+            KeyCode::Enter => {if *self.auth.get_field() == Field::Password {self.signup().await?} else {self.auth.down_field()}} 
+            _ => {},
+          }
+        }
+      }
+      self.auth.tick();
+      Ok(())
   }
 }

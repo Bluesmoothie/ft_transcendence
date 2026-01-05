@@ -12,10 +12,10 @@ use crossterm::{
     QueueableCommand,
 };
 
-use futures::stream::{StreamExt, TryStreamExt};
+use futures::stream::{StreamExt};
 use futures_util::{SinkExt, stream::SplitStream};
 use futures_util::stream::SplitSink;
-use std::{any, time::Duration};
+use std::{time::Duration};
 use std::{
 	collections::HashMap,
 	io::{Write, stdout},
@@ -36,7 +36,6 @@ use tokio_tungstenite::tungstenite::protocol::Message;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
 use anyhow::{Result, anyhow};
-use crate::mpsc::error::TryRecvError;
 use crate::Infos;
 
 use tokio::sync::{mpsc, Mutex};
@@ -109,18 +108,19 @@ pub trait Gameplay {
 	async fn create_game(&mut self, mode: &str) -> Result<()>;
 	async fn launch_game(&mut self) -> Result<()>;
 	async fn handle_game_events(&mut self) -> Result<()>;
+	fn handle_endgame(&mut self) -> Result<()>; 
 }
 
 impl Gameplay for Infos {
 	async fn create_game(&mut self, mode: &str) -> Result<()> {
-		if let Err(_) = send_post_game_request(&self, mode).await {
-			return Err(anyhow::anyhow!("error, no data received from server"))
-		}
+		send_post_game_request(&self, mode).await?;
+		// if let Err(_) = send_post_game_request(&self, mode).await {
+		// 	return Err(anyhow::anyhow!("error, no data received from server"))
+		// }
 		let receiver = match self.receiver.as_mut() {
 			Some(value) => value,
 			_ => return Err(anyhow::anyhow!("Empty receiver")),
 		};
-
 		loop {
 			match poll(Duration::from_millis(16)) {
 				Ok(true) => {
@@ -146,10 +146,11 @@ impl Gameplay for Infos {
 			};
 		}
 		let response = receiver.try_recv()?;
-		let game = match Game::new(&self, response) {
-			Ok(game) => game,
-			_ => return Err(anyhow::anyhow!("error creating game")),
-		};
+		let game = Game::new(&self, response)?;
+		//  {
+		// 	Ok(game) => game,
+		// 	_ => return Err(anyhow::anyhow!("error creating game")),
+		// };
 		self.game = game;
 		self.screen = crate::CurrentScreen::StartGame;
 		Ok(())
@@ -162,9 +163,13 @@ impl Gameplay for Infos {
 	async fn handle_game_events(&mut self) -> Result<()> {
 		let state = self.game.shared_state.clone();
 		if let Some(sender) = &self.game.game_sender {
-			let mut guard =  state.lock().await;
-			let bytes = guard.0.take();
-			let text = guard.1.take();
+			let bytes: Option<Bytes>;
+			let text: Option<Utf8Bytes>;
+			{
+				let mut guard =  state.lock().await;
+				bytes = guard.0.take();
+				text = guard.1.take();
+			}
 			match (bytes, text) {
 				(Some(bytes), None) => {self.game.decode_and_update(bytes)?;},
 				(None, Some(text)) => {
@@ -196,6 +201,20 @@ impl Gameplay for Infos {
 		// 		}
 		// 	}
 		// } 
+		Ok(())
+	}
+	fn handle_endgame(&mut self) -> Result<()> {
+		if poll(Duration::from_millis(16))? {
+			let event = event::read()?;
+			if should_exit(&event)? {
+				self.screen = crate::CurrentScreen::GameChoice;
+			} else if let Event::Key(keyevent) = event {
+				match keyevent.code {
+					KeyCode::Enter => {self.screen = crate::CurrentScreen::GameChoice},
+					_ => {},
+				}
+			}
+		}
 		Ok(())
 	}
 }
@@ -309,7 +328,6 @@ impl Game {
 		};
 		Ok(Game{
 			location: info.location.clone(), 
-			// original_size: info.original_size, 
 			id: info.id,
 			started: true, 
 			client: info.client.clone(), 
