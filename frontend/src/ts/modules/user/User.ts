@@ -270,11 +270,14 @@ export class User {
 		return response.status;
 	}
 
-	public async uploadAvatar(file: FormData): Promise<any> {
+	public async uploadAvatar(file: FormData): Promise<any>
+	{
+		file.append('token', this.m_token);
 
 		var response = await fetch("/api/user/upload/avatar", {
 			method: "POST",
-			body: file,
+			headers: { 'token': this.m_token },
+			body: file
 		});
 		var data = await response.json();
 		this.m_avatarPath = "/public/avatars/" + data.filename;
@@ -520,7 +523,7 @@ export class MainUser extends User
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
+				token: this.m_token,
 				email: this.email,
 			})
 			
@@ -538,7 +541,7 @@ export class MainUser extends User
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
+				token: this.m_token
 			})
 			
 		});
@@ -555,7 +558,7 @@ export class MainUser extends User
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
+				token: this.m_token,
 				totp: totp,
 			})
 			

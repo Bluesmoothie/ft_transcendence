@@ -50,7 +50,6 @@ export class Leaderboard
 			return ;
 		this.cleanContainer();
 		let max = this.m_users.length < this.m_LeaderboardSize ? this.m_users.length : this.m_LeaderboardSize;
-			console.log(this.m_users.length)
 		for (let i = 0; i < max; i++)
 		{
 			const user = this.m_users[i];
@@ -61,7 +60,7 @@ export class Leaderboard
 			}
 			await user.updateSelf();
 			const elt = new UserElement(user, this.m_container, UserElementType.STANDARD, "user-leaderboard-template");
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${user.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${user.name}`) });
 			const elo = elt.getElement("#elo");
 			const winrate = elt.getElement("#winrate");
 			if (elo)

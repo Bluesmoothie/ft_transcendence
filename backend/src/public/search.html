@@ -1,9 +1,22 @@
 <template id="search-template">
-	<div class="h-full overflow-hidden overflow-hidden">
+	<template id="user-search-template">
+		<div id="profile" class="flex flex-col justify-start items-center border-white border-2 h-[12vw] w-[10vw]
+			hover:text-dark hover:bg-white hover:cursor-grab">
+			<div class="relative">
+				<img
+					id="avatar-img"
+					src="" 
+					alt="Profile" 
+					class="object-cover w-[10vw] h-[10vw] bg-white"/>
+				<div id="user-status" class="user-status right-0 w-[20px] top-[90%]"></div>
+			</div>
+			<h1 id="avatar-name" class="text-[100%] border-t-2 border-white w-full text-center truncate font-bold select-none break-all">user</h1>
+		</div>
+	</template>
+	<div class="h-full overflow-hidden">
 		<div id="header-container"></div>
 
-		<div id="profile-container" class="m-5 bg-dark flex w-full h-full">
-
+		<div id="profile-container" class="pt-25 mx-10 mt-15 gap-5 flex flex-row-reverse justify-end items-start flex-wrap w-full h-full overflow-y-scroll">
 		</div>
 	</div>
 </template>

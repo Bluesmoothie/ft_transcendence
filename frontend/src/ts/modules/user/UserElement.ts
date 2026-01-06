@@ -1,4 +1,5 @@
 import { User, UserStatus } from "modules/user/User.js";
+import { Router } from "modules/router/Router.js";
 
 export enum UserElementType
 {
@@ -18,7 +19,7 @@ export class UserElement
 	private	m_user:				User | null;
 	private m_type:				UserElementType;
 
-	constructor(user: User | null, parent: HTMLElement, type: UserElementType, templateName: string = "user-profile-template")
+	constructor(user: User | null, parent: HTMLElement, type: UserElementType, templateName: string = "user-profile-template", clickRedirect: boolean = true)
 	{
 		this.m_user = user;
 		this.m_type = type;
@@ -43,6 +44,9 @@ export class UserElement
 		this.m_htmlName = this.m_clone.querySelector("#avatar-name");
 		if (!this.m_htmlName)
 			console.warn("no btn username txt found");
+
+		if (user && clickRedirect)
+			this.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${user.name}`) });
 
 		parent.prepend(this.m_clone);
 		this.m_clone = parent.firstElementChild as HTMLElement;

@@ -48,3 +48,30 @@ export function setPlaceHolderText(msg: string)
 	placeholder.innerText = msg;
 }
 
+export function levenshteinDistance(s1: string, s2: string): number
+{
+	if (s1.length == 0)
+		return s2.length;
+	if (s2.length == 0)
+		return s1.length;
+
+	const arr: any = [];
+	for (let i = 0; i <= s2.length; i++)
+	{
+		arr[i] = [i];
+		for (let j = 1; j <= s1.length; j++)
+		{
+			if (i === 0)
+			{
+				arr[i][j] = j;
+				continue;
+			}
+			arr[i][j] = Math.min(
+				arr[i - 1][j] + 1,										// addition
+				arr[i][j - 1] + 1,										// deletion
+				arr[i - 1][j - 1] + (s1[j - 1] === s2[i - 1] ? 0 : 1)	// subtitution
+			);
+		}
+	}
+	return arr[s2.length][s1.length];
+}

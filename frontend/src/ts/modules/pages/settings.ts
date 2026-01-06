@@ -39,6 +39,7 @@ export class SettingsView extends ViewComponent
 			Router.Instance?.navigateTo("/");
 			return ;
 		}
+		this.m_user.onLogout((user: MainUser) => Router.Instance?.navigateTo("/"));
 
 		new HeaderSmall(this.m_user, this, "header-container");
 

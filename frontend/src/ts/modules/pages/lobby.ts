@@ -39,9 +39,10 @@ export class LobbyView extends ViewComponent
 
 		if (this.m_user.id == -1)
 		{
-			Router.Instance.navigateTo("/");
+			Router.Instance?.navigateTo("/");
 			return ;
 		}
+		this.m_user.onLogout((user: MainUser) => Router.Instance?.navigateTo("/"));
 		new HeaderSmall(this.m_user, this, "header-container");
 
 		const chatInput: HTMLInputElement = this.querySelector("#chat-in") as HTMLInputElement;
@@ -125,9 +126,6 @@ export class LobbyView extends ViewComponent
 
 		users.forEach((conn: User) => {
 			const elt = new UserElement(conn, container, UserElementType.STANDARD, "user-template");
-			this.addTrackListener(elt.clone, "click", () => {
-				Router.Instance?.navigateTo(`/profile?username=${conn.name}`)
-			});
 			elt.updateHtml(conn);
 		})
 		container.prepend(text);

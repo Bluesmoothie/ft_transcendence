@@ -56,7 +56,7 @@ export class FriendManager
 				return ;
 
 			const elt = new UserElement(block, this.m_blockContainer, UserElementType.STANDARD, this.m_template);
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${block.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${block.name}`) });
 			elt.updateHtml(block);
 
 			const redBtn = elt.getElement("#red-btn");
@@ -136,7 +136,7 @@ export class FriendManager
 			const greenBtn = elt.getElement("#green-btn");
 			if (!redBtn || !greenBtn)
 				return ;
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
 			redBtn.style.display = "none";
 			greenBtn.style.display = "none";
 			htmlUser.push(elt);
@@ -155,7 +155,7 @@ export class FriendManager
 		friends.forEach(friend => {
 			const elt = new UserElement(friend, container, type, this.m_template);
 
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
 			elt.updateHtml(friend);
 			const redBtn = elt.getElement("#red-btn");
 			const greenBtn = elt.getElement("#green-btn");

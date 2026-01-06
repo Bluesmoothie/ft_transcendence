@@ -51,6 +51,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 			username: string
 		};
 		const res = await mgmt.createUser(email, passw, username, 0, core.db);
+		if (res.code != 200)
+			return reply.code(res.code).send(res.data);
+
 		const token = await jwt.jwtCreate({ id: res.data.id }, core.sessionKey);
 		return reply.code(res.code).send({ token: token });
 	})
@@ -124,7 +127,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 
 	fastify.post('/upload/avatar', {
 		schema: {
-			body: {
+			headers: {
 				type: 'object',
 				properties: {
 					token: { type: 'string' }
@@ -133,7 +136,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 			}
 		}
 	}, async (request, reply) => {
-			const { token } = request.body as { token: string };
+			const { token } = request.headers as { token: string };
 			const data: any = await jwt.jwtVerif(token, core.sessionKey);
 			if (!data)
 				return reply.code(400).send({ message: "token is invalid" });

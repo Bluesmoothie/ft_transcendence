@@ -1,5 +1,6 @@
 import { Route, Router } from "modules/router/Router.js";
 import { ViewComponent } from "modules/router/ViewComponent.js";
+import * as utils from "modules/utils/utils.js";
 
 import { StartView } from "modules/pages/start.js";
 import { LoginView } from "modules/pages/login.js";
@@ -29,3 +30,4 @@ customElements.define('search-view', SearchView);
 customElements.define('about-view', AboutView);
 
 const router = new Router(routes);
+
