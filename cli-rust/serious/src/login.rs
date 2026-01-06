@@ -17,6 +17,7 @@ pub enum Field {
     Mail,
     Username,
     Password,
+    Totp,
 }
 
 #[derive(Default)]
@@ -25,23 +26,38 @@ pub struct Auth {
     email: String,
     password: String,
     username: String,
+    totp: String,
     field: Field,
     blink: bool,
 }
 
 impl Auth {
-    pub fn up_field(&mut self) {
+    pub fn up_field_signup(&mut self) {
         match self.field {
-            Field::Mail => {},
             Field::Password => {self.field = Field::Username},
             Field::Username => {self.field = Field::Mail},
+            _ => {},
         }
     }
-    pub fn down_field(&mut self) {
+    pub fn down_field_signup(&mut self) {
         match self.field {
             Field::Mail => {self.field = Field::Username},
-            Field::Password => {},
             Field::Username => {self.field = Field::Password},
+            _ => {},
+        }
+    }
+    pub fn up_field_login(&mut self) {
+        match self.field {
+            Field::Password => {self.field = Field::Mail},
+            Field::Totp => {self.field = Field::Password},
+            _ => {},
+        }
+    }
+    pub fn down_field_login(&mut self) {
+        match self.field {
+            Field::Mail => {self.field = Field::Password},
+            Field::Password => {self.field = Field::Totp},
+            _ => {},
         }
     }
     pub fn add(&mut self, c: char) {
@@ -49,6 +65,7 @@ impl Auth {
             Field::Mail => {if self.email.len() < 50 {self.email.push(c)};},
             Field::Password => {if self.password.len() < 50 {self.password.push(c)};},
             Field::Username => {if self.username.len() < 50 {self.username.push(c);}},
+            Field::Totp => {if self.totp.len() < 50 {self.totp.push(c);}},
         }        
     }
     pub fn pop(&mut self) {
@@ -56,7 +73,11 @@ impl Auth {
             Field::Mail => {self.email.pop();},
             Field::Password => {self.password.pop();},
             Field::Username => {self.username.pop();},
-        }        
+            Field::Totp => {self.totp.pop();},
+        }
+    }
+    pub fn set_token(&mut self, token: &str) {
+        self.token = token.to_string();
     }
     pub fn get_token(&self) -> &str {
         &self.token
@@ -69,6 +90,9 @@ impl Auth {
     }
     pub fn get_username(&self) -> &str {
         &self.username
+    }
+    pub fn get_totp(&self) -> &str {
+        &self.totp
     }
     pub fn get_field(&self) -> &Field {
         &self.field
@@ -87,12 +111,16 @@ impl Auth {
         self.email.clear();
         self.password.clear();
         self.username.clear();
+        self.totp.clear();
         self.field = Field::Mail;
     }
 }
 
 pub trait Authentify {
     async fn signup(&mut self) -> Result<()>;
+    async fn create_guest_session(&mut self) -> Result<()>;
+    async fn get_id_and_launch_chat(&mut self) -> Result<()>;
+    async fn login(&mut self) -> Result<()>;
 }
 
 impl Authentify for Infos {
@@ -107,51 +135,83 @@ impl Authentify for Infos {
                                                 .json(&body)
                                                 .send()
                                                 .await?;
-        let response: serde_json::Value = response.json().await?;
-        eprintln!("{}", response);
-        std::thread::sleep(Duration::from_secs(5));
+        let body: serde_json::Value = response.json().await?;
+        if let Some(token) = body["token"].as_str() {
+            self.auth.set_token(token);
+        } else if let Some(error) = body["message"].as_str() {
+            self.auth.clear();
+            return Err(anyhow!(error.to_string()));
+        } else {
+            self.auth.clear();
+            return Err(anyhow!("Error signing up"));
+        }
+        if let Err(error) = self.login().await {
+            return Err(anyhow!(error.to_string()));
+        }
+        Ok(())
+    }
+    async fn login(&mut self) -> Result<()> {
+        let apiloc = format!("https://{}/api/user/login", self.location);
+        let mut body: HashMap<&str, &str> = HashMap::new();
+        body.insert("email", self.auth.get_email());
+        body.insert("passw", self.auth.get_password());
+        if !self.auth.get_totp().is_empty() {
+            body.insert("totp", self.auth.get_totp());
+        }
+        let response = self.client.post(apiloc)
+                                                .header("content-type", "application/json")
+                                                .json(&body)
+                                                .send()
+                                                .await?;
+        let body: serde_json::Value = response.json().await?;
+        self.auth.clear();
+        if let Some(token) = body["token"].as_str() {
+            self.auth.set_token(token);
+        } else if let Some(error) = body["message"].as_str() {
+            return Err(anyhow!(error.to_string()));
+        } else {
+            return Err(anyhow!("Error signing up"));
+        }
+        self.get_id_and_launch_chat().await?;
+        Ok(())
+    }
+    async fn create_guest_session(&mut self) -> Result<()> {
+        let apiloc = format!("https://{}/api/user/create_guest", &self.location);
+        let res = self.client.post(apiloc)
+            .send()
+            .await?;
+        let body: serde_json::Value = res.json().await?;
+        if let Some(token) = body["token"].as_str() {
+            self.auth.set_token(token);
+        } else if let Some(error) = body["message"].as_str() {
+            return Err(anyhow!(error.to_string()));
+        } else {
+            return Err(anyhow!("Error signing up"));
+        }
+        self.get_id_and_launch_chat().await?;
+        Ok(())
+    }
+    async fn get_id_and_launch_chat(&mut self) -> Result<()> {
+        let apiloc = format!("https://{}/api/user/get_profile_token", self.location);
+        let mut body = HashMap::new();
+        body.insert("token", self.auth.get_token());
+        let res = self.client.post(apiloc)
+            .header("content-type", "application/json")
+            .json(&body)
+            .send()
+            .await?;
+        let value: serde_json::Value = res.json().await?;
+        let player_id = match value["id"].as_u64(){
+            Some(nbr) => nbr,
+            _ => return Err(anyhow!("Error from server, no data received")),
+        };
+        let receiver = enter_chat_room(&self.location, player_id).await?;
+        self.id = player_id;
+        self.receiver = Some(receiver);
         Ok(())
     }
 }
 
-// headers: { 'content-type': 'application/json' },
-// 	body: JSON.stringify({
-// 		username: "<username>",
-// 		passw: "<password>",
-// 		email: "<email>"
-// 	})
-
-pub async fn create_guest_session(location: &String) -> 
-                                        Result<(u64, Client, mpsc::Receiver<serde_json::Value>)> {
-    let apiloc = format!("https://{location}/api/user/create_guest");
-    let client = Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()?;
-    let res = client.post(apiloc)
-        .send()
-        .await?;
-
-    let value: serde_json::Value = res.json().await?;
-    let value = match value["token"].as_str(){
-            Some(nbr) => nbr,
-            _ => return Err(anyhow!("Error creating guest session")),
-        };
-    let apiloc = format!("https://{location}/api/user/get_profile_token");
-    let mut body = HashMap::new();
-    body.insert("token", value);
-    let res = client.post(apiloc)
-        .header("content-type", "application/json")
-        .json(&body)
-        .send()
-        .await?;
-    let value: serde_json::Value = res.json().await?;
-    let player_id = match value["id"].as_u64(){
-        Some(nbr) => nbr,
-        _ => return Err(anyhow!("Error from server, no data received")),
-    };
-    let receiver = enter_chat_room(location, player_id).await?;
-    Ok((player_id, client, receiver))
-}
 
 async fn enter_chat_room(location: &String, id: u64) -> Result<mpsc::Receiver<serde_json::Value>> {
     let connector = Connector::NativeTls(

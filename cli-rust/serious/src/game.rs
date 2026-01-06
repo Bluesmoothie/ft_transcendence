@@ -114,9 +114,6 @@ pub trait Gameplay {
 impl Gameplay for Infos {
 	async fn create_game(&mut self, mode: &str) -> Result<()> {
 		send_post_game_request(&self, mode).await?;
-		// if let Err(_) = send_post_game_request(&self, mode).await {
-		// 	return Err(anyhow::anyhow!("error, no data received from server"))
-		// }
 		let receiver = match self.receiver.as_mut() {
 			Some(value) => value,
 			_ => return Err(anyhow::anyhow!("Empty receiver")),

@@ -21,7 +21,6 @@ use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
 // use crate::friends::social_life;
 
 mod login;
-use crate::login::{create_guest_session};
 use crate::game::{Game, Gameplay};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc, time::Duration};
 use crate::login::Auth;
@@ -76,6 +75,7 @@ pub struct Infos {
   game: Game,
   auth: Auth,
   receiver: Option<mpsc::Receiver<serde_json::Value>>,
+  error: String,
 }
 
 #[tokio::main]
@@ -112,28 +112,27 @@ impl Infos {
     }
     Ok(())
   }
-
   fn draw(&self, frame: &mut Frame) {
     frame.render_widget(self, frame.area());
   }
-
   async fn handle_events(&mut self) -> Result<()> {
     match self.screen {
       CurrentScreen::FirstScreen => {self.handle_first_events().await?},
-      // CurrentScreen::SignUp => {},
       CurrentScreen::SignUp => {self.handle_signup_events().await?},
-      CurrentScreen::Login => {},
+      CurrentScreen::Login => {self.handle_login_events().await?},
       CurrentScreen::Welcome => {self.handle_welcome_events()?},
       CurrentScreen::GameChoice => {self.handle_gamechoice_events()?},
       CurrentScreen::SocialLife => {self.handle_social_events().await?},
       CurrentScreen::FriendsDisplay => {},
       CurrentScreen::StartGame => {self.launch_game().await?},
-      // CurrentScreen::EndGame => {},
       CurrentScreen::EndGame => {self.handle_endgame()?},
       CurrentScreen::CreateGame => {self.create_game("online").await?},
       CurrentScreen::PlayGame => {self.handle_game_events().await?},
     }
   Ok(())
+  }
+  pub fn get_location(&self) -> &str {
+    &self.location
   }
 }
 
@@ -142,7 +141,7 @@ impl Widget for &Infos {
     match self.screen {
       CurrentScreen::FirstScreen => {self.display_first_screen(area, buf);},
       CurrentScreen::SignUp => {self.display_signup_screen(area, buf)},
-      CurrentScreen::Login => {},
+      CurrentScreen::Login => {self.display_login_screen(area, buf)},
       CurrentScreen::Welcome => {self.display_welcome_screen(area, buf);}, 
       CurrentScreen::GameChoice => {self.display_gamechoice_screen(area, buf);}, 
       CurrentScreen::SocialLife => {self.display_social_screen(area, buf);}, 

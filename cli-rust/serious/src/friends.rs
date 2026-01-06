@@ -14,7 +14,7 @@ use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
 // use crate::game::{create_game};
 // use crate::friends::social_life;
 
-use crate::login::{create_guest_session};
+// use crate::login::{create_guest_session};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc};
 
 use std::time::Duration;

@@ -12,7 +12,7 @@ use crate::{login::Authentify, welcome::{draw_welcome_screen, game_setup, setup_
 // use crate::game::{create_game};
 // use crate::friends::social_life;
 
-use crate::login::{create_guest_session};
+// use crate::login::{create_guest_session};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc};
 
 use crossterm::{
@@ -45,6 +45,7 @@ pub trait EventHandler {
     async fn handle_social_events(&mut self) -> Result<()>;
     async fn handle_first_events(&mut self) -> Result<()>;
     async fn handle_signup_events(&mut self) -> Result<()>;
+    async fn handle_login_events(&mut self) -> Result<()>;
 }
 
 impl EventHandler for Infos {
@@ -92,16 +93,13 @@ impl EventHandler for Infos {
               KeyCode::Char('1') => {self.screen = CurrentScreen::SignUp;},
               KeyCode::Char('2') => {self.screen = CurrentScreen::Login;},
               KeyCode::Char('3') => {
-                let (num, client, receiver) = match create_guest_session(&self.location).await {
-                  Ok(res) => res,
-                  Err(e) => {
-                    return Err(anyhow!("{}", e));
-                  },
-                };
-                self.id = num;
-                self.client = client;
-                self.receiver = Some(receiver);
-                self.screen = CurrentScreen::Welcome;
+                if let Err(e) = self.create_guest_session().await {
+                  eprintln!("Error: {}", e);
+                  std::thread::sleep(Duration::from_secs(2));
+                  self.screen = CurrentScreen::FirstScreen;
+                } else {
+                  self.screen = CurrentScreen::Welcome;
+                }
               },
               _ => {},
           }
@@ -141,11 +139,52 @@ impl EventHandler for Infos {
           self.screen = CurrentScreen::FirstScreen;
         } else if let Event::Key(eventkey) = event {
           match eventkey.code {
-            KeyCode::Up => {self.auth.up_field()},
-            KeyCode::Down => {self.auth.down_field()},
+            KeyCode::Up => {self.auth.up_field_signup()},
+            KeyCode::Down => {self.auth.down_field_signup()},
+            KeyCode::Char(c) => {self.auth.add(c)},
+            KeyCode::Backspace => {self.auth.pop()},
+            KeyCode::Tab => {self.auth.down_field_signup()}
+            KeyCode::Enter => {if *self.auth.get_field() == Field::Password {
+              if let Err(e) = self.signup().await {
+                  eprintln!("Error: {}", e);
+                  std::thread::sleep(Duration::from_secs(2));
+                  self.screen = CurrentScreen::SignUp;
+              } else {
+                self.screen = CurrentScreen::Welcome;
+              }
+            } else {self.auth.down_field_signup()}} 
+            _ => {},
+          }
+        }
+      }
+      self.auth.tick();
+      Ok(())
+  }
+  async fn handle_login_events(&mut self) -> Result<()> {
+      if poll(Duration::from_millis(500))? == true {
+        let event = event::read()?;
+        if should_exit(&event)? {
+          self.auth.clear();
+          self.screen = CurrentScreen::FirstScreen;
+        } else if let Event::Key(eventkey) = event {
+          match eventkey.code {
+            KeyCode::Up => {self.auth.up_field_login()},
+            KeyCode::Down => {self.auth.down_field_login()},
             KeyCode::Char(c) => {self.auth.add(c)},
             KeyCode::Backspace => {self.auth.pop();},
-            KeyCode::Enter => {if *self.auth.get_field() == Field::Password {self.signup().await?} else {self.auth.down_field()}} 
+            KeyCode::Tab => {self.auth.down_field_login()},
+            KeyCode::Enter => {if *self.auth.get_field() == Field::Totp {
+              if let Err(error) = self.login().await {
+                  eprintln!("Error: {}", error);
+                  std::thread::sleep(Duration::from_secs(2));
+                  self.screen = CurrentScreen::Login;
+                } else {
+                  self.screen = CurrentScreen::Welcome;
+                }
+              } else {
+              self.auth.down_field_login()
+              }
+            }  
             _ => {},
           }
         }

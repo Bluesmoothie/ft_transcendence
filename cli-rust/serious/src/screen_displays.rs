@@ -12,7 +12,6 @@ use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
 // use crate::game::{create_game};
 // use crate::friends::social_life;
 
-use crate::login::{create_guest_session};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc};
 
 use std::thread::{sleep};
@@ -59,6 +58,7 @@ pub trait ScreenDisplayer: FriendsDisplay {
     fn display_played_game(&self, area: Rect, buf: &mut Buffer);
     fn display_endgame(&self, area: Rect, buf: &mut Buffer);
     fn display_signup_screen(&self, area: Rect, buf: &mut Buffer);
+    fn display_login_screen(&self, area: Rect, buf: &mut Buffer);
 }
 
 impl ScreenDisplayer for Infos {
@@ -215,10 +215,13 @@ impl ScreenDisplayer for Infos {
             self.auth.get_username(),
             if self.auth.blinks(Field::Username) {"|"} else {""}
             );
-        let password = format!("{}{}", 
-            self.auth.get_password(),
-            if self.auth.blinks(Field::Password) {"|"} else {""}
-            );
+        let mut password = String::new();
+        for _ in 0..self.auth.get_password().len() {
+            password.push('*');
+        }
+        if self.auth.blinks(Field::Password) {
+            password.push('|')
+        }
         let content = vec![
             Line::from(Span::styled(
                 "Create an account",
@@ -242,6 +245,50 @@ impl ScreenDisplayer for Infos {
             .block(
                 Block::default()
                     .title("Signup")
+                    .borders(Borders::ALL),
+            )
+            .alignment(Alignment::Left)
+            .render(area, buf);
+    }
+    fn display_login_screen(&self, area: Rect, buf: &mut Buffer) {
+        let mail = format!("{}{}", 
+            self.auth.get_email(),
+            if self.auth.blinks(Field::Mail) {"|"} else {""}
+            );
+        let mut password = String::new();
+        for _ in 0..self.auth.get_password().len() {
+            password.push('*');
+        }
+        if self.auth.blinks(Field::Password) {
+            password.push('|')
+        }
+        let totp = format!("{}{}", 
+            self.auth.get_totp(),
+            if self.auth.blinks(Field::Totp) {"|"} else {""}
+            );
+        let content = vec![
+            Line::from(Span::styled(
+                "Login as user",
+                Style::default().add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Email:     ", Style::default().fg(Color::Gray)),
+                Span::raw(mail),
+            ]),
+            Line::from(vec![
+                Span::styled("Password:  ", Style::default().fg(Color::Gray)),
+                Span::raw(password),
+            ]),
+            Line::from(vec![
+                Span::styled("2FA Code:  ", Style::default().fg(Color::Gray)),
+                Span::raw(totp),
+            ]),
+        ];
+        Paragraph::new(content)
+            .block(
+                Block::default()
+                    .title("Signup".bold())
                     .borders(Borders::ALL),
             )
             .alignment(Alignment::Left)
