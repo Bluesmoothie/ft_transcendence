@@ -59,6 +59,9 @@ pub trait ScreenDisplayer: FriendsDisplay {
     fn display_endgame(&self, area: Rect, buf: &mut Buffer);
     fn display_signup_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_login_screen(&self, area: Rect, buf: &mut Buffer);
+    fn display_error_screen(&self, area: Rect, buf: &mut Buffer);
+    fn display_addfriends_screen(&self, area: Rect, buf: &mut Buffer);
+    fn display_delete_friends_screen(&self, area: Rect, buf: &mut Buffer);
 }
 
 impl ScreenDisplayer for Infos {
@@ -137,12 +140,11 @@ impl ScreenDisplayer for Infos {
                 .title(Line::from("Your Friends").bold().centered())
                 .title_bottom(instructions.centered())
                 .border_set(border::THICK);
-        let mut spanlist: Vec<Span> = vec![];
-        for line in &self.friends {
-            let newline = line.clone().bold();
-            spanlist.push(newline);
-        }
-        Paragraph::new(Line::from(spanlist))
+        let lines: Vec<Line> = self.friends
+                                    .iter()
+                                    .map(|friend| Line::from(friend.clone().bold()))
+                                    .collect();
+        Paragraph::new(lines)
                 .centered()
                 .block(block)
                 .render(area, buf);
@@ -293,6 +295,60 @@ impl ScreenDisplayer for Infos {
             )
             .alignment(Alignment::Left)
             .render(area, buf);
+    }
+    fn display_error_screen(&self, area: Rect, buf: &mut Buffer) {
+        let block = Block::bordered().border_set(border::THICK);
+        let spanlist: Vec<Span> = vec!["Error: ".bold(), self.error.as_str().bold()];
+        Paragraph::new(Line::from(spanlist))
+            .centered()
+            .block(block)
+            .render(area, buf);
+    }
+    fn display_addfriends_screen(&self, area: Rect, buf: &mut Buffer) {
+        let friend = format!("{}", 
+            self.friend_tmp,);
+        let content = vec![
+            Line::from(Span::styled(
+                "Add a friend",
+                Style::default().add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Friend:     ", Style::default().fg(Color::Gray)),
+                Span::raw(friend),
+            ]),
+        ];
+        Paragraph::new(content)
+            .block(
+                Block::default()
+                    .title("Add Friend".bold())
+                    .borders(Borders::ALL),
+            )
+            .alignment(Alignment::Left)
+            .render(area, buf);        
+    }
+    fn display_delete_friends_screen(&self, area: Rect, buf: &mut Buffer) {
+        let friend = format!("{}", 
+            self.friend_tmp,);
+        let content = vec![
+            Line::from(Span::styled(
+                "Delete a friend",
+                Style::default().add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Friend:     ", Style::default().fg(Color::Gray)),
+                Span::raw(friend),
+            ]),
+        ];
+        Paragraph::new(content)
+            .block(
+                Block::default()
+                    .title("Delete friend".bold())
+                    .borders(Borders::ALL),
+            )
+            .alignment(Alignment::Left)
+            .render(area, buf);        
     }
 }
 

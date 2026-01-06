@@ -144,10 +144,6 @@ impl Gameplay for Infos {
 		}
 		let response = receiver.try_recv()?;
 		let game = Game::new(&self, response)?;
-		//  {
-		// 	Ok(game) => game,
-		// 	_ => return Err(anyhow::anyhow!("error creating game")),
-		// };
 		self.game = game;
 		self.screen = crate::CurrentScreen::StartGame;
 		Ok(())
@@ -168,8 +164,8 @@ impl Gameplay for Infos {
 				text = guard.1.take();
 			}
 			match (bytes, text) {
-				(Some(bytes), None) => {self.game.decode_and_update(bytes)?;},
-				(None, Some(text)) => {
+				(Some(bytes), _none) => {self.game.decode_and_update(bytes)?;},
+				(_none, Some(text)) => {
 					self.game.end_game(text, sender.clone()).await?;
 					self.screen = crate::CurrentScreen::EndGame;
 				},

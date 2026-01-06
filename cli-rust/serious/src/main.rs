@@ -6,7 +6,6 @@ use anyhow::{Result, anyhow};
 use serde_json;
 
 use reqwest::{Client};
-use tokio_tungstenite::tungstenite::protocol::frame;
 
 mod welcome;
 mod game;
@@ -18,7 +17,7 @@ use crate::infos_events::EventHandler;
 use crate::screen_displays::ScreenDisplayer;
 use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
 // use crate::game::{create_game};
-// use crate::friends::social_life;
+use crate::friends::FriendsDisplay;
 
 mod login;
 use crate::game::{Game, Gameplay};
@@ -48,7 +47,7 @@ pub const HEIGHT: u16 = 30;
 // pub enum CurrentlyEditing {
 //   Friend,
 // }
-
+#[derive(Clone, Copy)]
 pub enum CurrentScreen {
   FirstScreen,
   Welcome,
@@ -61,6 +60,9 @@ pub enum CurrentScreen {
   PlayGame,
   EndGame,
   FriendsDisplay,
+  AddFriend,
+  DeleteFriend,
+  ErrorScreen,
 }
 
 #[derive(Default)]
@@ -72,10 +74,12 @@ pub struct Infos {
   screen: CurrentScreen,
   index: usize,
   friends: Vec<String>,
+  friend_tmp: String,
   game: Game,
   auth: Auth,
   receiver: Option<mpsc::Receiver<serde_json::Value>>,
   error: String,
+  post_error_screen: CurrentScreen,
 }
 
 #[tokio::main]
@@ -123,34 +127,50 @@ impl Infos {
       CurrentScreen::Welcome => {self.handle_welcome_events()?},
       CurrentScreen::GameChoice => {self.handle_gamechoice_events()?},
       CurrentScreen::SocialLife => {self.handle_social_events().await?},
-      CurrentScreen::FriendsDisplay => {},
+      CurrentScreen::FriendsDisplay => {self.handle_friends_events()?},
       CurrentScreen::StartGame => {self.launch_game().await?},
       CurrentScreen::EndGame => {self.handle_endgame()?},
       CurrentScreen::CreateGame => {self.create_game("online").await?},
       CurrentScreen::PlayGame => {self.handle_game_events().await?},
+      CurrentScreen::ErrorScreen => {self.handle_errors()},
+      CurrentScreen::AddFriend => {self.add_friend().await?},
+      CurrentScreen::DeleteFriend => {self.delete_friend().await?},
     }
   Ok(())
   }
   pub fn get_location(&self) -> &str {
     &self.location
   }
+  pub fn error(&mut self, error: String) {
+    self.post_error_screen = self.screen;
+    self.error = error;
+    self.screen = CurrentScreen::ErrorScreen;
+  }
+  pub fn handle_errors(&mut self) {
+    std::thread::sleep(Duration::from_secs(2));
+    self.screen = self.post_error_screen;
+  }
 }
 
 impl Widget for &Infos {
   fn render(self, area: Rect, buf: &mut Buffer) {
     match self.screen {
-      CurrentScreen::FirstScreen => {self.display_first_screen(area, buf);},
+      CurrentScreen::FirstScreen => {self.display_first_screen(area, buf)},
       CurrentScreen::SignUp => {self.display_signup_screen(area, buf)},
       CurrentScreen::Login => {self.display_login_screen(area, buf)},
-      CurrentScreen::Welcome => {self.display_welcome_screen(area, buf);}, 
-      CurrentScreen::GameChoice => {self.display_gamechoice_screen(area, buf);}, 
-      CurrentScreen::SocialLife => {self.display_social_screen(area, buf);}, 
-      CurrentScreen::FriendsDisplay => {self.display_friends_screen(area, buf);},
+      CurrentScreen::Welcome => {self.display_welcome_screen(area, buf)}, 
+      CurrentScreen::GameChoice => {self.display_gamechoice_screen(area, buf)}, 
+      CurrentScreen::SocialLife => {self.display_social_screen(area, buf)}, 
+      CurrentScreen::FriendsDisplay => {self.display_friends_screen(area, buf)},
       CurrentScreen::StartGame => {},
-      // CurrentScreen::EndGame => {},
-      CurrentScreen::EndGame => {self.display_endgame(area, buf);},
-      CurrentScreen::CreateGame => {self.display_waiting_screen(area, buf);},
-      CurrentScreen::PlayGame => {self.display_played_game(area, buf);},
+      CurrentScreen::EndGame => {self.display_endgame(area, buf)},
+      CurrentScreen::CreateGame => {self.display_waiting_screen(area, buf)},
+      CurrentScreen::PlayGame => {self.display_played_game(area, buf)},
+      CurrentScreen::ErrorScreen => {self.display_error_screen(area, buf)},
+      // CurrentScreen::AddFriend => {},
+      CurrentScreen::AddFriend => {self.display_addfriends_screen(area, buf)},
+      // CurrentScreen::DeleteFriend => {},
+      CurrentScreen::DeleteFriend => {self.display_delete_friends_screen(area, buf)},
     }
   }
 }

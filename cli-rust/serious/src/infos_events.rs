@@ -42,6 +42,7 @@ use super::{Infos, should_exit};
 pub trait EventHandler {
     fn handle_welcome_events(&mut self) -> Result<()>;
     fn handle_gamechoice_events(&mut self) -> Result<()>;
+    fn handle_friends_events(&mut self) -> Result<()>;
     async fn handle_social_events(&mut self) -> Result<()>;
     async fn handle_first_events(&mut self) -> Result<()>;
     async fn handle_signup_events(&mut self) -> Result<()>;
@@ -93,10 +94,8 @@ impl EventHandler for Infos {
               KeyCode::Char('1') => {self.screen = CurrentScreen::SignUp;},
               KeyCode::Char('2') => {self.screen = CurrentScreen::Login;},
               KeyCode::Char('3') => {
-                if let Err(e) = self.create_guest_session().await {
-                  eprintln!("Error: {}", e);
-                  std::thread::sleep(Duration::from_secs(2));
-                  self.screen = CurrentScreen::FirstScreen;
+                if let Err(error) = self.create_guest_session().await {
+                  self.error(error.to_string());
                 } else {
                   self.screen = CurrentScreen::Welcome;
                 }
@@ -108,6 +107,7 @@ impl EventHandler for Infos {
     Ok(())
   }
   async fn handle_social_events(&mut self) -> Result<()> {
+    self.get_indexed_friends().await?;
     let event = event::read()?;
 
     if should_exit(&event)? == true {
@@ -117,9 +117,6 @@ impl EventHandler for Infos {
         match key_event.code {
         // KeyCode::Char('1') => {display_friends(game_main).await?;},
         KeyCode::Char('1') => {
-          let mut list: Vec<String> = self.get_indexed_friends().await?;
-          list.push("test".to_string());
-          self.friends = list;
           self.screen = CurrentScreen::FriendsDisplay
         },
         KeyCode::Char('2') => {
@@ -145,10 +142,8 @@ impl EventHandler for Infos {
             KeyCode::Backspace => {self.auth.pop()},
             KeyCode::Tab => {self.auth.down_field_signup()}
             KeyCode::Enter => {if *self.auth.get_field() == Field::Password {
-              if let Err(e) = self.signup().await {
-                  eprintln!("Error: {}", e);
-                  std::thread::sleep(Duration::from_secs(2));
-                  self.screen = CurrentScreen::SignUp;
+              if let Err(error) = self.signup().await {
+                  self.error(error.to_string());
               } else {
                 self.screen = CurrentScreen::Welcome;
               }
@@ -175,9 +170,7 @@ impl EventHandler for Infos {
             KeyCode::Tab => {self.auth.down_field_login()},
             KeyCode::Enter => {if *self.auth.get_field() == Field::Totp {
               if let Err(error) = self.login().await {
-                  eprintln!("Error: {}", error);
-                  std::thread::sleep(Duration::from_secs(2));
-                  self.screen = CurrentScreen::Login;
+                  self.error(error.to_string());
                 } else {
                   self.screen = CurrentScreen::Welcome;
                 }
@@ -190,6 +183,26 @@ impl EventHandler for Infos {
         }
       }
       self.auth.tick();
+      Ok(())
+  }
+  fn handle_friends_events(&mut self) -> Result<()> {
+      let event = event::read()?;
+      if should_exit(&event)? == true {
+          self.exit = true;
+      }
+      else if let Event::Key(key_event) = event {
+          match key_event.code {
+          KeyCode::Char('1') => {
+            self.screen = CurrentScreen::AddFriend
+          },
+          KeyCode::Char('2') => {
+            self.screen = CurrentScreen::DeleteFriend
+          },
+          KeyCode::Left => {},
+          KeyCode::Right => {},
+          _ => {},
+          }
+      }      
       Ok(())
   }
 }
