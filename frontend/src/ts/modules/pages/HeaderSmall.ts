@@ -50,6 +50,11 @@ export class HeaderSmall
 			Router.Instance?.navigateTo("/settings")
 		});
 
+		view.addTrackListener(clone.querySelector("#about_btn"), "click", () => {
+			userMenuContainer?.classList.add("hide");
+			Router.Instance?.navigateTo("/about")
+		});
+
 		view.addTrackListener(clone.querySelector("#user-menu-btn"), 'click', () => {
 			userMenuContainer?.classList.toggle("hide");
 		});

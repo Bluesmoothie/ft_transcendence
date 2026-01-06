@@ -4,6 +4,7 @@ import { hashString } from "modules/utils/sha256.js";
 import { setPlaceHolderText } from "modules/utils/utils.js";
 import { ViewComponent } from "modules/router/ViewComponent.js";
 import { Router } from "modules/router/Router.js"
+import { toggleCrtEffect, getCookie } from "modules/utils/utils.js";
 
 export class SettingsView extends ViewComponent
 {
@@ -24,6 +25,7 @@ export class SettingsView extends ViewComponent
 	private holderParent:		HTMLElement | null = null;
 	private holderClose:		HTMLElement | null = null;
 	private saveBtn:			HTMLButtonElement | null = null;
+	private crtCheckbox:		HTMLInputElement | null = null;
 	
 	constructor()
 	{
@@ -57,6 +59,7 @@ export class SettingsView extends ViewComponent
 		this.holder = this.querySelector('#qrcode_holder') as HTMLElement;
 		this.holderParent = this.holder.parentNode as HTMLElement;
 		this.holderClose = this.querySelector("#holder-close-btn") as HTMLElement;
+		this.crtCheckbox = this.querySelector("#crt-checkbox") as HTMLInputElement;
 
 		this.saveBtn = this.querySelector("#save-btn") as HTMLButtonElement;
 
@@ -78,6 +81,17 @@ export class SettingsView extends ViewComponent
 			if (panel)
 				panel.innerHTML = "";
 		}));
+
+		const state = getCookie("crt_state");
+		if (state)
+		{
+			this.crtCheckbox.checked = !(state === 'true');
+		}
+
+		this.addTrackListener(this.crtCheckbox, "change", (e: any) => {
+			const target = e.target as HTMLInputElement;
+			toggleCrtEffect(!target.checked);
+		})
 
 		this.hideForbiddenElement();
 	}

@@ -75,3 +75,29 @@ export function levenshteinDistance(s1: string, s2: string): number
 	}
 	return arr[s2.length][s1.length];
 }
+
+export function toggleCrtEffect(state: boolean)
+{
+	if (state === true)
+	{
+		document.querySelector("#crt")?.classList.add("crt");
+		document.querySelector(".crt-mask")?.classList.remove("hide");
+		document.querySelector(".bootup-lines")?.classList.remove("hide");
+		document.querySelector(".bootup-mask")?.classList.remove("hide");
+		document.querySelector(".bootup-text")?.classList.remove("hide");
+		document.querySelector(".bootup-text")?.classList.remove("hide");
+		document.querySelector(".scanline")?.classList.remove("hide");
+	}
+	else
+	{
+		document.querySelector("#crt")?.classList.remove("crt");
+		document.querySelector(".crt-mask")?.classList.add("hide");
+		document.querySelector(".bootup-lines")?.classList.add("hide");
+		document.querySelector(".bootup-mask")?.classList.add("hide");
+		document.querySelector(".bootup-text")?.classList.add("hide");
+		document.querySelector(".bootup-text")?.classList.add("hide");
+		document.querySelector(".scanline")?.classList.add("hide");
+	}
+
+	setCookie("crt_state", state, 9999);
+}

@@ -141,7 +141,6 @@ export async function createUser(email: string, passw: string, username: string,
 
 	if (!validate_email(email) && source == AuthSource.INTERNAL)
 		return { code: 403, data: { message: "error: email not valid" }};
-	console.log("AAAA");
 	const res = await getUserByName(username, core.db);	
 	if (res.code != 404)
 		return { code: 409, data: { message: "user is already in database" }};

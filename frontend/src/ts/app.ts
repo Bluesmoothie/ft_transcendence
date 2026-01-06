@@ -30,4 +30,9 @@ customElements.define('search-view', SearchView);
 customElements.define('about-view', AboutView);
 
 const router = new Router(routes);
+const state = utils.getCookie("crt_state");
+if (state)
+{
+	utils.toggleCrtEffect(state === 'true');
+}
 

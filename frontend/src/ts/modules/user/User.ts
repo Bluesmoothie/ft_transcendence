@@ -2,10 +2,6 @@ import { setCookie, getCookie} from 'modules/utils/utils.js';
 import { hashString } from 'modules/utils/sha256.js'
 import { UserElement, UserElementType } from 'modules/user/UserElement.js';
 
-// *********************** TODO *********************** //
-// user with large name should be trucated
-// **************************************************** //
-
 export enum UserStatus {
 	UNKNOW = -2,
 	UNAVAILABLE = -1,

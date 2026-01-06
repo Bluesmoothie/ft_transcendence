@@ -41,6 +41,7 @@ export class ServerSideRendering
 				<div id="user-menu-container" class="hide absolute top-[90%] size-fit z-2">
 					<p id="profile_btn" class="btn text-left cursor-default">profile</p>
 					<p id="settings_btn" class="btn text-left cursor-default">settings</p>
+					<p id="about_btn" class="btn text-left cursor-default">about</p>
 					<p id="logout_btn" class="btn text-left cursor-default">logout</p>
 				</div>
 				<div id="user-menu-btn" class="flex items-center gap-4 hover:text-green">
@@ -64,7 +65,7 @@ export class ServerSideRendering
 		<div class="bootup-lines"></div>
 		<h1 class="bootup-text">HDMI-1</h1>
 		<div class="crt-mask"></div> 
-		<div class="crt h-screen">
+		<div id="crt" class="crt h-screen">
 			<div id="app" class="h-full">
 
 			</div>
