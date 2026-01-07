@@ -165,20 +165,20 @@ impl ScreenDisplayer for Infos {
             .paint(|ctx| {
                 ctx.draw(&Circle {
                     x: self.game.game_stats.ball_x as f64,
-                    y: self.game.game_stats.ball_y as f64,
+                    y: (95.0 - self.game.game_stats.ball_y) as f64,
                     radius: 0.5,
                     color: Color::Yellow,
                 });
                 ctx.draw(&Rectangle {
-                    x: 5.0,
-                    y: self.game.game_stats.left_y as f64,
+                    x: 1.5,
+                    y: (95.0 - self.game.game_stats.left_y) as f64,
                     width: 2.0,
                     height: 10.0,
                     color: Color::Green,
                 });
                 ctx.draw(&Rectangle {
                     x: 95.0,
-                    y: self.game.game_stats.right_y as f64,
+                    y: (100.0 - self.game.game_stats.right_y) as f64,
                     width: 2.0,
                     height: 10.0,
                     color: Color::Green,

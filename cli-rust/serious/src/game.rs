@@ -12,6 +12,8 @@ use crossterm::{
     QueueableCommand,
 };
 
+use device_query::{DeviceQuery, DeviceState, MouseState, Keycode};
+
 use futures::stream::{StreamExt};
 use futures_util::{SinkExt, stream::SplitStream};
 use futures_util::stream::SplitSink;
@@ -38,7 +40,7 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use anyhow::{Result, anyhow};
 use crate::Infos;
 
-use tokio::sync::{mpsc, Mutex};
+use tokio::{net::unix::pipe::Receiver, sync::{Mutex, mpsc, watch}};
 use tokio::net::TcpStream;
 
 //  Response: Object {"gameId": String("442c772e-0ec8-447e-8f1d-b87f00c76380"), 
@@ -80,14 +82,13 @@ pub struct Game {
 	location: String,
 	original_size: (u16, u16),
 	id: u64,
-	started: bool,
 	client: Client,
 	game_id: String,
 	opponent_id: u64,
 	player_side: u64,
 	shared_state: Arc<Mutex<(Option<Bytes>, Option<Utf8Bytes>)>>,
+	receiver: Option<watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>>,
 	pub game_stats: GameStats,
-	// ws_read: Option<SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>>,
 	game_sender: Option<mpsc::Sender<u8>>,
 }
 
@@ -108,6 +109,7 @@ pub trait Gameplay {
 	async fn create_game(&mut self, mode: &str) -> Result<()>;
 	async fn launch_game(&mut self) -> Result<()>;
 	async fn handle_game_events(&mut self) -> Result<()>;
+	async fn send_remove_from_queue_request(&self) -> Result<()>;
 	fn handle_endgame(&mut self) -> Result<()>; 
 }
 
@@ -127,7 +129,7 @@ impl Gameplay for Infos {
 					let event = event::read()?;
 					match should_exit(&event) {
 						Ok(true) => {
-							send_remove_from_queue_request(&self).await?;
+							self.send_remove_from_queue_request().await?;
 							self.screen = crate::CurrentScreen::GameChoice;
 							return Ok(());
 						}
@@ -154,15 +156,14 @@ impl Gameplay for Infos {
 		Ok(())
 	}
 	async fn handle_game_events(&mut self) -> Result<()> {
-		let state = self.game.shared_state.clone();
+		let mut state_receiver = match self.game.receiver.clone() {
+			Some(receiver) => receiver,
+			_ => {return Err(anyhow!("State receiver is empty"));}
+		};
 		if let Some(sender) = &self.game.game_sender {
-			let bytes: Option<Bytes>;
-			let text: Option<Utf8Bytes>;
-			{
-				let mut guard =  state.lock().await;
-				bytes = guard.0.take();
-				text = guard.1.take();
-			}
+			// state_receiver.changed().await?;
+			let (bytes, text) = state_receiver.borrow_and_update().clone();
+			// let (bytes, text) = received.clone();
 			match (bytes, text) {
 				(Some(bytes), _none) => {self.game.decode_and_update(bytes)?;},
 				(_none, Some(text)) => {
@@ -172,28 +173,6 @@ impl Gameplay for Infos {
 				_ => {}
 			};
 		}
-		// if let Some(sender) = &self.game.game_sender {
-		// 	if let Some(ws_read) = &mut self.game.ws_read {
-		// 		let mut last_message = None;
-		// 		loop {
-		// 			match tokio::time::timeout(Duration::ZERO, ws_read.next()).await {
-		// 				Ok(Some(Ok(msg))) => last_message = Some(msg),
-		// 				_ => break,
-		// 			}
-		// 		}
-		// 		if let Some(msg) = last_message {
-		// 			match msg {
-		// 				Message::Binary(text) => {self.game.decode_and_update(text)?},
-		// 				Message::Text(text) => {
-		// 					self.game.end_game(text, sender.clone()).await?;
-		// 					self.screen = crate::CurrentScreen::EndGame;
-		// 				},
-		// 				Message::Close(_) => {sender.send(1).await?;}
-		// 				_ => {},
-		// 			}
-		// 		}
-		// 	}
-		// } 
 		Ok(())
 	}
 	fn handle_endgame(&mut self) -> Result<()> {
@@ -208,6 +187,21 @@ impl Gameplay for Infos {
 				}
 			}
 		}
+		Ok(())
+	}
+	async fn send_remove_from_queue_request(&self) -> Result<()> {
+		let mut map = HashMap::new();
+		let mut headers = HeaderMap::new();
+		headers.insert("Content-Type", "application/json".parse()?);
+		let id: &str = &self.id.to_string();
+		map.insert("id", id);
+		let mut url = self.location.clone();
+		url = format!("https://{url}/api/chat/removeQueue");
+		self.client.delete(url)
+			.headers(headers)
+			.json(&map)
+			.send()
+			.await?;
 		Ok(())
 	}
 }
@@ -229,21 +223,6 @@ async fn send_post_game_request(game_main: &Infos, mode: &str) -> Result<()> {
 	Ok(())
 }
 
-async fn send_remove_from_queue_request(game_main: &Infos) -> Result<()> {
-	let mut map = HashMap::new();
-	let mut headers = HeaderMap::new();
-	headers.insert("Content-Type", "application/json".parse()?);
-	let id: &str = &game_main.id.to_string();
-	map.insert("id", id);
-	let mut url = game_main.location.clone();
-	url = format!("https://{url}/api/chat/removeQueue");
-	game_main.client.delete(url)
-        .headers(headers)
-        .json(&map)
-        .send()
-        .await?;
-	Ok(())
-}
 
 // pub async fn create_game(game_main: &Infos, mode: &str, mut receiver: mpsc::Receiver<serde_json::Value>) 
 // 										-> Result<mpsc::Receiver<serde_json::Value>, (String, mpsc::Receiver<serde_json::Value>)> {
@@ -322,7 +301,6 @@ impl Game {
 		Ok(Game{
 			location: info.location.clone(), 
 			id: info.id,
-			started: true, 
 			client: info.client.clone(), 
 			game_id,
 			player_side: player_side,
@@ -353,14 +331,18 @@ impl Game {
 		let (ws_write, ws_read) = ws_stream.split();
 		let (sender, receiver): (mpsc::Sender<u8>, mpsc::Receiver<u8>) = mpsc::channel(1);
 		let cloned_size = self.original_size.clone();
-		tokio::spawn(async move {
+		let (state_sender, state_receiver): 
+			(watch::Sender<(Option<Bytes>, Option<Utf8Bytes>)>, watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>) 
+				= watch::channel((None, None));
+		self.receiver = Some(state_receiver);
+		tokio::task::spawn(async move {
 			if let Err(e) = Self::send_game(ws_write, receiver, cloned_size).await {
 				eprintln!("Error: {}", e);
 			}
 		});
-		let state = self.shared_state.clone();
+		// let state = self.shared_state.clone();
 		tokio::spawn(async move {
-			Self::read_socket(ws_read, state).await;
+			Self::read_socket(ws_read, state_sender).await;
 		});
 		self.game_sender = Some(sender);
 		Ok(())
@@ -404,6 +386,9 @@ impl Game {
 		let mut up:bool = false;
 		let mut down: bool = false;
 		let mut to_send = String::new();
+		// let device_state = DeviceState::new();
+		// let sdl_context = sdl2::init().unwrap();
+		// let mut event_pump = sdl_context.event_pump().unwrap();
 		loop {
 			match receiver.try_recv() {
 				Ok(_) => break,
@@ -420,51 +405,72 @@ impl Game {
 				let send_it = to_send.clone();
 				ws_write.send(send_it.into()).await?;
 			}
+			// to_send.clear();
+			// for event in event_pump.poll_iter() {
+			// 	match event {
+			// 		sdl2::event::Event::Quit {..} => break 'running,
+			// 		sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Up), ..} => {up = true;}
+			// 		sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Down), ..} => {down = true;}
+			// 		sdl2::event::Event::KeyUp { keycode: Some(sdl2::keyboard::Keycode::Up), ..} => {up = false;}
+			// 		sdl2::event::Event::KeyUp{ keycode: Some(sdl2::keyboard::Keycode::Down), ..} => {down = false;}
+			// 		_ => {},
+			// 			}
+			// }
+			// up = falfalse//
 			if poll(Duration::from_millis(16))? {
 				let event = event::read()?;
 				if should_exit(&event)? == true {
-						cleanup_and_quit(&original_size)?;
-				} else if let Event::Key(key_event) = event {
-						match key_event.code {
-							KeyCode::Up => {
-								up = match key_event.kind {
-									KeyEventKind::Press => true,
-									KeyEventKind::Repeat => true,
-									KeyEventKind::Release => false,
-								};
-							},
-							KeyCode::Down =>{
-								down = match key_event.kind {
-									KeyEventKind::Press => true,
-									KeyEventKind::Repeat => true,
-									KeyEventKind::Release => false,
-								};
-							},
-							_ => {continue;},
-					}
-				};
-			}
-			else {
-				to_send.clear();
-				up = false;
-				down = false;
-			}
+					cleanup_and_quit(&original_size)?;
+				} 
+				else if let Event::Key(key_event) = event {
+					match key_event.code {
+						KeyCode::Up => {
+							up = match key_event.kind {
+								KeyEventKind::Press => true,
+								KeyEventKind::Repeat => {continue;},
+								KeyEventKind::Release => {false},
+							};
+						},
+						KeyCode::Down =>{
+							down = match key_event.kind {
+								KeyEventKind::Press => true,
+								KeyEventKind::Repeat => {continue;},
+								KeyEventKind::Release => false,
+							};
+						},
+						_ => {continue;},
+						}
+					};
+				}
+				else {
+					up = false;
+					down = false;
+				}
 		}
 		Ok(())
 	}
-	async fn read_socket(mut ws_read: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>, state: Arc<Mutex<(Option<Bytes>, Option<Utf8Bytes>)>>) {
-		while let Some(msg) = ws_read.next().await {
-        	match msg {
-				Ok(Message::Binary(b)) => {
-					*state.lock().await = (Some(b), None);
-            	}
-				Ok(Message::Text(s)) => {
-					*state.lock().await = (None, Some(s));
+	async fn read_socket(mut ws_read: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>, state_sender: watch::Sender<(Option<Bytes>, Option<Utf8Bytes>)>) {
+		loop {
+			match ws_read.next().await {
+				Some(msg) => {
+						match msg {
+							Ok(Message::Binary(b)) => {
+								if let Err(_) = state_sender.send((Some(b), None)) {
+									break;
+							}
+						}
+						Ok(Message::Text(s)) => {
+							if let Err(_) = state_sender.send((None, Some(s))) {
+								break;
+							}
+						}
+						Ok(Message::Close(_)) => {},
+					_ => {}
+					}
 				}
-				Ok(Message::Close(_)) => {},
-            	_ => {}
-        }
-    }
+				_ => {}
+			}
+		}
 	}
 }
 

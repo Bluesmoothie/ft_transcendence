@@ -1,6 +1,5 @@
 use std::{collections::HashMap, time::Duration};
 
-use reqwest::{Client};
 use anyhow::{Result, anyhow};
 
 use tokio_tungstenite::{
@@ -219,7 +218,6 @@ async fn enter_chat_room(location: &String, id: u64) -> Result<mpsc::Receiver<se
 				.danger_accept_invalid_certs(true)
 				.build()?
 		);
-
 	let request = format!("wss://{}/api/chat?userid={}", location, id);
 	let (ws_stream, _) = connect_async_tls_with_config(
 			request,
@@ -228,7 +226,6 @@ async fn enter_chat_room(location: &String, id: u64) -> Result<mpsc::Receiver<se
 			Some(connector),
 			)
             .await?;
-
     let (sender, receiver): (mpsc::Sender<serde_json::Value>, mpsc::Receiver<serde_json::Value>)  = mpsc::channel(1024);
     tokio::spawn(async move {
         chat(ws_stream, sender).await.unwrap();
@@ -246,7 +243,6 @@ async fn   chat(mut ws_stream: WebSocketStream<MaybeTlsStream<TcpStream>>, sende
             _ => {continue;},
         };
         let message: serde_json::Value = serde_json::from_str(&last_message.as_str())?;
-        
         let _ = match message["gameId"].as_str() {
             Some(_) => {sender.send(message).await?},
             _ => {continue;}

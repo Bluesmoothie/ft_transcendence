@@ -6,6 +6,7 @@ use anyhow::{Result, anyhow};
 use serde_json;
 
 use reqwest::{Client};
+use device_query::{DeviceQuery, DeviceState, MouseState, Keycode};
 
 mod welcome;
 mod game;
@@ -167,9 +168,7 @@ impl Widget for &Infos {
       CurrentScreen::CreateGame => {self.display_waiting_screen(area, buf)},
       CurrentScreen::PlayGame => {self.display_played_game(area, buf)},
       CurrentScreen::ErrorScreen => {self.display_error_screen(area, buf)},
-      // CurrentScreen::AddFriend => {},
       CurrentScreen::AddFriend => {self.display_addfriends_screen(area, buf)},
-      // CurrentScreen::DeleteFriend => {},
       CurrentScreen::DeleteFriend => {self.display_delete_friends_screen(area, buf)},
     }
   }
