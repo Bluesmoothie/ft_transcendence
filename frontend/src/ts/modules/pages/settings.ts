@@ -105,6 +105,7 @@ export class SettingsView extends ViewComponent
 		this.hideForbiddenElement();
 	}
 
+
 	public async disable()
 	{
 		const container = this.querySelector("#user-container");

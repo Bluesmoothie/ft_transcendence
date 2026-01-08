@@ -72,7 +72,8 @@ export class Router
 			return
 		}
 		this.m_activeView = view;
-		this.m_activeView.enable();
+		await this.m_activeView.enable();
+		window.dispatchEvent(new CustomEvent('pageChanged'));
 		this.m_activeView.style.display = "block";
 		this.m_activeView.style.height = "100%";
 	}
