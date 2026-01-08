@@ -5,16 +5,14 @@ services:
     build: ./backend/
     container_name: backend
     env_file: ./.env
-    ports:
-      - "3000:3000"
     volumes:
       - sqlite:/var/lib/sqlite
       - avatars:/var/www/server/public/avatars
       - vault_key:/vault/config
       # - ./backend/src/public:/var/www/server/public # remove comment for working on webpage
     networks:
-      - db
-      - vault
+      - backend_net
+      - vault_net
     develop:
       watch:
         - path: ./backend/src
@@ -31,8 +29,8 @@ services:
     depends_on:
       - backend
     networks:
-      - web
-      - db
+      - frontend_net
+      - backend_net
     develop:
       watch:
         - path: ./frontend/src
@@ -49,9 +47,9 @@ services:
       - "8080:80"
       - "8081:443"
     networks:
-      - web
-      - db
-      - transcendence
+      - frontend_net
+      - backend_net
+      - entrypoint_net
     depends_on:
       - frontend
       - backend
@@ -74,18 +72,18 @@ services:
       - vault:/vault/file
       - ./vault/conf:/vault/conf:ro
     networks:
-      - vault
+      - vault_net
     environment:
       VAULT_API_ADDR: "http://127.0.0.1:8200"
       VAULT_ADDR: "http://127.0.0.1:8200"
     command: vault server -config=/vault/conf/vault.hcl
 
 networks:
-  transcendence:
+  entrypoint_net:
     driver: bridge
-  db:
-  web:
-  vault:
+  backend_net:
+  frontend_net:
+  vault_net:
 
 volumes:
   sqlite:
