@@ -3,7 +3,6 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite'
 import Fastify, { FastifyInstance } from "fastify";
 import '@fastify/session';
-import { randomBytes } from "crypto";
 
 export interface DbResponse {
 	code:	number;
@@ -31,7 +30,6 @@ export async function createServer()
 	});
 
 	fastify = Fastify({ logger: false });
-	// sessionKey = randomBytes(64).toString('hex');
 	if (process.env.JWT_SECRET)
 		sessionKey = process.env.JWT_SECRET;
 	else

@@ -9,6 +9,7 @@ services:
       - "3000:3000"
     volumes:
       - sqlite:/var/lib/sqlite
+      - avatars:/var/www/server/public/avatars
       # - ./backend/src/public:/var/www/server/public # remove comment for working on webpage
     networks:
       - db

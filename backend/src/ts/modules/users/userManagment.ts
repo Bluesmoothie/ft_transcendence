@@ -190,11 +190,11 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 
 	const rBytes = randomBytes(64).toString('hex');
 	const name = `DELETED_USER${user_id}${randomBytes(2).toString('hex')}`
-	const sql = "UPDATE users SET name = ?, email = ?, passw = ?, oauth_id = ? WHERE id = ?";
+	const sql = "UPDATE users SET name = ?, email = ?, passw = ?, oauth_id = ?, source = ? WHERE id = ?";
 	try
 	{
 		await updateAvatarPath(user_id, 'default.png');
-		await db.run(sql, [name, rBytes, rBytes, rBytes, user_id]);
+		await db.run(sql, [name, rBytes, rBytes, rBytes, AuthSource.DELETED, user_id]);
 		console.log(`user has been deleted`)
 		return { code: 200, data: { message: "Success" }};
 	}
@@ -283,10 +283,14 @@ export async function uploadAvatar(request: FastifyRequest, reply: any, id: numb
 
 export async function blockUser(userId: number, target: number, db: Database) : Promise<DbResponse>
 {
-	const sql = "INSERT INTO blocked_usr (user1_id, user2_id) VALUES(?, ?)";
+
+	const sender = userId;
+	if (Number(userId) > Number(target))
+		[userId, target] = [target, userId];
+	const sql = "INSERT INTO blocked_usr (user1_id, user2_id, blocked_by) VALUES(?, ?, ?)";
 	try
 	{
-		await db.run(sql, [userId, target]);
+		await db.run(sql, [userId, target, sender]);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err: any)
@@ -301,6 +305,8 @@ export async function blockUser(userId: number, target: number, db: Database) : 
 
 export async function unBlockUser(userId: number, target: number, db: Database) : Promise<DbResponse>
 {
+	if (Number(userId) > Number(target))
+		[userId, target] = [target, userId];
 	const sql = "DELETE from blocked_usr WHERE user1_id = ? AND user2_id = ?";
 	try
 	{

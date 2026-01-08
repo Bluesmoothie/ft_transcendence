@@ -1,7 +1,7 @@
-import { MainUser } from './User.js';
-import { Router } from 'app.js';
-import { Leaderboard } from 'Leaderboard.js';
-import { ViewComponent } from 'ViewComponent.js';
+import { MainUser } from 'modules/user/User.js';
+import { Router } from 'modules/router/Router.js';
+import { Leaderboard } from 'modules/user/Leaderboard.js';
+import { ViewComponent } from 'modules/router/ViewComponent.js';
 
 export class StartView extends ViewComponent
 {
@@ -20,7 +20,6 @@ export class StartView extends ViewComponent
 		this.m_profileContainer = this.querySelector("#profile-container") as HTMLElement;
 
 		if (!playBtn) throw new Error("play btn not found"); 
-		if (!this.m_profileContainer) throw new Error("profile container not found"); 
 
 		this.addTrackListener(playBtn, "click", () => {
 			if (this.m_user && this.m_user.id == -1)
@@ -29,11 +28,12 @@ export class StartView extends ViewComponent
 				Router.Instance?.navigateTo("/lobby");
 		});
 
-		this.m_user = new MainUser(this.m_profileContainer);
+		this.m_user = new MainUser();
 		await this.m_user.loginSession();
 
 		this.m_leaderboard = new Leaderboard();
 		await this.m_leaderboard.Init();
+		// console.error("enabling start.ts");
 		this.m_leaderboard.RefreshContainer();
 	}
 
@@ -49,6 +49,9 @@ export class StartView extends ViewComponent
 
 		this.m_profileContainer.innerHTML = "";
 		this.clearTrackListener();
+		this.m_leaderboard?.cleanContainer();
+		if (this.m_leaderboard)
+			this.m_leaderboard = null;
 	}
 }
 

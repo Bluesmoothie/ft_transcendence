@@ -1,12 +1,12 @@
 import * as core from '@core/core.js';
-import { getBlockedUsrById, getUserById, getUserByName, getUserStats } from '@modules/users/user.js';
+import { getUserById, getBlockUser, getUserStatus } from 'modules/users/user.js';
 import { WebSocket } from '@fastify/websocket';
 import * as utils from 'utils.js';
 import { FastifyRequest } from 'fastify';
 import { GameServer } from 'modules/game/GameServer.js';
 import { GameInstance } from 'modules/game/GameInstance.js'
 
-//TODO: if a user block someone everyone is blocked ?
+// TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
 export const connections = new Map<WebSocket, number>(); // websocket => user login
 var matchQueue: number[] = [];
 
@@ -14,27 +14,6 @@ function serverMsg(str: string): string
 {
 	const val = Array.from(connections.values());
 	return JSON.stringify({ username: "<SERVER>", message: str, connections: val });
-}
-
-// TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
-// TODO: move to front
-async function handleCommand(str: string) : Promise<string>
-{
-	const args: string[] = str.split(/\s+/);
-	var response: any;
-	switch (args[0])
-	{
-		case "/inspect":
-			response = await getUserByName(args[1], core.db);
-			return JSON.stringify(response.data);
-		case "/stats":
-			response = await getUserStats(args[1], core.db);
-			return JSON.stringify(response[1]);
-		case "/ping":
-			return "pong";
-		default:
-			return "Command not found"
-	}
 }
 
 function sendTo(userId: number, msg: string)
@@ -95,17 +74,6 @@ async function onMessage(message: any, connection: WebSocket)
 	try
 	{
 		const msg = message.toString();
-		const json = JSON.parse(message);
-		if (json.isCmd === true)
-		{
-			const result = await handleCommand(json.message);
-			if (result == "") // no server feedback
-				return ;
-			const str = serverMsg(result);
-			console.log(str);
-			connection.send(str);
-			return ;
-		}
 		await broadcast(msg, connection);
 	}
 	catch (err)
@@ -150,49 +118,25 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 	}
 }
 
-async function getBlockUsr(userid: number)
-{
-	var blockedUsr = [];
-	var res = await getBlockedUsrById(userid, core.db);
-	if (res.code == 200)
-		blockedUsr = res.data;
-	return blockedUsr;
-}
-
-async function isBlocked(blockedUsr: any, key: WebSocket, sender: WebSocket): Promise<number>
-{
-	for (let i = 0; i  < blockedUsr.length; i ++)
-	{
- 		if (connections.get(key) == blockedUsr[i].user2_id)
-		{
-			console.log(connections.get(key), "is blocked by", connections.get(sender));
-			return 1;
-		}
-	}
-	return 0;
-}
-
 async function broadcast(message: any, sender: WebSocket)
 {
-	const conn = connections.get(sender);
-	if (!conn)
+	const senderId = connections.get(sender);
+	if (!senderId)
 		return ;
 
-	const blockedUsrSender = await getBlockUsr(conn);
 	connections.forEach(async (id: number, conn: WebSocket) => {
 
 		if (conn === sender || conn.readyState !== conn.OPEN)
 			return ;
+		const status = await getUserStatus(id);
+		console.log(id, status);
 		try
 		{
-			const blockedUsr = await getBlockUsr(id);
-			if (await isBlocked(blockedUsrSender, conn, sender) ||
-				await isBlocked(blockedUsr, sender, conn))
+			const data = await getBlockUser(id, senderId);
+			// console.log(`${senderId} <=> ${id}: `, data);
+			if (data.code == 200) // user is blocked
 			{
-				console.log("msg will be blocked");
-				const val = await JSON.parse(message);
-				val.message = "[REDACTED]";
-				message = JSON.stringify(val);
+				return;
 			}
 			conn.send(message);
 		}

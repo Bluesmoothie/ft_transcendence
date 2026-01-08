@@ -43,19 +43,45 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		return reply.code(res.code).send(res);
 	})
 
+	fastify.post('/create', {
+		schema: {
+			body: {
+				type: "object",
+				properties: {
+					email: { type: "string" },
+					passw: { type: "string" },
+					username: { type: "string" },
+				},
+				required: ["email", "passw", "username"]
+			}
+		}
 
-	fastify.post('/create', async (request: any, reply: any) => {
+	}, async (request: any, reply: any) => {
 		const { email, passw, username } = request.body as {
 			email: string,
 			passw: string,
 			username: string
 		};
 		const res = await mgmt.createUser(email, passw, username, 0, core.db);
+		if (res.code != 200)
+			return reply.code(res.code).send(res.data);
+
 		const token = await jwt.jwtCreate({ id: res.data.id }, core.sessionKey);
 		return reply.code(res.code).send({ token: token });
 	})
 
-	fastify.post('/login', async (request: any, reply: FastifyReply) => {
+	fastify.post('/login', {
+		schema: {
+			body: {
+				type: "object",
+				properties: {
+					email: { type: "string" },
+					passw: { type: "string" },
+					totp: { type: "string" },
+				}
+			}
+		}
+	}, async (request: any, reply: FastifyReply) => {
 		const { email, passw, totp } = request.body as { email: string, passw: string, totp: string };
 		const res = await mgmt.login(email, passw, totp, core.db);
 		if (res.code == 200)
@@ -67,10 +93,23 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		return reply.code(res.code).send(res.data);
 	})
 
-	fastify.post('/logout', async (request: any, reply: any) => {
-		const { user_id } = request.body;
+	fastify.post('/logout', {
+		schema: {
+			body: {
+				type: "object",
+				properties: {
+					token: { type: "string" },
+				},
+				required: ["token"]
+			}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+		const { token } = request.body as { token: string };
+		const data: any = await jwt.jwtVerif(token, core.sessionKey);
+		if (!data)
+			return reply.code(400).send({ message: "invalid token" });
 
-		const res = await mgmt.logoutUser(user_id, core.db);
+		const res = await mgmt.logoutUser(data.id, core.db);
 		return reply.code(res.code).send(res.data);
 	})
 
@@ -115,16 +154,30 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 			return reply.code(res.code).send(res.data);
 		})
 
-	fastify.post('/set_status', async (request:any, reply:any) => {
-		const { user_id, newStatus } = request.body;
+	fastify.post('/set_status', {
+		schema: {
+			body: {
+				type: "object",
+				properties: {
+					token: { type: "string" },
+					new_status: { type: "string" }
+				},
+				required: ["token", "new_status"]
+			}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+		const { token, new_status} = request.body as { token: string, new_status: string };
+		const data: any = await jwt.jwtVerif(token, core.sessionKey);
+		if (!data)
+			return reply.code(400).send({ message: "invalid token" });
 
-		const res = await mgmt.setUserStatus(user_id, newStatus, core.db);
+		const res = await mgmt.setUserStatus(data.id, new_status, core.db);
 		return reply.code(res.code).send(res.data);
 	})
 
 	fastify.post('/upload/avatar', {
 		schema: {
-			body: {
+			headers: {
 				type: 'object',
 				properties: {
 					token: { type: 'string' }
@@ -133,7 +186,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 			}
 		}
 	}, async (request, reply) => {
-			const { token } = request.body as { token: string };
+			const { token } = request.headers as { token: string };
 			const data: any = await jwt.jwtVerif(token, core.sessionKey);
 			if (!data)
 				return reply.code(400).send({ message: "token is invalid" });
