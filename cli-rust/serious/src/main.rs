@@ -6,8 +6,7 @@ use anyhow::{Result, anyhow};
 use serde_json;
 
 use reqwest::{Client};
-use device_query::{DeviceQuery, DeviceState, MouseState, Keycode};
-
+// use device_query::{DeviceQuery, DeviceState, MouseState, Keycode};
 mod welcome;
 mod game;
 mod friends;
@@ -22,7 +21,7 @@ use crate::friends::FriendsDisplay;
 
 mod login;
 use crate::game::{Game, Gameplay};
-use tokio::{net::unix::pipe::Receiver, sync::mpsc, time::Duration};
+use tokio::{io::DuplexStream, net::unix::pipe::Receiver, sync::mpsc, time::Duration};
 use crate::login::Auth;
 
 use crossterm::{
@@ -85,15 +84,27 @@ pub struct Infos {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+  console_subscriber::init();
   let location = match get_location() {
     Ok(result) => result,
     Err(e) => {return Err(anyhow!("{}", e));},
   };
+  // let handle = tokio::spawn(async move {
+  crossterm::terminal::enable_raw_mode()?;
   let mut terminal = ratatui::init();
   let game_main = Infos::new(location);
   let app_result = game_main.run(&mut terminal).await;
+  crossterm::terminal::disable_raw_mode()?;
   ratatui::restore();
   app_result
+  // // });
+  // let sdl_context = sdl2::init().unwrap();
+  // let mut event_pump = sdl_context.event_pump().unwrap();
+  // if let Err(e) = handle.await {
+  //   eprintln!("{:?}", e);
+  //   return Err(anyhow!("Error in thread: {}", e));
+  // }
+  // Ok(())
 }
 
 impl Default for CurrentScreen {

@@ -12,12 +12,10 @@ use crossterm::{
     QueueableCommand,
 };
 
-use device_query::{DeviceQuery, DeviceState, MouseState, Keycode};
-
 use futures::stream::{StreamExt};
 use futures_util::{SinkExt, stream::SplitStream};
 use futures_util::stream::SplitSink;
-use std::{time::Duration};
+use std::time::{Duration, Instant};
 use std::{
 	collections::HashMap,
 	io::{Write, stdout},
@@ -42,11 +40,6 @@ use crate::Infos;
 
 use tokio::{net::unix::pipe::Receiver, sync::{Mutex, mpsc, watch}};
 use tokio::net::TcpStream;
-
-//  Response: Object {"gameId": String("442c772e-0ec8-447e-8f1d-b87f00c76380"), 
-//"opponentId": String("35"), 
-//"playerId": Number(2)}
-
 
 // enum Params
 // {
@@ -86,7 +79,6 @@ pub struct Game {
 	game_id: String,
 	opponent_id: u64,
 	player_side: u64,
-	shared_state: Arc<Mutex<(Option<Bytes>, Option<Utf8Bytes>)>>,
 	receiver: Option<watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>>,
 	pub game_stats: GameStats,
 	game_sender: Option<mpsc::Sender<u8>>,
@@ -161,9 +153,8 @@ impl Gameplay for Infos {
 			_ => {return Err(anyhow!("State receiver is empty"));}
 		};
 		if let Some(sender) = &self.game.game_sender {
-			// state_receiver.changed().await?;
+			state_receiver.changed().await?;
 			let (bytes, text) = state_receiver.borrow_and_update().clone();
-			// let (bytes, text) = received.clone();
 			match (bytes, text) {
 				(Some(bytes), _none) => {self.game.decode_and_update(bytes)?;},
 				(_none, Some(text)) => {
@@ -222,67 +213,6 @@ async fn send_post_game_request(game_main: &Infos, mode: &str) -> Result<()> {
         .await?;
 	Ok(())
 }
-
-
-// pub async fn create_game(game_main: &Infos, mode: &str, mut receiver: mpsc::Receiver<serde_json::Value>) 
-// 										-> Result<mpsc::Receiver<serde_json::Value>, (String, mpsc::Receiver<serde_json::Value>)> {
-// 	if let Err(_) = send_post_game_request(game_main, mode).await {
-// 		return Err(("error, no data received from server".to_string(), receiver));
-// 	};
-// 	if let Err(_) = waiting_screen() {
-// 		return Err(("error, no data received from server".to_string(), receiver));
-// 	};
-// 	loop {
-// 		match poll(Duration::from_millis(16)) {
-// 			Ok(true) => {
-// 				if !receiver.is_empty() {
-// 					break ;
-// 				}
-// 				let event = match event::read() {
-// 				Ok(event) => event,
-// 				_ => return Err(("error in read".to_string(), receiver))
-// 				};
-// 				match should_exit(&event) {
-// 					Ok(true) => {
-// 						if let Err(_) = send_remove_from_queue_request(game_main).await {
-// 							return Err(("error: could not send request to remove from list".to_string(), receiver));
-// 						};
-// 						return Ok(receiver);},
-// 					Ok(false) => {},
-// 					_ => return Err(("event error".to_string(), receiver))
-// 				}
-// 			},
-// 			Ok(false) => {
-// 				if !receiver.is_empty() {
-// 					break ;
-// 				}
-// 			},
-// 			_ => return Err(("error in poll".to_string(), receiver))
-// 		};
-// 	}
-// 	let response = match receiver.recv().await {
-// 		Some(value) => value,
-// 		_ => return Err(("error, no data received from server".to_string(), receiver)),
-// 	};
-// 	let game = match Game::new(game_main, response) {
-// 		Ok(game) => game,
-// 		_ => return Err(("error creating game".to_string(), receiver)),
-// 	};
-// 	if let Err(e) = game.start_game().await {
-// 		return Err((e.to_string(), receiver));
-// 	};
-// 	Ok(receiver)
-// }
-
-// fn wrong_resize_waiting_screen(event: &Event) -> Result<bool> {
-//   if let Event::Resize(x,y ) = event {
-//     if *x < WIDTH || *y < HEIGHT {
-//       return Ok(true);
-//     }
-//   }
-//   Ok(false)
-// }
-
 
 impl Game {
 	fn new(info: &Infos, value: serde_json::Value) -> Result<Game> {
@@ -383,40 +313,25 @@ impl Game {
 		Ok((left_y, right_y, ball_x, ball_y, _speed_x, _speed_y, player1_score, player2_score))
 	}
 	async fn send_game(mut ws_write: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>, mut receiver: mpsc::Receiver<u8>, original_size: (u16, u16)) -> Result<()> {
-		let mut up:bool = false;
-		let mut down: bool = false;
+		let mut up: (bool, Instant, u128) = (false, std::time::Instant::now(), 0);
+		let mut down: (bool, Instant, u128) = (false, std::time::Instant::now(), 0);
 		let mut to_send = String::new();
-		// let device_state = DeviceState::new();
-		// let sdl_context = sdl2::init().unwrap();
-		// let mut event_pump = sdl_context.event_pump().unwrap();
 		loop {
 			match receiver.try_recv() {
 				Ok(_) => break,
 				_ => {},
 			}
 			to_send.clear();
-			if up == true {
+			if up.0 == true {
 				to_send.insert_str(0, "U");
 			}
-			if down == true {
+			if down.0 == true {
 				to_send.insert_str(0, "D");
 			}
 			if !to_send.is_empty() {
 				let send_it = to_send.clone();
 				ws_write.send(send_it.into()).await?;
 			}
-			// to_send.clear();
-			// for event in event_pump.poll_iter() {
-			// 	match event {
-			// 		sdl2::event::Event::Quit {..} => break 'running,
-			// 		sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Up), ..} => {up = true;}
-			// 		sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Down), ..} => {down = true;}
-			// 		sdl2::event::Event::KeyUp { keycode: Some(sdl2::keyboard::Keycode::Up), ..} => {up = false;}
-			// 		sdl2::event::Event::KeyUp{ keycode: Some(sdl2::keyboard::Keycode::Down), ..} => {down = false;}
-			// 		_ => {},
-			// 			}
-			// }
-			// up = falfalse//
 			if poll(Duration::from_millis(16))? {
 				let event = event::read()?;
 				if should_exit(&event)? == true {
@@ -424,28 +339,29 @@ impl Game {
 				} 
 				else if let Event::Key(key_event) = event {
 					match key_event.code {
-						KeyCode::Up => {
-							up = match key_event.kind {
-								KeyEventKind::Press => true,
-								KeyEventKind::Repeat => {continue;},
-								KeyEventKind::Release => {false},
-							};
+						KeyCode::Up => match key_event.kind {
+							KeyEventKind::Press => {up = (true, std::time::Instant::now(), 500)},
+							KeyEventKind::Repeat => {eprintln!("KEYREPEAT");up = (true, std::time::Instant::now(), 100)},
+							KeyEventKind::Release => {up = (false, std::time::Instant::now(), 100)},
 						},
-						KeyCode::Down =>{
-							down = match key_event.kind {
-								KeyEventKind::Press => true,
-								KeyEventKind::Repeat => {continue;},
-								KeyEventKind::Release => false,
-							};
-						},
+						// KeyCode::Up => up = (true, std::time::Instant::now()),
+						// KeyCode::Down => down = (true, std::time::Instant::now(), 100),
+						KeyCode::Down => match key_event.kind {
+							KeyEventKind::Press => {down = (true, std::time::Instant::now(), 500)},
+							KeyEventKind::Repeat => {down = (true, std::time::Instant::now(), 100)},
+							KeyEventKind::Release => {down = (false, std::time::Instant::now(), 100)},
+						},						
 						_ => {continue;},
-						}
-					};
-				}
-				else {
-					up = false;
-					down = false;
-				}
+					}
+				};
+			}
+			if up.1.elapsed().as_millis() > up.2 {
+				up.0 = false;
+			}
+			if down.1.elapsed().as_millis() > down.2 {
+				down.0 = false;
+			}
+			tokio::time::sleep(Duration::from_millis(1)).await;
 		}
 		Ok(())
 	}
@@ -473,70 +389,6 @@ impl Game {
 		}
 	}
 }
-
-fn normalize(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> (u16, u16, u16, u16, f32, f32, u8, u8) {
-    let (left_y, right_y, ball_x, ball_y, _speed_x, _speed_y, player1_score, player2_score) = message;
-    let my_left_y = (left_y * HEIGHT as f32 / 100.0) as u16;
-    let my_right_y = (right_y * HEIGHT as f32 / 100.0) as u16;
-    let my_ball_y = (ball_y * HEIGHT as f32 / 100.0) as u16;
-    let my_ball_x = (ball_x * WIDTH as f32 / 100.0) as u16;
-    (my_left_y, my_right_y, my_ball_x, my_ball_y, _speed_x, _speed_y, player1_score, player2_score)
-}
-
-fn display(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> Result<()> {
-    stdout().execute(terminal::Clear(terminal::ClearType::All))?;
-    let normalized = normalize(message);
-    let (left_y, right_y, ball_x, ball_y, speed_x, speed_y, player1_score, player2_score) = normalized;
-    // borders(&stdout)?;
-    stdout()
-        .queue(cursor::MoveTo(ball_x, ball_y))?
-        .queue(Print("o"))?
-        .queue(cursor::MoveTo(1, left_y))?
-        .queue(Print("I"))?
-        .queue(cursor::MoveTo(WIDTH - 1, right_y))?
-        .queue(Print("I"))?;
-    stdout().flush()?;
-    Ok(())
-}
-
-fn waiting_screen() -> Result<()> {
-	stdout().execute(terminal::Clear(terminal::ClearType::All))?;
-	stdout()
-		.queue(cursor::MoveTo(45, 15))?
-		.queue(Print("Waiting for opponents"))?;
-	stdout().flush()?;	
-	Ok(())
-}
-
-fn display_end_game(message: &str) -> Result<()> {
-	stdout().execute(terminal::Clear(terminal::ClearType::All))?;
-	stdout()
-		.queue(cursor::MoveTo(WIDTH / 2, HEIGHT / 2))?
-		.queue(Print(message))?
-		.queue(cursor::MoveTo(WIDTH/2, HEIGHT / 2 + 3))?
-		.queue(Print("Press Esc to continue"))?;
-	stdout().flush()?;
-	loop {
-		let event = event::read()?;
-	
-		if should_exit(&event)? == true {
-			break ;
-		}
-	}
-	Ok(())
-}
-
-// enum StateIndex
-// {
-// 	LEFT_PADDLE_Y = 0,
-// 	RIGHT_PADDLE_Y = 1,
-// 	BALL_X = 2,
-// 	BALL_Y = 3,
-// 	SPEED_X = 4,
-// 	SPEED_Y = 5,
-// 	PLAYER1_SCORE = 0,
-// 	PLAYER2_SCORE = 1
-// } 
 
 
 // async startGame(): Promise<void>
