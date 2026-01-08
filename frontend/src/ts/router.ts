@@ -4,11 +4,10 @@ import { GameClient } from 'pages/GameClient.js';
 import { TournamentMenu } from 'pages/TournamentMenu.js';
 import { TournamentCreate } from 'pages/TournamentCreate.js';
 import { TournamentJoin } from 'pages/TournamentJoin.js';
-import { User } from "User.js";
-import { Chat } from '@modules/chat';
-import { UserElement } from 'UserElement.js';
-import { ViewComponent } from 'ViewComponent.js';
-import { Router } from 'app.js';
+import { User } from "modules/user/User.js";
+import { Chat } from 'modules/chat/chat';
+import { UserElement } from 'modules/user/UserElement.js';
+import { ViewComponent } from 'modules/router/ViewComponent.js';
 
 export class GameRouter
 {
@@ -44,13 +43,17 @@ export class GameRouter
 		this.setUpWindowEventListeners();
 		this.showPage(this.currentPage, null);
 
-		if (!view)
+	}
+
+	public assignListener()
+	{
+		if (!this.m_view)
 			return ;
-		view.addTrackListener(view.querySelector('#local-game'), "click", this.localGameClickHandler);
-		view.addTrackListener(view.querySelector('#online-game'), "click", this.onlineGameClickHandler);
-		view.addTrackListener(view.querySelector('#bot-game'), "click", this.botGameClickHandler);
-		view.addTrackListener(view.querySelector('#game'), "click", this.menuGameClickHandler);
-		view.addTrackListener(view.querySelector('#tournament'), "click", this.menuTournamentClickHandler);
+		this.m_view.addTrackListener(this.m_view.querySelector('#local-game'), "click", this.localGameClickHandler);
+		this.m_view.addTrackListener(this.m_view.querySelector('#online-game'), "click", this.onlineGameClickHandler);
+		this.m_view.addTrackListener(this.m_view.querySelector('#bot-game'), "click", this.botGameClickHandler);
+		this.m_view.addTrackListener(this.m_view.querySelector('#game'), "click", this.menuGameClickHandler);
+		this.m_view.addTrackListener(this.m_view.querySelector('#tournament'), "click", this.menuTournamentClickHandler);
 	}
 
 	private menuGameClickHandler = () =>
@@ -122,7 +125,7 @@ export class GameRouter
 		switch (key)
 		{
 			case GameRouter.EXIT_KEY:
-				history.back();
+				this.navigateTo('home', '');
 				break ;
 			case GameRouter.HOME_KEY:
 				this.navigateTo('home', '');

@@ -1,6 +1,6 @@
-import { UserElement, UserElementType } from 'UserElement.js';
-import { User, MainUser } from 'User.js';
-import { Router } from 'app.js'
+import { UserElement, UserElementType } from 'modules/user/UserElement.js';
+import { User, MainUser } from 'modules/user/User.js';
+import { Router } from 'modules/router/Router.js'
 
 export class FriendManager
 {
@@ -56,8 +56,25 @@ export class FriendManager
 				return ;
 
 			const elt = new UserElement(block, this.m_blockContainer, UserElementType.STANDARD, this.m_template);
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${block.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${block.name}`) });
 			elt.updateHtml(block);
+
+			const redBtn = elt.getElement("#red-btn");
+			const greenBtn = elt.getElement("#green-btn");
+			if (!redBtn || !greenBtn)
+			{
+				console.warn("no redBtn or greenBtn");
+				return ;
+			}
+
+			greenBtn.style.display = "none";
+			redBtn.innerText = "X";
+			redBtn.addEventListener("click", async () => {
+				if (!elt.user) return;
+				await this.m_main.unblockUser(elt.user.id);
+				this.refreshContainers();
+			});
+
 		})
 
 		pdng.forEach(elt => {
@@ -70,9 +87,11 @@ export class FriendManager
 			}
 
 			if (elt.type !== UserElementType.REQUEST)
-				greenBtn.style.display = "flex";
+				greenBtn.style.display = "block";
+			else
+				redBtn.innerText = "X";
 
-			redBtn.style.display = "flex";
+			redBtn.style.display = "block";
 			greenBtn.addEventListener("click", async () => {
 				if (!elt.user) return;
 				await this.m_main.acceptFriend(elt.user)
@@ -117,7 +136,7 @@ export class FriendManager
 			const greenBtn = elt.getElement("#green-btn");
 			if (!redBtn || !greenBtn)
 				return ;
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
 			redBtn.style.display = "none";
 			greenBtn.style.display = "none";
 			htmlUser.push(elt);
@@ -136,7 +155,7 @@ export class FriendManager
 		friends.forEach(friend => {
 			const elt = new UserElement(friend, container, type, this.m_template);
 
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${friend.name}`) });
 			elt.updateHtml(friend);
 			const redBtn = elt.getElement("#red-btn");
 			const greenBtn = elt.getElement("#green-btn");

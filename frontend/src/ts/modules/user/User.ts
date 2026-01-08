@@ -1,25 +1,21 @@
-import { setCookie, getCookie} from 'utils.js';
-import { hashString } from './sha256.js'
-import { UserElement, UserElementType } from './UserElement.js';
-
-// *********************** TODO *********************** //
-// user with large name should be trucated
-// **************************************************** //
+import { setCookie, getCookie} from 'modules/utils/utils.js';
+import { hashString } from 'modules/utils/sha256.js'
+import { UserElement, UserElementType } from 'modules/user/UserElement.js';
 
 export enum UserStatus {
 	UNKNOW = -2,
 	UNAVAILABLE = -1,
-	AVAILABLE = 0,			// user online
+	AVAILABLE = 0,		// user online
 	BUSY,				// overide IN_GAME / AVAILABLE
-	INVISIBLE,			// overide IN_GAME / AVAILABLE same ui as unavailable
 	IN_GAME,			// show when user in game
 }
 
 export enum AuthSource {
-	BOT = -2,	// for bot account
-	GUEST = -1, // guest profile are deleted on logout
+	DELETED = -3,	// deleted account
+	BOT = -2,		// for bot account
+	GUEST = -1,		// guest profile are deleted on logout
 	INTERNAL = 0,
-	GOOGLE, // not used anymore
+	GOOGLE,			// not used anymore
 	GITHUB,
 	FORTY_TWO
 }
@@ -77,13 +73,16 @@ export class User {
 	private m_created_at:	string = "";
 	private m_stats:		Stats;
 	private m_source:		AuthSource;
-	private m_elo:			number = 0;
 
 	private m_blockUsr:		User[];
 	private m_friends:		User[] = []; // accepted request
 	private m_pndgFriends = new Map<User, number>(); // pending requests (number == sender)
 
-	constructor(token?: string) {
+	private m_onStatusChanged: Array<(status: UserStatus) => void>;
+
+	constructor(token?: string)
+	{
+		this.m_onStatusChanged = new Array<(status: UserStatus) => void>;
 		this.setUser(
 			-1,
 			"Guest",
@@ -110,9 +109,9 @@ export class User {
 		this.m_pndgFriends = new Map<User, number>();
 	}
 
-	public getStatus(): UserStatus			{ return this.m_status; }
-	public getEmail(): string				{ return this.m_email; }
-	public getAvatarPath(): string			{ return this.m_avatarPath; }
+	get status(): UserStatus			{ return this.m_status; }
+	get email(): string				{ return this.m_email; }
+	get avatarPath(): string			{ return this.m_avatarPath; }
 	get	elo(): number						{ return this.m_stats.currElo; }
 	get blockUsr(): User[]					{ return this.m_blockUsr; }
 	get friends(): User[]					{ return this.m_friends; }
@@ -122,6 +121,7 @@ export class User {
 	get gamePlayed(): number				{ return this.m_stats.gamePlayed; }
 	get	stats(): Stats						{ return this.m_stats; }
 	get	source(): AuthSource				{ return this.m_source; }
+	get token(): string						{ return this.m_token; }
 	set token(token: string)				{ this.m_token = token; }
 
 	get winrate(): number
@@ -132,8 +132,15 @@ export class User {
 		return Math.round(winrate);
 	}
 
+	public onStatusChanged(cb: (status: UserStatus) => void)
+	{
+		this.m_onStatusChanged.push(cb);
+	}
+
 	public async setStatus(status: UserStatus): Promise<Response> {
 		this.m_status = status;
+
+		this.m_onStatusChanged.forEach(cb => cb(this.m_status));
 
 		var response = await fetch("/api/user/set_status", {
 			method: "POST",
@@ -141,8 +148,8 @@ export class User {
 				'content-type': 'application/json'
 			},
 			body: JSON.stringify({
-				user_id: this.id.toString(),
-				newStatus: this.m_status.toString()
+				token: this.m_token,
+				new_status: this.m_status.toString()
 			})
 		});
 		return response;
@@ -154,7 +161,7 @@ export class User {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
+				token: this.m_token,
 			})
 		});
 		this.setUser(-1, "Guest", "", "", UserStatus.UNKNOW);
@@ -195,7 +202,7 @@ export class User {
 			return 0;
 
 		this.m_blockUsr = [];
-		const response = await fetch('/api/user/blocked_users', {
+		const response = await fetch('/api/user/blocked_users', { // TODO renvoyer tous les user ou blocked_by === id
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ token: this.m_token })
@@ -207,7 +214,9 @@ export class User {
 
 		for (let i = 0; i < data.length; i++)
 		{
-			const id = data[i].user2_id;
+			if (data[i].blocked_by != this.id)
+				continue ;
+			const id = data[i].user1_id == this.id ? data[i].user2_id : data[i].user1_id;
 			const tmp = await getUserFromId(id);
 			if (!tmp)
 			{
@@ -232,7 +241,7 @@ export class User {
 		var data = await response.json();
 		this.name = data.name;
 		this.m_avatarPath = data.avatar;
-		this.m_status = data.status;
+		this.m_status = data.is_login ? data.status : UserStatus.UNAVAILABLE;
 		this.m_created_at = data.created_at;
 		this.m_source = data.source;
 
@@ -258,11 +267,14 @@ export class User {
 		return response.status;
 	}
 
-	public async uploadAvatar(file: FormData): Promise<any> {
+	public async uploadAvatar(file: FormData): Promise<any>
+	{
+		file.append('token', this.m_token);
 
 		var response = await fetch("/api/user/upload/avatar", {
 			method: "POST",
-			body: file,
+			headers: { 'token': this.m_token },
+			body: file
 		});
 		var data = await response.json();
 		this.m_avatarPath = "/public/avatars/" + data.filename;
@@ -288,11 +300,21 @@ export class MainUser extends User
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
 
-	constructor(parent: HTMLElement | null)
+	constructor()
 	{
 		const token = getCookie("jwt_session");
 		super(token);
-		
+
+		this.m_onLoginCb = [];
+		this.m_onLogoutCb = [];
+	}
+
+	/**
+	 * use to create a userElement
+	 * @param parent html parent to append the child to
+	*/
+	public setHtml(parent: HTMLElement | null)
+	{
 		if (parent)
 		{
 			this.m_userElement = new UserElement(this, parent, UserElementType.MAIN);
@@ -303,10 +325,26 @@ export class MainUser extends User
 			statusSelect.prepend(newOption("busy"));
 			statusSelect.prepend(newOption("in_game"));
 			statusSelect.addEventListener("change", () => this.updateStatus(statusSelect.value, this, this.m_userElement));
-		}
+			switch (this.status)
+			{
+				case UserStatus.UNKNOW:
+					statusSelect.value = "available";
+					break;
+				case UserStatus.UNAVAILABLE:
+					statusSelect.value = "unavailable";
+					break;
+				case UserStatus.AVAILABLE:
+					statusSelect.value = "available";
+					break;
+				case UserStatus.BUSY:
+					statusSelect.value = "busy";
+					break;
+				case UserStatus.IN_GAME:
+					statusSelect.value = "in_game";
+					break;
 
-		this.m_onLoginCb = [];
-		this.m_onLogoutCb = [];
+			}
+		}
 	}
 	
 	public resetCallbacks()
@@ -318,38 +356,16 @@ export class MainUser extends User
 	public onLogin(cb: ((user: MainUser) => void)) { this.m_onLoginCb.push(cb); }
 	public onLogout(cb: ((user: MainUser) => void)) { this.m_onLogoutCb.push(cb); }
 
-	public async oauth2Login(id: string, source: number) {
-		var response = await fetch(`/api/oauth2/login`, {
-			method: "POST",
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({
-				id: id,
-				source: source
-			})
-		});
-		const data = await response.json();
-
-		if (response.status == 200) {
-			var status = data.status;
-			this.setUser(data.id, data.name, data.email, data.avatar, status);
-			this.setStatus(this.getStatus());
-			await this.refreshSelf();
-
-			this.m_onLoginCb.forEach(cb => cb(this));
-		}
-
-		return { status: response.status, data: data };
-	}
-
 	public async loginSession()
 	{
 		const response = await fetch("/api/user/get_session");
 		const data = await response.json();
 
-		if (response.status == 200) {
+		if (response.status == 200)
+		{
 			var status = data.status;
 			this.setUser(data.id, data.name, data.email, data.avatar, status);
-			this.setStatus(this.getStatus());
+			this.setStatus(this.status);
 			await this.refreshSelf();
 
 			this.m_onLoginCb.forEach(cb => cb(this));
@@ -500,8 +516,8 @@ export class MainUser extends User
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
-				email: this.getEmail(),
+				token: this.m_token,
+				email: this.email,
 			})
 			
 		});
@@ -518,7 +534,7 @@ export class MainUser extends User
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
+				token: this.m_token
 			})
 			
 		});
@@ -535,7 +551,7 @@ export class MainUser extends User
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				user_id: this.id.toString(),
+				token: this.m_token,
 				totp: totp,
 			})
 			
@@ -548,6 +564,10 @@ export class MainUser extends User
 	{
 		const res = await fetch ('api/user/delete', {
 			method: "DELETE",
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				token: this.m_token
+			})
 		});
 		this.logout();
 		return res.status;
@@ -565,7 +585,7 @@ export class MainUser extends User
 			method: "DELETE",
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
-				id: this.id
+				token: this.m_token
 			})
 		});
 		return res.status;
@@ -596,6 +616,7 @@ export class MainUser extends User
 				id: id
 			})
 		});
+		await this.updateSelf();
 		return res.status;
 	}
 }

@@ -1,4 +1,4 @@
-import { User } from '../User.js';
+import { User } from 'modules/user/User.js';
 
 export class TournamentCreate
 {
@@ -25,7 +25,6 @@ export class TournamentCreate
 
 	private hydrateButtons(): void
 	{
-		this.button1Element.textContent = TournamentCreate.BUTTON_1;
 	}
 
 	private startTournamentClickHandler = async () =>

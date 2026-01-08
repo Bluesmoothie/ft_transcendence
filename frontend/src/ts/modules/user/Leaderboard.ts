@@ -1,6 +1,6 @@
-import { User } from "User.js";
-import { UserElement, UserElementType } from "UserElement.js";
-import { Router } from "app.js";
+import { User } from "modules/user/User.js";
+import { UserElement, UserElementType } from "modules/user/UserElement.js";
+import { Router } from "modules/router/Router.js";
 
 export class Leaderboard
 {
@@ -36,14 +36,20 @@ export class Leaderboard
 		this.m_users.sort((a: User, b: User) => { return Number(a.elo < b.elo) })
 	}
 
-	public RefreshContainer()
+	public async cleanContainer()
 	{
 		if (!this.m_container)
 			return ;
 
 		this.m_container.innerHTML = "";
+	}
+
+	public async RefreshContainer()
+	{
+		if (!this.m_container)
+			return ;
+		this.cleanContainer();
 		let max = this.m_users.length < this.m_LeaderboardSize ? this.m_users.length : this.m_LeaderboardSize;
-			console.log(this.m_users.length)
 		for (let i = 0; i < max; i++)
 		{
 			const user = this.m_users[i];
@@ -52,8 +58,9 @@ export class Leaderboard
 				console.warn("no container");
 				return ;
 			}
+			await user.updateSelf();
 			const elt = new UserElement(user, this.m_container, UserElementType.STANDARD, "user-leaderboard-template");
-			elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${user.name}`) });
+			// elt.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${user.name}`) });
 			const elo = elt.getElement("#elo");
 			const winrate = elt.getElement("#winrate");
 			if (elo)

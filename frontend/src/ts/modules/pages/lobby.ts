@@ -1,9 +1,10 @@
-import { MainUser, User } from "User.js";
-import { UserElement, UserElementType } from "UserElement.js";
-import { Chat } from "modules/chat.js";
+import { MainUser, User } from "modules/user/User.js";
+import { UserElement, UserElementType } from "modules/user/UserElement.js";
+import { Chat } from "modules/chat/chat.js";
 import { GameRouter } from "router.js";
-import { Router } from "app.js";
-import { ViewComponent } from "ViewComponent.js";
+import { Router } from "modules/router/Router.js";
+import { HeaderSmall } from "./HeaderSmall.js";
+import { ViewComponent } from "modules/router/ViewComponent.js";
 
 	enum ListState
 	{
@@ -32,17 +33,17 @@ export class LobbyView extends ViewComponent
 			return ;
 
 		this.m_userContainer = this.querySelector("#user-container");
-		this.m_user = new MainUser(this.m_userContainer);
+		this.m_user = new MainUser();
 
 		await this.m_user.loginSession();
 
 		if (this.m_user.id == -1)
 		{
-			console.warn("user is not log");
-			Router.Instance.navigateTo("/");
+			Router.Instance?.navigateTo("/");
 			return ;
 		}
-		this.m_user.onLogout((user) => { Router.Instance?.navigateTo("/"); })
+		this.m_user.onLogout((user: MainUser) => Router.Instance?.navigateTo("/"));
+		new HeaderSmall(this.m_user, this, "header-container");
 
 		const chatInput: HTMLInputElement = this.querySelector("#chat-in") as HTMLInputElement;
 		const chatOutput: HTMLInputElement = this.querySelector("#chat-out") as HTMLInputElement;
@@ -50,9 +51,16 @@ export class LobbyView extends ViewComponent
 			return ;
 		this.m_chat = new Chat(this.m_user, chatOutput, chatInput);
 		this.m_chat.onConnRefresh((conns: User[]) => this.fillUserList(conns));
-		this.m_gameRouter = new GameRouter(this.m_user, this.m_chat, this);
+
+		if (this.m_gameRouter == null)
+			this.m_gameRouter = new GameRouter(this.m_user, this.m_chat, this);
+		this.m_gameRouter.assignListener();
+		this.m_gameRouter.navigateTo('home', '');
 
 		const userMenuContainer = this.querySelector("#user-menu-container");
+		const container = this.querySelector("#user-list-container") as HTMLElement;
+		if (container)
+			container.innerHTML = "";
 
 		this.addTrackListener(this.querySelector("#user-list-btn"), "click", () => {
 			if (!this.m_chat || !this.m_user) return;
@@ -62,15 +70,7 @@ export class LobbyView extends ViewComponent
 			if (!this.m_chat || !this.m_user) return;
 			this.showListContainer(ListState.FRIEND, this.m_chat, this.m_user);
 		});
-		this.addTrackListener(this.querySelector("#user-menu-btn"), "click", () => {
-			if (!userMenuContainer) return;
-			userMenuContainer.classList.toggle("hide");
-		});
 
-		this.addTrackListener(this.querySelector("#banner"), "click", () => Router.Instance?.navigateTo("/"));
-		this.addTrackListener(this.querySelector("#logout_btn"), "click", () => this.m_user?.logout());
-		this.addTrackListener(this.querySelector("#profile_btn"), "click", () => Router.Instance?.navigateTo("/profile"));
-		this.addTrackListener(this.querySelector("#settings_btn"), "click", () => Router.Instance?.navigateTo("/settings"));
 	}
 
 	public async disable()
@@ -91,7 +91,7 @@ export class LobbyView extends ViewComponent
 		if (this.m_gameRouter?.m_gameMenu)
 			this.m_gameRouter.m_gameMenu.destroy();
 
-		this.m_gameRouter = null;
+		// this.m_gameRouter = null;
 		if (this.m_userContainer)
 			this.m_userContainer.innerHTML = "";
 
@@ -130,9 +130,6 @@ export class LobbyView extends ViewComponent
 
 		users.forEach((conn: User) => {
 			const elt = new UserElement(conn, container, UserElementType.STANDARD, "user-template");
-			this.addTrackListener(elt.clone, "click", () => {
-				Router.Instance?.navigateTo(`/profile?username=${conn.name}`)
-			});
 			elt.updateHtml(conn);
 		})
 		container.prepend(text);
