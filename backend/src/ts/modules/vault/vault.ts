@@ -18,7 +18,6 @@ async function readFiles() {
     unsealKey = (await readFile(keyFile, 'utf-8')).trim();
     rootToken = (await readFile(tokenFile, 'utf-8')).trim();
 	}
-	console.log("KEYS", unsealKey, rootToken);
 }
 
 async function writeFiles() {
@@ -26,7 +25,7 @@ async function writeFiles() {
   await writeFile(tokenFile, rootToken);
 }
 
-async function unsealVault() {
+async function configureVault() {
 	await readFiles();
 
 	if (unsealKey === '' || rootToken === '') {
@@ -37,21 +36,23 @@ async function unsealVault() {
 			const { keys, root_token } = init.data;
 			unsealKey = keys[0];
 			rootToken = root_token;
-			vc.token = rootToken;
 			await writeFiles();
+			return 1;
 		}
 		else
 			throw new Error("Error initializing Vault");
 	}
 
+	return 0;
+}
+
+async function unsealVault() {
+	vc.token = rootToken;
 	const unsealed = await vc.unseal({ key: unsealKey });
 	console.log(unsealed);
 };
 
-export async function initVault() {
-
-	await unsealVault();
-
+async function mountVault() {
 	const mounted = await vc.mount({
 	  mountPath: mountPath,
 	  type: 'kv-v2'
@@ -61,6 +62,14 @@ export async function initVault() {
 		throw new Error("Error mounting Hashi Corp Vault !");
 	else
 		console.log("Successfully mounted Vault");
+}
+
+export async function initVault() {
+
+	const init = await configureVault();
+	await unsealVault();
+	if (init)
+		await mountVault();
 };
 
 export async function createSecret(name: string, value: object) {
