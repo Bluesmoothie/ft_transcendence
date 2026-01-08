@@ -190,11 +190,11 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 
 	const rBytes = randomBytes(64).toString('hex');
 	const name = `DELETED_USER${user_id}${randomBytes(2).toString('hex')}`
-	const sql = "UPDATE users SET name = ?, email = ?, passw = ?, oauth_id = ? WHERE id = ?";
+	const sql = "UPDATE users SET name = ?, email = ?, passw = ?, oauth_id = ?, source = ? WHERE id = ?";
 	try
 	{
 		await updateAvatarPath(user_id, 'default.png');
-		await db.run(sql, [name, rBytes, rBytes, rBytes, user_id]);
+		await db.run(sql, [name, rBytes, rBytes, rBytes, AuthSource.DELETED, user_id]);
 		console.log(`user has been deleted`)
 		return { code: 200, data: { message: "Success" }};
 	}

@@ -25,7 +25,6 @@ export class TournamentCreate
 
 	private hydrateButtons(): void
 	{
-		this.button1Element.textContent = TournamentCreate.BUTTON_1;
 	}
 
 	private startTournamentClickHandler = async () =>

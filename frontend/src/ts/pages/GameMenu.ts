@@ -2,10 +2,6 @@ import { GameRouter } from '../router.js';
 
 export class GameMenu
 {
-	private static readonly BUTTON_1: string = 'local';
-	private static readonly BUTTON_2: string = 'online';
-	private static readonly BUTTON_3: string = 'bot';
-
 	private router: GameRouter;
 	private button1Element;
 	private button2Element;
@@ -25,9 +21,6 @@ export class GameMenu
 
 	private hydrateButtons(): void
 	{
-		this.button1Element.textContent = GameMenu.BUTTON_1;
-		this.button2Element.textContent = GameMenu.BUTTON_2;
-		this.button3Element.textContent = GameMenu.BUTTON_3;
 	}
 
 	private menuGameClickHandler = () =>

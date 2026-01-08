@@ -5,16 +5,17 @@ import { UserElement, UserElementType } from 'modules/user/UserElement.js';
 export enum UserStatus {
 	UNKNOW = -2,
 	UNAVAILABLE = -1,
-	AVAILABLE = 0,			// user online
+	AVAILABLE = 0,		// user online
 	BUSY,				// overide IN_GAME / AVAILABLE
 	IN_GAME,			// show when user in game
 }
 
 export enum AuthSource {
-	BOT = -2,	// for bot account
-	GUEST = -1, // guest profile are deleted on logout
+	DELETED = -3,	// deleted account
+	BOT = -2,		// for bot account
+	GUEST = -1,		// guest profile are deleted on logout
 	INTERNAL = 0,
-	GOOGLE, // not used anymore
+	GOOGLE,			// not used anymore
 	GITHUB,
 	FORTY_TWO
 }
@@ -563,6 +564,10 @@ export class MainUser extends User
 	{
 		const res = await fetch ('api/user/delete', {
 			method: "DELETE",
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				token: this.m_token
+			})
 		});
 		this.logout();
 		return res.status;

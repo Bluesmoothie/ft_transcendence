@@ -56,12 +56,12 @@
 				<div id="chat-out" class="flex h-[90%] overflow-y-scroll flex-col-reverse align-bottom justify-start items-start bg-darker">
 				</div>
 				<div class="bg-dark w-full h-[10%] flex gap-2 border-t-2 border-blue">
-					<input id="chat-in" wrap="soft" placeholder="enter message..."
+					<input id="chat-in" wrap="soft" data-i18n-placeholder="chat" placeholder="enter message..."
 						class="flex-1 h-full py-2 px-3 focus:outline-none
 						border-r-2 border-y-0 focus:brightness-100 hover:brightness-100">
 					<div class="w-[15%] flex flex-col justify-between">
-						<button id="user-list-btn" class="button-empty border-purple text-purple">users</button>
-						<button id="friend-list-btn" class="button-empty border-purple text-purple">friends</button>
+						<button id="user-list-btn" data-i18n="user" class="button-empty border-purple text-purple">users</button>
+						<button id="friend-list-btn" data-i18n="friends" class="button-empty border-purple text-purple">friends</button>
 					</div>
 				</div>
 			</div>
@@ -69,14 +69,14 @@
 			<div class="border-4 flex flex-col border-red w-[70%]">
 				<div class="w-full flex-1">
 					<section id="home" class="page px-[30%] bg-darkest ">
-						<button class="btn w-full text-6xl font-bold" id="game"></button>
-						<button class="btn w-full text-6xl font-bold" id="tournament"></button>
+						<button class="btn w-full text-6xl font-bold" data-i18n="game" id="game">game</button>
+						<button class="btn w-full text-6xl font-bold" data-i18n="tournament" id="tournament">tournament</button>
 					</section>
 
 					<section id="game-menu" class="flex page px-[30%] bg-darkest">
-						<button class="btn w-full text-6xl font-bold" id="local-game"></button>
-						<button class="btn w-full text-6xl font-bold" id="online-game"></button>
-						<button class="btn w-full text-6xl font-bold" id="bot-game"></button>
+						<button class="btn w-full text-6xl font-bold" data-i18n="local" id="local-game">local</button>
+						<button class="btn w-full text-6xl font-bold" data-i18n="online" id="online-game">online</button>
+						<button class="btn w-full text-6xl font-bold" data-i18n="bot" id="bot-game">bot</button>
 					</section>
 
 					<section id="game" class="relative game page bg-darkest w-full box-sizing: content-box overflow-hidden flex justify-center align-middle items-center">
@@ -112,12 +112,12 @@
 					</section>
 
 					<section id="tournament-menu">
-						<button class="btn w-full text-6xl font-bold" id="tournament-create"></button>
-						<button class="btn w-full text-6xl font-bold" id="tournament-join"></button>
+						<button class="btn w-full text-6xl font-bold" id="tournament-create">create tournament</button>
+						<button class="btn w-full text-6xl font-bold" id="tournament-join">join tournament</button>
 					</section>
 
 					<section id="tournament-create">
-						<button class="btn w-full text-6xl font-bold" id="tournament-start"></button>
+						<button class="btn w-full text-6xl font-bold" id="tournament-start">start tournament</button>
 					</section>
 
 				</div>

@@ -1,6 +1,6 @@
 import { ViewComponent } from 'modules/router/ViewComponent.js';
 import { Router } from 'modules/router/Router.js'
-import { MainUser, User } from 'modules/user/User.js';
+import { AuthSource, MainUser, User } from 'modules/user/User.js';
 import { HeaderSmall } from './HeaderSmall.js';
 import { UserElement, UserElementType } from 'modules/user/UserElement.js';
 import * as utils from 'modules/utils/utils.js';
@@ -82,9 +82,10 @@ export class SearchView extends ViewComponent
 			const usr: User = new User();
 			usr.setUser(element.id, element.name, "", element.avatar, element.status);
 			await usr.updateSelf()
-			this.m_users.push(usr);
+			if (usr.source != AuthSource.DELETED) // don't push deleted users
+				this.m_users.push(usr);
 		}
-		this.m_users.sort((a: User, b: User) => { return Number(utils.levenshteinDistance(a.name.toLowerCase(), query) < utils.levenshteinDistance(b.name.toLowerCase(), query)); })
+		this.m_users.sort((a: User, b: User) => { return Number(utils.levenshteinDistance(a.name, query) < utils.levenshteinDistance(b.name, query)); })
 	}
 
 	public async disable()

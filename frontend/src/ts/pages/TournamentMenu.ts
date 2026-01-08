@@ -3,8 +3,6 @@ import { Router } from 'modules/router/Router.js';
 
 export class TournamentMenu
 {
-	private static readonly BUTTON_1: string = 'create a tournament';
-	private static readonly BUTTON_2: string = 'join a tournament';
 
 	private router: GameRouter;
 	private button1Element = document.getElementById('tournament-create') as HTMLButtonElement;
@@ -19,8 +17,6 @@ export class TournamentMenu
 
 	private hydrateButtons(): void
 	{
-		this.button1Element.textContent = TournamentMenu.BUTTON_1;
-		this.button2Element.textContent = TournamentMenu.BUTTON_2;
 	}
 
 	private createTournamentClickHandler = () =>

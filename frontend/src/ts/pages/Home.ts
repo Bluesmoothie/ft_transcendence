@@ -3,8 +3,6 @@ import { Router } from 'modules/router/Router.js';
 
 export class Home
 {
-	private static readonly BUTTON_1: string = 'game';
-	private static readonly BUTTON_2: string = 'tournament';
 
 	private router: GameRouter;
 	private button1Element = Router.getElementById('game') as HTMLButtonElement;
@@ -19,8 +17,6 @@ export class Home
 
 	private hydrateButtons(): void
 	{
-		this.button1Element.textContent = Home.BUTTON_1;
-		this.button2Element.textContent = Home.BUTTON_2;
 	}
 
 

@@ -6,6 +6,9 @@ import { ViewComponent } from "modules/router/ViewComponent.js";
 import { Router } from "modules/router/Router.js"
 import { toggleCrtEffect, getCookie } from "modules/utils/utils.js";
 
+// TODO: quand on ce log en guest que on vas dans settings, que on ce delog et relog en internal, les settings inderdi sont toujours cache
+// TODO: si on delete account et que on retourne dans le setting le confirm panel est toujour up
+
 export class SettingsView extends ViewComponent
 {
 	private m_user: MainUser | null = null;
