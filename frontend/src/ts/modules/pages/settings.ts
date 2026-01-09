@@ -5,6 +5,7 @@ import { setPlaceHolderText } from "modules/utils/utils.js";
 import { ViewComponent } from "modules/router/ViewComponent.js";
 import { Router } from "modules/router/Router.js"
 import { toggleCrtEffect, getCookie } from "modules/utils/utils.js";
+import { ThemeController } from "./Theme.js";
 
 // TODO: quand on ce log en guest que on vas dans settings, que on ce delog et relog en internal, les settings inderdi sont toujours cache
 // TODO: si on delete account et que on retourne dans le setting le confirm panel est toujour up
@@ -29,6 +30,7 @@ export class SettingsView extends ViewComponent
 	private holderClose:		HTMLElement | null = null;
 	private saveBtn:			HTMLButtonElement | null = null;
 	private crtCheckbox:		HTMLInputElement | null = null;
+	private themeSelect:		HTMLSelectElement | null = null;
 	
 	constructor()
 	{
@@ -63,6 +65,7 @@ export class SettingsView extends ViewComponent
 		this.holderParent = this.holder.parentNode as HTMLElement;
 		this.holderClose = this.querySelector("#holder-close-btn") as HTMLElement;
 		this.crtCheckbox = this.querySelector("#crt-checkbox") as HTMLInputElement;
+		this.themeSelect = this.querySelector("#theme-select") as HTMLSelectElement;
 
 		this.saveBtn = this.querySelector("#save-btn") as HTMLButtonElement;
 
@@ -101,6 +104,16 @@ export class SettingsView extends ViewComponent
 			const target = e.target as HTMLInputElement;
 			toggleCrtEffect(!target.checked);
 		})
+
+		if (this.themeSelect)
+		{
+			this.themeSelect.value = ThemeController.Instance ? ThemeController.Instance.themeName : "onedark";
+			this.themeSelect.addEventListener("change", () => { if (this.themeSelect)
+				{
+					ThemeController.Instance?.setGlobalTheme(this.themeSelect.value);
+				}
+			});
+		}
 
 		this.hideForbiddenElement();
 	}

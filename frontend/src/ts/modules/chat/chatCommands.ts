@@ -1,3 +1,4 @@
+import { ThemeController, Theme } from "modules/pages/Theme.js";
 import { ChatCommand } from "./Command.js";
 import { Chat } from "./chat.js";
 import { serverReply } from "./chat_utils.js";
@@ -59,6 +60,24 @@ export function registerCmds(chat: Chat)
 		});
 		displayResponse(chat, res);
 	})
+
+	cmd.register("setTheme", "<theme name>\n\tset the global theme to <theme name>", async (chat: Chat, argv: Array<string>) => {
+		if (argv.length != 2)
+		{
+			chat.displayMessage(serverReply("usage: /setTheme <theme name>"));
+			return ;
+		}
+		ThemeController.Instance?.setGlobalTheme(argv[1]);
+		chat.displayMessage(serverReply(`theme set to ${argv[1]}`));
+	});
+
+	cmd.register("listTheme", "\n\tlist all available themes", async (chat: Chat, argv: Array<string>) => {
+		const themes: Theme[] = ThemeController.Instance ? ThemeController.Instance.themes : [];
+		ThemeController.Instance?.setGlobalTheme(argv[1]);
+		themes.forEach((theme: Theme) => {
+			chat.displayMessage(serverReply(theme.name));
+		});
+	});
 
 	cmd.register("getFriend", "\n\treturn friends", async (chat: Chat, argv: Array<string>) => {
 		if (argv.length != 1)

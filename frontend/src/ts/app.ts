@@ -1,5 +1,7 @@
 import { Route, Router } from "modules/router/Router.js";
 import { ViewComponent } from "modules/router/ViewComponent.js";
+import { ThemeController } from "modules/pages/Theme.js";
+import { loadTheme } from "themes.js";
 import * as utils from "modules/utils/utils.js";
 
 import { StartView } from "modules/pages/start.js";
@@ -35,7 +37,13 @@ customElements.define('notfound-view', NotFoundView);
 const router = new Router(routes);
 const state = utils.getCookie("crt_state");
 if (state)
-{
 	utils.toggleCrtEffect(state === 'true');
-}
+
+var defaultTheme = "onedark";
+const themeCookie = utils.getCookie("theme");
+if (themeCookie)
+	defaultTheme = themeCookie;
+
+const themes = await loadTheme();
+const themeController = new ThemeController(themes, defaultTheme);
 
