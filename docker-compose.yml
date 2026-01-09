@@ -135,6 +135,7 @@ services:
     volumes:
       - ./elk/logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
       - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./elk/logstash/log4j2.properties:/usr/share/logstash/config/log4j2.properties:ro
       - modsecurity_logs:/var/log/nginx:ro
       - grafana-logs:/var/log/grafana:ro
     depends_on:
@@ -144,8 +145,6 @@ services:
       - .env
     networks:
       - elk_net
-    environment:
-      - PATH_LOGS=/var/log/logstash
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.0
