@@ -1,18 +1,26 @@
  To do 
+ - Animation 
+ - Boucle infinie qui consomme
  - Clean unwrap() and error management
- - Print scores
- - Login
  - Doc
+ - Refacto
+ - Accept pending friends requests
+ - Get/setattr / ioctl pour keypressed (C) 
+
+ DONE 
+ - Changer username addresse mail creation de compte 
+ - friends management if too many friends
+ - Add a go back button everywhere
+ - Check si Ctrl+C durant game -> Quit game.
+ - Fermer websocket suite a fin de game
 
 
 Problemes CLI
-- mouvement des paddles lents
 - le jeu commence avant pour le CLI que sur le Web
+- Comment implementer le compte a rebours?
 
 Améliorations possibles
-- add/manage friends --> names of 30 characteres max
 - animations
 - aesthetics
-- chat 
-
-find . -type f -exec wc -l {} +
+- chat
+- buttons / change menu 
