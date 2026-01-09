@@ -6,7 +6,6 @@ use anyhow::{Result, anyhow};
 use serde_json;
 
 use reqwest::{Client};
-// use device_query::{DeviceQuery, DeviceState, MouseState, Keycode};
 mod welcome;
 mod game;
 mod friends;
@@ -15,39 +14,31 @@ mod screen_displays;
 
 use crate::infos_events::EventHandler;
 use crate::screen_displays::ScreenDisplayer;
-use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
-// use crate::game::{create_game};
+use crate::welcome::game_setup;
 use crate::friends::FriendsDisplay;
 
 mod login;
 use crate::game::{Game, Gameplay};
-use tokio::{io::DuplexStream, net::unix::pipe::Receiver, sync::mpsc, time::Duration};
+use tokio::{sync::mpsc, time::Duration};
 use crate::login::Auth;
 
 use crossterm::{
-  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, poll, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
+  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
 
 use welcome::LOGO;
 
 use ratatui::{
-    text::Span,
     buffer::Buffer,
     layout::Rect,
-    style::Stylize,
-    symbols::border,
-    text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
+    widgets::Widget,
     DefaultTerminal, Frame,
 };
 
 pub const WIDTH: u16 = 90;
 pub const HEIGHT: u16 = 30;
 
-// pub enum CurrentlyEditing {
-//   Friend,
-// }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum CurrentScreen {
   FirstScreen,
   Welcome,
@@ -72,39 +63,28 @@ pub struct Infos {
   client: Client,
   exit: bool,
   screen: CurrentScreen,
+  post_error_screen: CurrentScreen,
   index: usize,
+  index_max: usize,
   friends: Vec<String>,
   friend_tmp: String,
   game: Game,
   auth: Auth,
   receiver: Option<mpsc::Receiver<serde_json::Value>>,
   error: String,
-  post_error_screen: CurrentScreen,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  console_subscriber::init();
   let location = match get_location() {
     Ok(result) => result,
     Err(e) => {return Err(anyhow!("{}", e));},
   };
-  // let handle = tokio::spawn(async move {
-  crossterm::terminal::enable_raw_mode()?;
   let mut terminal = ratatui::init();
   let game_main = Infos::new(location);
   let app_result = game_main.run(&mut terminal).await;
-  crossterm::terminal::disable_raw_mode()?;
   ratatui::restore();
   app_result
-  // // });
-  // let sdl_context = sdl2::init().unwrap();
-  // let mut event_pump = sdl_context.event_pump().unwrap();
-  // if let Err(e) = handle.await {
-  //   eprintln!("{:?}", e);
-  //   return Err(anyhow!("Error in thread: {}", e));
-  // }
-  // Ok(())
 }
 
 impl Default for CurrentScreen {
@@ -123,8 +103,15 @@ impl Infos {
   }
   pub async fn run(mut self, terminal: &mut DefaultTerminal) -> Result<()> {
     while !self.exit {
-        terminal.draw(|frame| self.draw(frame))?;
-        self.handle_events().await?;
+        if self.screen == CurrentScreen::FriendsDisplay {
+          self.update_friends_index(terminal).await?;
+        }
+        if let Err(e) = terminal.draw(|frame| self.draw(frame)) {
+          self.error(e.to_string());
+        }
+        if let Err(e) = self.handle_events().await {
+          self.error(e.to_string());
+        }
     }
     Ok(())
   }
@@ -162,6 +149,24 @@ impl Infos {
     std::thread::sleep(Duration::from_secs(2));
     self.screen = self.post_error_screen;
   }
+  async fn update_friends_index(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+    self.get_indexed_friends().await?;
+    let height: usize = (terminal.get_frame().area().height - 2) as usize;
+    let len = self.friends.len();
+    let modulo: usize = match len % height {
+      0 => 0,
+      _ => 1
+    };
+    if height < len {
+      self.index_max = len / height + modulo;
+    } else {
+      self.index_max = 0;
+    }
+    if self.index > self.index_max {
+      self.index = 0;
+    }
+    Ok(())
+  }
 }
 
 impl Widget for &Infos {
@@ -196,38 +201,6 @@ fn get_location() -> Result<String> {
     };
     Ok(first)
 }
-
-// pub async fn game_loop(game_main: &Infos, mut receiver: mpsc::Receiver<serde_json::Value>) -> Result<mpsc::Receiver<serde_json::Value>> {
-//   game_setup()?;
-//   loop {
-//     let event: Event = event::read()?;
-//     if wrong_resize_game_page(&event)? == true {
-//       stdout()
-//         .execute(terminal::Clear(terminal::ClearType::All))?;
-//       stdout()
-//         .execute(cursor::MoveTo(0,0))?
-//         .execute(Print("Wrong terminal size, please resize"))?;
-//     } else if should_exit(&event)? == true {
-//       cleanup_and_quit(&game_main.original_size)?;
-//     } else if let Event::Key(key_event) = event {
-//         match key_event.code {
-//           KeyCode::Char('1') => {},
-//           KeyCode::Char('2') => {
-//             receiver = match create_game(&game_main, "online", receiver).await {
-//               Ok(receiver) => receiver,
-//               Err((error, receiver)) => {
-//                 display_error(&error)?;
-//                 receiver
-//               }
-//             };
-//           },
-//           KeyCode::Char('3') => {},
-//           KeyCode::Char('4') => {break Ok(receiver);},
-//           _ => {}
-//         }
-//       }
-//   }
-// }
 
 pub fn wrong_resize_game_page(event: &Event) -> Result<bool> {
   if let Event::Resize(x,y ) = event {
@@ -270,119 +243,3 @@ pub fn clean_terminal(original_size: &(u16, u16)) -> Result<()> {
   terminal::disable_raw_mode()?;
   Ok(())
 }
-
-fn display_error(message: &str) -> Result<()> {
-	stdout().execute(terminal::Clear(terminal::ClearType::All))?;
-	stdout()
-		.queue(cursor::MoveTo(WIDTH / 2, HEIGHT / 2))?
-		.queue(Print(message))?
-		.queue(cursor::MoveTo(WIDTH/2, HEIGHT / 2 + 3))?
-		.queue(Print("Press Esc to continue"))?;
-	stdout().flush()?;
-	loop {
-		let event = event::read()?;
-	
-		if should_exit(&event)? == true {
-			break ;
-		}
-	}
-	Ok(())
-}
-
-// use std::env;
-// use std::io;
-// use crossterm::{terminal, ExecutableCommand};
-
-// fn main() -> Result<(), Box<dyn std::error::Error>> {
-//     let mut args = env::args();
-//     args.next();
-//     let first = match args.next() {
-//         Some(addr) => addr,
-//         None => {
-//             eprintln!("No argument provided");
-//             std::process::exit(1);
-//         }
-//     };
-//     let mut stdout = io::stdout();
-//     stdout.execute(terminal::Clear(terminal::ClearType::All))?;
-//     Ok(())
-// }
-
-// use std::io::{self, Write};
-// use crossterm::{
-//     ExecutableCommand, QueueableCommand, execute,
-//     terminal, cursor, style::{self, Stylize}
-// };
-
-// fn main() -> std::io::Result<()> {
-//   let mut stdout = io::stdout();
-
-//   // stdout.execute(terminal::Clear(terminal::ClearType::All))?;
-//   execute!(stdout, terminal::EnterAlternateScreen)?;
-
-//   let Ok((height, width)) = terminal::size() else {eprintln!("error in term size"); std::process::exit(1);}; 
-
-//   for y in 0..width {
-//     for x in 0..height {
-//       if (y == 0 || y == width - 1) || (x == 0 || x == height - 1) {
-//         // in this loop we are more efficient by not flushing the buffer.
-//         stdout
-//           .queue(cursor::MoveTo(x,y))?
-//           .queue(style::PrintStyledContent( "█".magenta()))?;
-//       }
-//     }
-//   }
-//   stdout.flush()?;
-
-//   execute!(stdout, terminal::LeaveAlternateScreen)
-// }
-
-// use std::io::{Write, stdout};
-// use crossterm::{execute, style::Print};
-// fn main() {
-//     // will be executed directly
-//     execute!(stdout(), Print("sum:\n".to_string()));
-//     // will be executed directly
-//     execute!(stdout(), Print("1 + 1 = ".to_string()), Print((1+1).to_string()));
-// }
-
-// // ==== Output ====
-// // sum:
-// // 1 + 1 = 2
-
-// #![cfg(feature = "bracketed-paste")]
-// use crossterm::{
-//     event::{
-//         read, DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
-//         EnableFocusChange, EnableMouseCapture, Event,
-//     },
-//     execute,
-// };
-
-// fn main() -> std::io::Result<()> {
-//     execute!(
-//          std::io::stdout(),
-//          EnableBracketedPaste,
-//          EnableFocusChange,
-//          EnableMouseCapture
-//     )?;
-//     loop {
-//         // `read()` blocks until an `Event` is available
-//         match read()? {
-//             Event::FocusGained => println!("FocusGained"),
-//             Event::FocusLost => println!("FocusLost"),
-//             Event::Key(event) => println!("{:?}", event),
-//             Event::Mouse(event) => println!("{:?}", event),
-//             #[cfg(feature = "bracketed-paste")]
-//             Event::Paste(data) => println!("{:?}", data),
-//             Event::Resize(width, height) => println!("New size {}x{}", width, height),
-//         }
-//     }
-//     execute!(
-//         std::io::stdout(),
-//         DisableBracketedPaste,
-//         DisableFocusChange,
-//         DisableMouseCapture
-//     )?;
-//     Ok(())
-// }

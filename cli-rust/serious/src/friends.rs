@@ -39,9 +39,6 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-pub const WIDTH: u16 = 90;
-pub const HEIGHT: u16 = 30;
-
 pub trait FriendsDisplay {
     async fn get_indexed_friends(&mut self) -> Result<()>;
     async fn add_friend(&mut self) -> Result<()>;
@@ -50,34 +47,31 @@ pub trait FriendsDisplay {
     async fn send_delete_friend_request(&mut self) -> Result<()>;
     async fn get_id(&self) -> Result<i64>;
     async fn get_all_friends(&self) -> Result<Vec<(String, bool)>>;
-    // fn print_friends(&self, area: Rect, buf: &mut Buffer, friends: &Vec<(String, bool)>) -> Result<Vec<String>>;
 }
 
 impl FriendsDisplay for Infos  {
     async fn get_indexed_friends(&mut self) -> Result<()> {
         let friends = self.get_all_friends().await?;
-        // eprintln!("friends: {:?}", friends);
-        // std::thread::sleep(Duration::from_secs(3));
         let mut printable: Vec<String> = vec![];
-        let mut i: usize = 0;
-        if self.index * 10 < friends.len() {
+        // let mut i: usize = 0;
+        // if self.index * 10 < friends.len() {
             let mut str_tmp: String = String::new();
-            for element in &friends[self.index * 10..] {
-                if (self.index * 10 + i) as usize > friends.len() || i > 9 {
-                    break;
-                } else {
+            for element in &friends[..] {
+                // if (self.index * 10 + i) as usize > friends.len() || i > 9 {
+                //     break;
+                // } else {
                     str_tmp = element.0.clone();
                     if element.1 == false {
                         str_tmp = str_tmp + " (Pending)";
                     }
-                }
+                // }
                 printable.push(str_tmp);
-                i += 1;
+                // i += 1;
             }
-        }
-        if i == 10 && friends.len() > self.index * 10 + i {
-            printable.push("...".to_string());
-        }
+        // }
+        // if i == 10 && friends.len() > self.index * 10 + i {
+        //     printable.push("...".to_string());
+        // }
         self.friends = printable;
         Ok(())
     }
@@ -181,44 +175,8 @@ impl FriendsDisplay for Infos  {
             Some(id) => result = id,
             _ => {return Err(anyhow::anyhow!("Friend not found"))}
         }
-        // eprintln!("{:?}", response);
-        // std::thread::sleep(Duration::from_secs(5));
         Ok(result)
     }
-    // fn print_friends(&self, area: Rect, buf: &mut Buffer, friends: &Vec<(String, bool)>) -> Result<Vec<String>> {
-    //     let mut printable: Vec<String> = vec![];
-    //     let mut i: usize = 0;
-    //     if self.index * 10 < friends.len() {
-    //         let mut str_tmp: String = String::new();
-    //         for element in &friends[self.index * 10..] {
-    //             if (self.index * 10 + i) as usize > friends.len() || i > 9 {
-    //                 break;
-    //             } else {
-    //                 str_tmp = element.0.clone();
-    //                 if element.1 == false {
-    //                     str_tmp = str_tmp + " (Pending)";
-    //                 }
-    //             }
-    //             printable.push(str_tmp);
-    //             i += 1;
-    //         }
-    //     }
-    //     if i == 10 && friends.len() > self.index * 10 + i {
-    //         printable.push("...".to_string());
-    //         // stdout()
-    //         //     .queue(cursor::MoveTo(4, 24))?
-    //         //     .queue(Print("..."))?;
-
-    //     }
-
-
-    //     // let menu = format!("Menu: 1. ADD   2. DELETE   3. DM   {} Previous   {} Next    ESC. Back", '←', '→');
-    //     // stdout()
-    //     //     .queue(cursor::MoveTo(2, HEIGHT - 1))?
-    //     //     .queue(Print(menu))?;
-    //     // stdout().flush()?;
-    //     Ok(printable)
-    // }
     async fn get_all_friends(&self) -> Result<Vec<(String, bool)>> {
         let url = format!("https://{}/api/friends/get?user_id={}", self.location, self.id);
         let response = self.client

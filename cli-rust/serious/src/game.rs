@@ -270,7 +270,6 @@ impl Game {
 				eprintln!("Error: {}", e);
 			}
 		});
-		// let state = self.shared_state.clone();
 		tokio::spawn(async move {
 			Self::read_socket(ws_read, state_sender).await;
 		});
@@ -340,14 +339,14 @@ impl Game {
 				else if let Event::Key(key_event) = event {
 					match key_event.code {
 						KeyCode::Up => match key_event.kind {
-							KeyEventKind::Press => {up = (true, std::time::Instant::now(), 500)},
-							KeyEventKind::Repeat => {eprintln!("KEYREPEAT");up = (true, std::time::Instant::now(), 100)},
+							KeyEventKind::Press => {up = (true, std::time::Instant::now(), 100)},
+							KeyEventKind::Repeat => {up = (true, std::time::Instant::now(), 100)},
 							KeyEventKind::Release => {up = (false, std::time::Instant::now(), 100)},
 						},
 						// KeyCode::Up => up = (true, std::time::Instant::now()),
 						// KeyCode::Down => down = (true, std::time::Instant::now(), 100),
 						KeyCode::Down => match key_event.kind {
-							KeyEventKind::Press => {down = (true, std::time::Instant::now(), 500)},
+							KeyEventKind::Press => {down = (true, std::time::Instant::now(), 100)},
 							KeyEventKind::Repeat => {down = (true, std::time::Instant::now(), 100)},
 							KeyEventKind::Release => {down = (false, std::time::Instant::now(), 100)},
 						},						
@@ -389,58 +388,3 @@ impl Game {
 		}
 	}
 }
-
-
-// async startGame(): Promise<void>
-// 	{
-// 		await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
-// 		{
-// 			method: 'POST',
-// 		});
-
-// 		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerId}`);
-// 		this.socket.binaryType = 'arraybuffer';
-
-// 		this.socket.onopen = () =>
-// 		{
-// 			this.setupEventListeners();
-// 			this.interval = setInterval(() => { this.send(); }, GameClient.IPS_INTERVAL);
-// 		};
-
-// 		this.socket.onmessage = (event) =>
-// 		{
-// 			this.updateGameState(event.data);
-// 		};
-
-// 		this.socket.onclose = () =>
-// 		{
-// 			this.stopGameLoop();
-// 		};
-
-// 		this.socket.onerror = (error) =>
-// 		{
-// 			console.error('WebSocket error:', error);
-// 			this.stopGameLoop();
-// 		};
-// 	}
-
-
-
-
-//  Response: Object {"gameId": String("442c772e-0ec8-447e-8f1d-b87f00c76380"), 
-//"opponentId": String("35"), 
-//"playerId": Number(2)}
-
-// pub struct {
-
-// }
-
-/*
-Need to do when I create a game
-    -> login or play as guest --> connect through wss?
-        Gameclient->Front->Startgame
-    -> select which mode
-    -> get infos from db (Guest or infos)
-    -> init --> POST to /api/whatever?
-
-*/

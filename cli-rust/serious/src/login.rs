@@ -126,7 +126,7 @@ impl Authentify for Infos {
     async fn signup(&mut self) -> Result<()> {
         let apiloc = format!("https://{}/api/user/create", self.location);
         let mut body: HashMap<&str, &str> = HashMap::new();
-        body.insert("username", self.auth.get_email());
+        body.insert("username", self.auth.get_username());
         body.insert("passw", self.auth.get_password());
         body.insert("email", self.auth.get_email());
         let response = self.client.post(apiloc)

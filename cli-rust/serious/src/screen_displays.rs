@@ -19,7 +19,6 @@ use std::thread::{sleep};
 use crossterm::{
   ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
 };
-
 use crate::login::Field;
 use crate::friends::FriendsDisplay;
 use crate::game::GameStats;
@@ -39,12 +38,10 @@ use ratatui::{
     symbols::{border, Marker},
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget, canvas::Canvas, Borders},
-    DefaultTerminal, Frame,
+    DefaultTerminal, 
+    Frame,
     text::Span,
 };
-
-pub const WIDTH: u16 = 90;
-pub const HEIGHT: u16 = 30;
 
 use super::Infos;
 
@@ -103,7 +100,7 @@ impl ScreenDisplayer for Infos {
         print_block(instructions, area, buf);
     }
     fn display_social_screen(&self, area: Rect, buf: &mut Buffer) {
-     let instructions = Line::from(vec![
+        let instructions = Line::from(vec![
             "1. ".bold(),
             "YOUR FRIENDS ".blue(),
             "2. ".bold(),
@@ -112,7 +109,7 @@ impl ScreenDisplayer for Infos {
             "GO BACK ".blue(),
             "ESC. ".bold(),
             "Quit".blue(),
-    ]);
+        ]);
         print_block(instructions, area, buf);
     }
     fn display_waiting_screen(&self, area: Rect, buf: &mut Buffer) {
@@ -134,13 +131,26 @@ impl ScreenDisplayer for Infos {
             "→ ".bold(),
             "Next ".blue(),
             "ESC. ".bold(),
-            "Quit".blue(),
+            "Back".blue(),
         ]);
         let block = Block::bordered()
                 .title(Line::from("Your Friends").bold().centered())
                 .title_bottom(instructions.centered())
                 .border_set(border::THICK);
-        let lines: Vec<Line> = self.friends
+        let mut friends_display: Vec<String> = vec![];
+        let height: usize = (area.height - 2) as usize;
+        let max: usize = match (self.index * height + height + 1) >= self.friends.len() {
+            true => self.friends.len(),
+            false => (self.index * height) + height + 1
+        };
+        let min = match self.index * height < self.friends.len() {
+            true => self.index * height,
+            false => self.friends.len(),
+        };
+        for friend in &self.friends[min..max] {
+            friends_display.push(friend.clone());
+        }
+        let lines: Vec<Line> = friends_display
                                     .iter()
                                     .map(|friend| Line::from(friend.clone().bold()))
                                     .collect();
@@ -165,7 +175,7 @@ impl ScreenDisplayer for Infos {
             .paint(|ctx| {
                 ctx.draw(&Circle {
                     x: self.game.game_stats.ball_x as f64,
-                    y: (95.0 - self.game.game_stats.ball_y) as f64,
+                    y: (100.0 - self.game.game_stats.ball_y) as f64,
                     radius: 0.5,
                     color: Color::Yellow,
                 });
@@ -178,7 +188,7 @@ impl ScreenDisplayer for Infos {
                 });
                 ctx.draw(&Rectangle {
                     x: 95.0,
-                    y: (100.0 - self.game.game_stats.right_y) as f64,
+                    y: (95.0 - self.game.game_stats.right_y) as f64,
                     width: 2.0,
                     height: 10.0,
                     color: Color::Green,
@@ -361,68 +371,3 @@ fn print_block(instructions: Line, area: Rect, buf: &mut Buffer) {
             .block(block)
             .render(area, buf);        
 }
-
-// impl Shape for GameStats {
-//     // Required method
-//     fn draw(&self, painter: &mut Painter<'_, '_>) {
-
-//     }
-// }
-
-// fn normalize(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> (u16, u16, u16, u16, f32, f32, u8, u8) {
-//     let (left_y, right_y, ball_x, ball_y, _speed_x, _speed_y, player1_score, player2_score) = message;
-//     let my_left_y = (left_y * HEIGHT as f32 / 100.0) as u16;
-//     let my_right_y = (right_y * HEIGHT as f32 / 100.0) as u16;
-//     let my_ball_y = (ball_y * HEIGHT as f32 / 100.0) as u16;
-//     let my_ball_x = (ball_x * WIDTH as f32 / 100.0) as u16;
-//     (my_left_y, my_right_y, my_ball_x, my_ball_y, _speed_x, _speed_y, player1_score, player2_score)
-// }
-
-// fn display(message: (f32, f32, f32, f32, f32, f32, u8, u8)) -> Result<()> {
-//     stdout().execute(terminal::Clear(terminal::ClearType::All))?;
-//     let normalized = normalize(message);
-//     let (left_y, right_y, ball_x, ball_y, speed_x, speed_y, player1_score, player2_score) = normalized;
-//     // borders(&stdout)?;
-//     stdout()
-//         .queue(cursor::MoveTo(ball_x, ball_y))?
-//         .queue(Print("o"))?
-//         .queue(cursor::MoveTo(1, left_y))?
-//         .queue(Print("I"))?
-//         .queue(cursor::MoveTo(WIDTH - 1, right_y))?
-//         .queue(Print("I"))?;
-//     stdout().flush()?;
-//     Ok(())
-// }X
-
-
-// async fn display_friends(game_main: &Infos) -> Result<()> {
-//     let mut index: usize = 0;
-//     loop {
-//         let friends_list = get_friends(game_main).await?;
-//         print_friends(&friends_list, &index)?;
-//         if (poll(Duration::from_millis(16)))? {
-//             let event: Event = event::read()?;
-    
-//             if (should_exit(&event))? == true {
-//                 return Ok(());
-//             }
-//             else if let Event::Key(key_event) = event {
-//                 match key_event.code {
-//                     KeyCode::Char('1') => {add_friend(game_main).await?},
-//                     KeyCode::Char('2') => {delete_friend(game_main).await?},
-//                     KeyCode::Char('3') => {},
-//                     KeyCode::Right => {
-//                         if index < usize::MAX {
-//                             index += 1;
-//                         }
-//                     },
-//                     KeyCode::Left => {if index > 0 {
-//                         index -= 1;
-//                        }
-//                     },
-//                     _ => {},
-//                 }
-//             }
-//         }
-//     }
-// }

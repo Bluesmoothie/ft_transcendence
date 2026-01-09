@@ -9,8 +9,6 @@ use reqwest::{Client};
 use tokio_tungstenite::tungstenite::protocol::frame;
 
 use crate::{login::Authentify, welcome::{draw_welcome_screen, game_setup, setup_terminal}};
-// use crate::game::{create_game};
-// use crate::friends::social_life;
 
 // use crate::login::{create_guest_session};
 use tokio::{net::unix::pipe::Receiver, sync::mpsc};
@@ -94,11 +92,8 @@ impl EventHandler for Infos {
               KeyCode::Char('1') => {self.screen = CurrentScreen::SignUp;},
               KeyCode::Char('2') => {self.screen = CurrentScreen::Login;},
               KeyCode::Char('3') => {
-                if let Err(error) = self.create_guest_session().await {
-                  self.error(error.to_string());
-                } else {
-                  self.screen = CurrentScreen::Welcome;
-                }
+                self.create_guest_session().await?;
+                self.screen = CurrentScreen::Welcome;
               },
               _ => {},
           }
@@ -109,7 +104,6 @@ impl EventHandler for Infos {
   async fn handle_social_events(&mut self) -> Result<()> {
     self.get_indexed_friends().await?;
     let event = event::read()?;
-
     if should_exit(&event)? == true {
         self.exit = true;
     }
@@ -142,11 +136,8 @@ impl EventHandler for Infos {
             KeyCode::Backspace => {self.auth.pop()},
             KeyCode::Tab => {self.auth.down_field_signup()}
             KeyCode::Enter => {if *self.auth.get_field() == Field::Password {
-              if let Err(error) = self.signup().await {
-                  self.error(error.to_string());
-              } else {
-                self.screen = CurrentScreen::Welcome;
-              }
+              self.signup().await?;
+              self.screen = CurrentScreen::Welcome;
             } else {self.auth.down_field_signup()}} 
             _ => {},
           }
@@ -169,11 +160,8 @@ impl EventHandler for Infos {
             KeyCode::Backspace => {self.auth.pop();},
             KeyCode::Tab => {self.auth.down_field_login()},
             KeyCode::Enter => {if *self.auth.get_field() == Field::Totp {
-              if let Err(error) = self.login().await {
-                  self.error(error.to_string());
-                } else {
-                  self.screen = CurrentScreen::Welcome;
-                }
+              self.login().await?;
+              self.screen = CurrentScreen::Welcome;
               } else {
               self.auth.down_field_login()
               }
@@ -188,7 +176,7 @@ impl EventHandler for Infos {
   fn handle_friends_events(&mut self) -> Result<()> {
       let event = event::read()?;
       if should_exit(&event)? == true {
-          self.exit = true;
+        self.screen = CurrentScreen::SocialLife      
       }
       else if let Event::Key(key_event) = event {
           match key_event.code {
@@ -198,11 +186,14 @@ impl EventHandler for Infos {
           KeyCode::Char('2') => {
             self.screen = CurrentScreen::DeleteFriend
           },
-          KeyCode::Left => {},
-          KeyCode::Right => {},
+          KeyCode::Right => {if self.index < self.index_max {self.index += 1}},
+          KeyCode::Left => {if self.index > usize::MIN {self.index -= 1}},
           _ => {},
           }
-      }      
+      }
+      else if let Event::Resize(_, _) = event {
+        self.index = 0;
+      }
       Ok(())
   }
 }
