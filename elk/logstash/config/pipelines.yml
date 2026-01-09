@@ -1,2 +1,5 @@
 - pipeline.id: modsec
   path.config: "/usr/share/logstash/pipeline/modsec.conf"
+
+- pipeline.id: grafana
+  path.config: "/usr/share/logstash/pipeline/grafana.conf"

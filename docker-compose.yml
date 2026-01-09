@@ -96,12 +96,15 @@ services:
       - ./monitoring/conf/grafana/defaults.ini:/usr/share/grafana/conf/defaults.ini
       - ./monitoring/conf/grafana/grafana-provisioning:/etc/grafana/provisioning
       - grafana:/var/lib/grafana
+      - grafana-logs:/var/log/grafana:rw
     networks:
       - monitoring_net
     ports:
       - "3001:3001"
     depends_on:
       - prometheus
+    environment:
+      - GF_LOG_MODE=file
 
   nginx_prom_export:
     image: nginx/nginx-prometheus-exporter:1.5.1
@@ -133,6 +136,7 @@ services:
       - ./elk/logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
       - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
       - modsecurity_logs:/var/log/nginx:ro
+      - grafana-logs:/var/log/grafana:ro
     depends_on:
       - elasticsearch
       - modsecurity
@@ -140,6 +144,8 @@ services:
       - .env
     networks:
       - elk_net
+    environment:
+      - PATH_LOGS=/var/log/logstash
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.0
@@ -195,3 +201,4 @@ volumes:
   es_data:
   modsecurity_logs:
   grafana:
+  grafana-logs:
