@@ -73,13 +73,13 @@ use tokio::net::TcpStream;
 #[derive(Default)]
 pub struct Game {
 	location: String,
-	original_size: (u16, u16),
 	id: u64,
 	client: Client,
 	game_id: String,
 	opponent_id: u64,
 	player_side: u64,
 	receiver: Option<watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>>,
+	pub game_checker: Option<mpsc::Receiver<bool>>,
 	pub game_stats: GameStats,
 	game_sender: Option<mpsc::Sender<u8>>,
 }
@@ -151,6 +151,11 @@ impl Gameplay for Infos {
 		let mut state_receiver = match self.game.receiver.clone() {
 			Some(receiver) => receiver,
 			_ => {return Err(anyhow!("State receiver is empty"));}
+		};
+		if let Some(checker) = &mut self.game.game_checker {
+			if let Ok(true) = checker.try_recv() {
+				self.screen = crate::CurrentScreen::GameChoice;
+			}
 		};
 		if let Some(sender) = &self.game.game_sender {
 			state_receiver.changed().await?;
@@ -260,13 +265,14 @@ impl Game {
 			).await?;
 		let (ws_write, ws_read) = ws_stream.split();
 		let (sender, receiver): (mpsc::Sender<u8>, mpsc::Receiver<u8>) = mpsc::channel(1);
-		let cloned_size = self.original_size.clone();
 		let (state_sender, state_receiver): 
 			(watch::Sender<(Option<Bytes>, Option<Utf8Bytes>)>, watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>) 
 				= watch::channel((None, None));
 		self.receiver = Some(state_receiver);
+		let (game_sender, game_checker): (mpsc::Sender<bool>, mpsc::Receiver<bool>) = mpsc::channel(1);
+		self.game_checker = Some(game_checker);
 		tokio::task::spawn(async move {
-			if let Err(e) = Self::send_game(ws_write, receiver, cloned_size).await {
+			if let Err(e) = Self::send_game(ws_write, receiver, game_sender).await {
 				eprintln!("Error: {}", e);
 			}
 		});
@@ -311,14 +317,13 @@ impl Game {
 		let player2_score: u8 =  msg[25];
 		Ok((left_y, right_y, ball_x, ball_y, _speed_x, _speed_y, player1_score, player2_score))
 	}
-	async fn send_game(mut ws_write: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>, mut receiver: mpsc::Receiver<u8>, original_size: (u16, u16)) -> Result<()> {
+	async fn send_game(mut ws_write: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>, mut receiver: mpsc::Receiver<u8>, game_sender: mpsc::Sender<bool>) -> Result<()> {
 		let mut up: (bool, Instant, u128) = (false, std::time::Instant::now(), 0);
 		let mut down: (bool, Instant, u128) = (false, std::time::Instant::now(), 0);
 		let mut to_send = String::new();
 		loop {
-			match receiver.try_recv() {
-				Ok(_) => break,
-				_ => {},
+			if let Ok(_) = receiver.try_recv() {
+				break;
 			}
 			to_send.clear();
 			if up.0 == true {
@@ -334,7 +339,8 @@ impl Game {
 			if poll(Duration::from_millis(16))? {
 				let event = event::read()?;
 				if should_exit(&event)? == true {
-					cleanup_and_quit(&original_size)?;
+					game_sender.send(true).await?;
+					break;
 				} 
 				else if let Event::Key(key_event) = event {
 					match key_event.code {
@@ -362,6 +368,7 @@ impl Game {
 			}
 			tokio::time::sleep(Duration::from_millis(1)).await;
 		}
+		ws_write.close().await?;
 		Ok(())
 	}
 	async fn read_socket(mut ws_read: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>, state_sender: watch::Sender<(Option<Bytes>, Option<Utf8Bytes>)>) {
