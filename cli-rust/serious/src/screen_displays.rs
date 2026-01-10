@@ -172,7 +172,7 @@ impl ScreenDisplayer for Infos {
                     color: Color::Green,
                 });
                 ctx.draw(&Rectangle {
-                    x: 95.0,
+                    x: 97.0,
                     y: (95.0 - self.game.game_stats.right_y) as f64,
                     width: 2.0,
                     height: 10.0,
