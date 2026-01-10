@@ -55,11 +55,11 @@ impl EventHandler for Infos {
     }
     else if let Event::Key(key_event) = event {
       if key_event.kind == KeyEventKind::Press {
-          match key_event.code {
-              KeyCode::Char('1') => {self.screen = CurrentScreen::GameChoice;},
-              KeyCode::Char('2') => {self.screen = CurrentScreen::SocialLife;},
-              _ => {},
-          }
+        match key_event.code {
+            KeyCode::Up => {self.screen = CurrentScreen::GameChoice;},
+            KeyCode::Right => {self.screen = CurrentScreen::SocialLife;},
+            _ => {},
+        }
       }
     }
     Ok(())
@@ -72,9 +72,8 @@ impl EventHandler for Infos {
     else if let Event::Key(key_event) = event {
       if key_event.kind == KeyEventKind::Press {
           match key_event.code {
-              // KeyCode::Char('1') => {self.screen = CurrentScreen::GameChoice;},
-              KeyCode::Char('2') => {self.screen = CurrentScreen::CreateGame;},
-              KeyCode::Char('4') => {self.screen = CurrentScreen::Welcome;},
+              KeyCode::Right => {self.screen = CurrentScreen::CreateGame;},
+              KeyCode::Left => {self.screen = CurrentScreen::Welcome;},
               _ => {},
           }
       }
@@ -89,9 +88,9 @@ impl EventHandler for Infos {
     else if let Event::Key(key_event) = event {
       if key_event.kind == KeyEventKind::Press {
           match key_event.code {
-              KeyCode::Char('1') => {self.screen = CurrentScreen::SignUp;},
-              KeyCode::Char('2') => {self.screen = CurrentScreen::Login;},
-              KeyCode::Char('3') => {
+              KeyCode::Up => {self.screen = CurrentScreen::SignUp;},
+              KeyCode::Down => {self.screen = CurrentScreen::Login;},
+              KeyCode::Right => {
                 self.create_guest_session().await?;
                 self.screen = CurrentScreen::Welcome;
               },
@@ -108,17 +107,13 @@ impl EventHandler for Infos {
         self.exit = true;
     }
     else if let Event::Key(key_event) = event {
-        match key_event.code {
-        // KeyCode::Char('1') => {display_friends(game_main).await?;},
-        KeyCode::Char('1') => {
+      match key_event.code {
+        KeyCode::Right => {
           self.screen = CurrentScreen::FriendsDisplay
         },
-        KeyCode::Char('2') => {
-            //chat();
-        },
-        KeyCode::Char('3') => {self.screen = CurrentScreen::Welcome},
+        KeyCode::Left => {self.screen = CurrentScreen::Welcome},
         _ => {},
-        }
+      }
     }
     Ok(()) 
   }
@@ -180,10 +175,10 @@ impl EventHandler for Infos {
       }
       else if let Event::Key(key_event) = event {
           match key_event.code {
-          KeyCode::Char('1') => {
+          KeyCode::Up => {
             self.screen = CurrentScreen::AddFriend
           },
-          KeyCode::Char('2') => {
+          KeyCode::Down => {
             self.screen = CurrentScreen::DeleteFriend
           },
           KeyCode::Right => {if self.index < self.index_max {self.index += 1}},

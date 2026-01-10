@@ -59,79 +59,89 @@ pub trait ScreenDisplayer: FriendsDisplay {
     fn display_error_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_addfriends_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_delete_friends_screen(&self, area: Rect, buf: &mut Buffer);
+    fn print_demo(&self, area: Rect, buf: &mut Buffer);
 }
 
 impl ScreenDisplayer for Infos {
     fn display_first_screen(&self, area: Rect, buf: &mut Buffer) {
+        let layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints(vec![
+                            Constraint::Max(10),
+                            Constraint::Fill(1),
+                        ])
+                        .split(area);
+        self.print_demo(layout[1], buf);
         let instructions = Line::from(vec![
-                "1. ".bold(),
-                "SIGNUP ".blue(),
-                "2. ".bold(),
-                "LOGIN ".blue(),
-                "3. ".bold(),
-                "SIGN IN AS GUEST ".blue(),
-                "ESC. ".bold(),
-                "Quit".blue(),
+                " Menu: ↑ Sign up ".bold(),
+                "↓ Login ".bold(),
+                "→  Sign in as guest ".bold(),
+                "ESC. Quit ".bold(),
         ]);
-        print_block(instructions, area, buf);
+        print_block(instructions, layout[0], buf);
     }
     fn display_welcome_screen(&self, area: Rect, buf: &mut Buffer) {
+        let layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints(vec![
+                            Constraint::Max(10),
+                            Constraint::Fill(1),
+                        ])
+                        .split(area);
+        self.print_demo(layout[1], buf);
         let instructions = Line::from(vec![
-                "1. ".bold(),
-                "GAME ".blue(),
-                "2. ".bold(),
-                "SOCIAL LIFE ".blue(),
-                "ESC. ".bold(),
-                "Quit".blue(),
+                " Menu: ↑ Game ".bold(),
+                "→ Social Life ".bold(),
+                "ESC. Quit ".bold(),
         ]);
-        print_block(instructions, area, buf);
+        print_block(instructions, layout[0], buf);
     }
     fn display_gamechoice_screen(&self, area: Rect, buf: &mut Buffer) {
+        let layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints(vec![
+                            Constraint::Max(10),
+                            Constraint::Fill(1),
+                        ])
+                        .split(area);
+        self.print_demo(layout[1], buf);
         let instructions = Line::from(vec![
-                "1. ".bold(),
-                "LOCAL ".blue(),
-                "2. ".bold(),
-                "ONLINE ".blue(),
-                "4. ".bold(),
-                "GO BACK ".blue(),
-                "ESC. ".bold(),
-                "Quit".blue(),
+                " Menu: → Online ".bold(),
+                "← Back  ".bold(),
+                "ESC. Quit ".bold(),
         ]);
-        print_block(instructions, area, buf);
+        print_block(instructions, layout[0], buf);
     }
     fn display_social_screen(&self, area: Rect, buf: &mut Buffer) {
+        let layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints(vec![
+                            Constraint::Max(10),
+                            Constraint::Fill(1),
+                        ])
+                        .split(area);
+        self.print_demo(layout[1], buf);
         let instructions = Line::from(vec![
-            "1. ".bold(),
-            "YOUR FRIENDS ".blue(),
-            "2. ".bold(),
-            "CHAT ".blue(),
-            "3. ".bold(),
-            "GO BACK ".blue(),
-            "ESC. ".bold(),
-            "Quit".blue(),
+            " Menu: → Your Friends  ".bold(),
+            "← Back  ".bold(),
+            "ESC. Quit ".bold(),
         ]);
-        print_block(instructions, area, buf);
+        print_block(instructions, layout[0], buf);
     }
     fn display_waiting_screen(&self, area: Rect, buf: &mut Buffer) {
         let block = Block::bordered().border_set(border::THICK);
-        let spanlist: Vec<Span> = vec!["Searching \n".bold(), "For \n".bold(), "Opponent \n".bold()];
-        Paragraph::new(Line::from(spanlist))
+        Paragraph::new(Line::from("Searching for opponent".bold()))
             .centered()
             .block(block)
             .render(area, buf);
     }
     fn display_friends_screen(&self, area: Rect, buf: &mut Buffer){
         let instructions = Line::from(vec![
-            "1. ".bold(),
-            "ADD FRIEND ".blue(),
-            "2. ".bold(),
-            "DELETE FRIEND ".blue(),
-            "← ".bold(),
-            "Previous ".blue(),
-            "→ ".bold(),
-            "Next ".blue(),
-            "ESC. ".bold(),
-            "Back".blue(),
+            " Menu: ↑ Add friend ".bold(),
+            "↓ Delete friend ".bold(),
+            "← Previous ".bold(),
+            "→ Next ".bold(),
+            "ESC. Back".bold(),
         ]);
         let block = Block::bordered()
                 .title(Line::from("Your Friends").bold().centered())
@@ -315,8 +325,8 @@ impl ScreenDisplayer for Infos {
             .render(area, buf);
     }
     fn display_addfriends_screen(&self, area: Rect, buf: &mut Buffer) {
-        let friend = format!("{}", 
-            self.friend_tmp,);
+        let friend = format!("{}{}", 
+            self.friend_tmp, if self.auth.blink {"|"} else {""});
         let content = vec![
             Line::from(Span::styled(
                 "Add a friend",
@@ -338,8 +348,8 @@ impl ScreenDisplayer for Infos {
             .render(area, buf);        
     }
     fn display_delete_friends_screen(&self, area: Rect, buf: &mut Buffer) {
-        let friend = format!("{}", 
-            self.friend_tmp,);
+        let friend = format!("{}{}", 
+            self.friend_tmp, if self.auth.blink {"|"} else {""});
         let content = vec![
             Line::from(Span::styled(
                 "Delete a friend",
@@ -359,6 +369,36 @@ impl ScreenDisplayer for Infos {
             )
             .alignment(Alignment::Left)
             .render(area, buf);        
+    }
+    fn print_demo(&self, area: Rect, buf: &mut Buffer) {
+                Canvas::default()
+            .block(Block::bordered())
+            .marker(Marker::Braille)
+            .x_bounds([0.0, 100.0])
+            .y_bounds([0.0, 100.0])
+            .paint(|ctx| {
+                ctx.draw(&Circle {
+                    x: self.demo.ball_x as f64,
+                    y: self.demo.ball_y,
+                    radius: 0.5,
+                    color: Color::Yellow,
+                });
+                ctx.draw(&Rectangle {
+                    x: 1.5,
+                    y: self.demo.paddle_left_y,
+                    width: 2.0,
+                    height: 10.0,
+                    color: Color::Green,
+                });
+                ctx.draw(&Rectangle {
+                    x: 95.0,
+                    y: self.demo.paddle_right_y,
+                    width: 2.0,
+                    height: 10.0,
+                    color: Color::Green,
+                });
+            })
+            .render(area, buf);
     }
 }
 

@@ -27,7 +27,7 @@ pub struct Auth {
     username: String,
     totp: String,
     field: Field,
-    blink: bool,
+    pub blink: bool,
 }
 
 impl Auth {

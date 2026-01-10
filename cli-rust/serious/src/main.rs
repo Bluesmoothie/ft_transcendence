@@ -11,12 +11,12 @@ mod game;
 mod friends;
 mod infos_events;
 mod screen_displays;
-
+mod game_demo;
 use crate::infos_events::EventHandler;
 use crate::screen_displays::ScreenDisplayer;
 use crate::welcome::game_setup;
 use crate::friends::FriendsDisplay;
-
+use crate::game_demo::Demo;
 mod login;
 use crate::game::{Game, Gameplay};
 use tokio::{sync::mpsc, time::Duration};
@@ -72,6 +72,7 @@ pub struct Infos {
   auth: Auth,
   receiver: Option<mpsc::Receiver<serde_json::Value>>,
   error: String,
+  demo: Demo,
 }
 
 #[tokio::main]
@@ -109,8 +110,21 @@ impl Infos {
         if let Err(e) = terminal.draw(|frame| self.draw(frame)) {
           self.error(e.to_string());
         }
-        if let Err(e) = self.handle_events().await {
-          self.error(e.to_string());
+        match self.screen {
+          CurrentScreen::FirstScreen | CurrentScreen::GameChoice | 
+            CurrentScreen::SocialLife | CurrentScreen::Welcome => {
+              self.demo.update(100, 100);
+              if event::poll(Duration::from_millis(16))? {
+                if let Err(e) = self.handle_events().await {
+                  self.error(e.to_string());
+                }
+              }
+            },
+          _ => {
+              if let Err(e) = self.handle_events().await {
+                  self.error(e.to_string());
+              }
+            }
         }
     }
     Ok(())
@@ -157,7 +171,7 @@ impl Infos {
       0 => 0,
       _ => 1
     };
-    if height < len {
+    if height < len && height != 0 {
       self.index_max = len / height + modulo;
     } else {
       self.index_max = 0;
