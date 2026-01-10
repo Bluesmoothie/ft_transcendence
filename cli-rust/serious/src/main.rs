@@ -4,7 +4,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use serde_json;
-
+use console_subscriber;
 use reqwest::{Client};
 mod welcome;
 mod game;
@@ -14,7 +14,6 @@ mod screen_displays;
 mod game_demo;
 use crate::infos_events::EventHandler;
 use crate::screen_displays::ScreenDisplayer;
-use crate::welcome::game_setup;
 use crate::friends::FriendsDisplay;
 use crate::game_demo::Demo;
 mod login;
@@ -22,9 +21,7 @@ use crate::game::{Game, Gameplay};
 use tokio::{sync::mpsc, time::Duration};
 use crate::login::Auth;
 
-use crossterm::{
-  ExecutableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyModifiers, PopKeyboardEnhancementFlags}, terminal
-};
+use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 use welcome::LOGO;
 
@@ -34,9 +31,6 @@ use ratatui::{
     widgets::Widget,
     DefaultTerminal, Frame,
 };
-
-pub const WIDTH: u16 = 90;
-pub const HEIGHT: u16 = 30;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CurrentScreen {
@@ -77,6 +71,7 @@ pub struct Infos {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+  console_subscriber::init();
   let location = match get_location() {
     Ok(result) => result,
     Err(e) => {return Err(anyhow!("{}", e));},
@@ -113,7 +108,7 @@ impl Infos {
         match self.screen {
           CurrentScreen::FirstScreen | CurrentScreen::GameChoice | 
             CurrentScreen::SocialLife | CurrentScreen::Welcome => {
-              self.demo.update(100, 100);
+              self.demo.update();
               if event::poll(Duration::from_millis(16))? {
                 if let Err(e) = self.handle_events().await {
                   self.error(e.to_string());
@@ -145,7 +140,7 @@ impl Infos {
       CurrentScreen::EndGame => {self.handle_endgame()?},
       CurrentScreen::CreateGame => {self.create_game("online").await?},
       CurrentScreen::PlayGame => {self.handle_game_events().await?},
-      CurrentScreen::ErrorScreen => {self.handle_errors()},
+      CurrentScreen::ErrorScreen => {self.handle_errors().await},
       CurrentScreen::AddFriend => {self.add_friend().await?},
       CurrentScreen::DeleteFriend => {self.delete_friend().await?},
     }
@@ -159,8 +154,8 @@ impl Infos {
     self.error = error;
     self.screen = CurrentScreen::ErrorScreen;
   }
-  pub fn handle_errors(&mut self) {
-    std::thread::sleep(Duration::from_secs(2));
+  async fn handle_errors(&mut self) {
+    tokio::time::sleep(Duration::from_secs(2)).await;
     self.screen = self.post_error_screen;
   }
   async fn update_friends_index(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
@@ -219,18 +214,6 @@ fn get_location() -> Result<String> {
     Ok(first)
 }
 
-pub fn wrong_resize_game_page(event: &Event) -> Result<bool> {
-  if let Event::Resize(x,y ) = event {
-    if *x < WIDTH || *y < HEIGHT {
-      return Ok(true);
-    }
-    else {
-      game_setup()?;
-    }
-  }
-  Ok(false)
-}
-
 pub fn should_exit(event: &Event) -> Result<bool> {
   if let Event::Key(key_event) = event {
     if key_event.code == KeyCode::Esc || 
@@ -240,23 +223,4 @@ pub fn should_exit(event: &Event) -> Result<bool> {
     }
   }
   Ok(false)
-}
-
-pub fn cleanup_and_quit(original_size: &(u16, u16)) -> std::io::Result<()> {
-  stdout().execute(cursor::Show)?;
-  stdout().execute(SetCursorStyle::BlinkingBlock)?;
-  stdout().execute(terminal::LeaveAlternateScreen)?;
-  stdout().execute(terminal::SetSize(original_size.0, original_size.1))?;
-  stdout().execute(PopKeyboardEnhancementFlags)?;
-  terminal::disable_raw_mode()?;
-  std::process::exit(0);
-}
-
-pub fn clean_terminal(original_size: &(u16, u16)) -> Result<()> {
-  stdout().execute(cursor::Show)?;
-  stdout().execute(terminal::LeaveAlternateScreen)?;
-  stdout().execute(terminal::SetSize(original_size.0, original_size.1))?;
-  stdout().execute(PopKeyboardEnhancementFlags)?;
-  terminal::disable_raw_mode()?;
-  Ok(())
 }

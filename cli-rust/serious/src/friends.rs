@@ -1,43 +1,11 @@
-use std::{
-  io::{Write, stdout},
-};
-
 use anyhow::{Result, anyhow};
 use serde_json;
 use crossterm::event::poll;
-use reqwest::{Client};
-use tokio_tungstenite::tungstenite::{http::response, protocol::frame};
-
-use crate::infos_events::EventHandler;
-use crate::screen_displays::ScreenDisplayer;
-use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
-// use crate::game::{create_game};
-// use crate::friends::social_life;
-
-// use crate::login::{create_guest_session};
-use tokio::{net::unix::pipe::Receiver, sync::mpsc};
 use crate::CurrentScreen;
 use std::time::Duration;
-use crossterm::{
-  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
-};
-
+use crossterm::event::{self, Event, KeyCode};
 use std::collections::HashMap;
-
-
-use crate::LOGO;
 use super::{should_exit, Infos};
-
-use ratatui::{
-    text::Span,
-    buffer::Buffer,
-    layout::Rect,
-    style::Stylize,
-    symbols::border,
-    text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
-    DefaultTerminal, Frame,
-};
 
 pub trait FriendsDisplay {
     async fn get_indexed_friends(&mut self) -> Result<()>;
@@ -69,7 +37,6 @@ impl FriendsDisplay for Infos  {
             let event = event::read()?;
             if should_exit(&event)? {
                 self.friend_tmp.clear();
-                // self.get_indexed_friends().await?;
                 self.screen = CurrentScreen::FriendsDisplay;
             } else if let Event::Key(eventkey) = event {
             match eventkey.code {
@@ -91,7 +58,6 @@ impl FriendsDisplay for Infos  {
             let event = event::read()?;
             if should_exit(&event)? {
                 self.friend_tmp.clear();
-                // self.get_indexed_friends().await?;
                 self.screen = CurrentScreen::FriendsDisplay;
             } else if let Event::Key(eventkey) = event {
             match eventkey.code {
@@ -164,7 +130,7 @@ impl FriendsDisplay for Infos  {
         let response: serde_json::Value = response.json().await?;
         match response["id"].as_i64() {
             Some(id) => result = id,
-            _ => {return Err(anyhow::anyhow!("Friend not found"))}
+            _ => {return Err(anyhow!("Friend not found"))}
         }
         Ok(result)
     }
@@ -182,7 +148,7 @@ impl FriendsDisplay for Infos  {
                 if response_array.is_array() {
                     let response_array = match response_array.as_array() {
                         Some(array) => array,
-                        _ => {return Err(anyhow::anyhow!("empty array"));}
+                        _ => {return Err(anyhow!("empty array"));}
                     };
                     for object in response_array {
                         let map = match object.as_object() {
@@ -210,49 +176,6 @@ impl FriendsDisplay for Infos  {
     }
 }
 
-// async fn get_all_friends(game_main: &Infos) -> Result<Vec<(String, bool)>> {
-//     let url = format!("https://{}/api/friends/get?user_id={}", game_main.location, game_main.id);
-//     let response = game_main.client
-//         .get(url)
-//         .send()
-//         .await?;
-//     let mut result: Vec<(String, bool)> = vec![];
-//     match response.status().as_u16() {
-//         200 => {
-//             let response_array: serde_json::Value = response.json().await?;
-//             // println!("friends: {}", response_array);
-//             if response_array.is_array() {
-//                 let response_array = match response_array.as_array() {
-//                     Some(array) => array,
-//                     _ => {return Err(anyhow::anyhow!("empty array"));}
-//                 };
-//                 for object in response_array {
-//                     let map = match object.as_object() {
-//                         Some(map) => map,
-//                         _ => {continue;},
-//                     };
-//                     let name = look_for_name(game_main, object).await?;
-//                     match map["pending"].as_u64() {
-//                     Some(0) => {
-//                         result.push((name, true));
-//                     }
-//                     Some(1) => {
-//                         result.push((name, false));
-//                     },
-//                     _ => {}, 
-//                     }
-                    
-//                 }
-//                 // sleep(Duration::from_secs(3));
-//             }
-
-//         },
-//         404 => {eprintln!("No friends found :(");},
-//         _ => {eprintln!("Error from server :(");}
-//     }
-//     Ok(result)
-// }
-
 async fn look_for_name(game_main: &Infos, object: &serde_json::Value) -> Result<String> {
     let id_to_find = match object["user1_id"].as_u64() {
         Some(user1) => {
@@ -264,15 +187,15 @@ async fn look_for_name(game_main: &Infos, object: &serde_json::Value) -> Result<
                         if user2 != game_main.id {
                             user2
                         } else {
-                            return Err(anyhow::anyhow!("from user ids"));
+                            return Err(anyhow!("from user ids"));
                         }
                     }
-                    _ => {return Err(anyhow::anyhow!("from user ids"));}
+                    _ => {return Err(anyhow!("from user ids"));}
                 };
                 user2
             }
         },
-        _ => {return Err(anyhow::anyhow!("from user ids"));}
+        _ => {return Err(anyhow!("from user ids"));}
     };
     
     let url = format!("https://{}/api/user/get_profile_id?user_id={}", game_main.location, id_to_find);
@@ -285,9 +208,9 @@ async fn look_for_name(game_main: &Infos, object: &serde_json::Value) -> Result<
             let body: serde_json::Value = response.json().await?;
             match body["name"].as_str() {
                 Some(name) => {return Ok(name.to_string());},
-                _ => {return Err(anyhow::anyhow!("No name in "))}
+                _ => {return Err(anyhow!("No name in "))}
             }
         },
-        _ => {return Err(anyhow::anyhow!("Error"));},
+        _ => {return Err(anyhow!("Error"));},
     }
 }

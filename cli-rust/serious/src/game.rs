@@ -4,28 +4,16 @@ use reqwest::{
 };
 
 use crossterm::{
-    cursor,
     event::{self, poll, Event, KeyCode, KeyEventKind},
-    style::*,
-    terminal,
-    ExecutableCommand,
-    QueueableCommand,
 };
 
 use futures::stream::{StreamExt};
 use futures_util::{SinkExt, stream::SplitStream};
 use futures_util::stream::SplitSink;
-use std::{any, time::{Duration, Instant}};
-use std::{
-	collections::HashMap,
-	io::{Write, stdout},
-};
+use std::{time::{Duration, Instant}};
+use std::collections::HashMap;
 
-use crate::{HEIGHT, WIDTH};
-
-use std::sync::{Arc};
-
-use crate::{should_exit};
+use crate::should_exit;
 use bytes::Bytes;
 
 use tokio_tungstenite::{connect_async_tls_with_config, tungstenite::Utf8Bytes};
@@ -38,7 +26,7 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use anyhow::{Result, anyhow};
 use crate::Infos;
 
-use tokio::{net::unix::pipe::Receiver, sync::{Mutex, mpsc, watch}};
+use tokio::sync::{mpsc, watch};
 use tokio::net::TcpStream;
 
 #[derive(Default)]
@@ -50,7 +38,7 @@ pub struct Game {
 	pub opponent_name: String,
 	player_side: u64,
 	receiver: Option<watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>>,
-	pub game_checker: Option<mpsc::Receiver<bool>>,
+	pub game_checker: Option<watch::Receiver<bool>>,
 	pub game_stats: GameStats,
 	game_sender: Option<mpsc::Sender<u8>>,
 }
@@ -81,7 +69,7 @@ impl Gameplay for Infos {
 		send_post_game_request(&self, mode).await?;
 		let receiver = match self.receiver.as_mut() {
 			Some(value) => value,
-			_ => return Err(anyhow::anyhow!("Empty receiver")),
+			_ => return Err(anyhow!("Empty receiver")),
 		};
 		loop {
 			match poll(Duration::from_millis(16)) {
@@ -104,7 +92,7 @@ impl Gameplay for Infos {
 							break ;
 					}
 				},
-				_ => return Err(anyhow::anyhow!("error in poll".to_string()))
+				_ => return Err(anyhow!("error in poll".to_string()))
 			};
 		}
 		let response = receiver.try_recv()?;
@@ -124,7 +112,7 @@ impl Gameplay for Infos {
 			_ => {return Err(anyhow!("State receiver is empty"));}
 		};
 		if let Some(checker) = &mut self.game.game_checker {
-			if let Ok(true) = checker.try_recv() {
+			if let Ok(true) = checker.has_changed() {
 				self.screen = crate::CurrentScreen::GameChoice;
 			}
 		};
@@ -242,15 +230,16 @@ impl Game {
 			(watch::Sender<(Option<Bytes>, Option<Utf8Bytes>)>, watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>) 
 				= watch::channel((None, None));
 		self.receiver = Some(state_receiver);
-		let (game_sender, game_checker): (mpsc::Sender<bool>, mpsc::Receiver<bool>) = mpsc::channel(1);
+		let (game_sender, game_checker): (watch::Sender<bool>, watch::Receiver<bool>) = watch::channel(true);
 		self.game_checker = Some(game_checker);
+		let socket_checker = game_sender.subscribe();
 		tokio::task::spawn(async move {
 			if let Err(e) = Self::send_game(ws_write, receiver, game_sender).await {
 				eprintln!("Error: {}", e);
 			}
 		});
 		tokio::spawn(async move {
-			Self::read_socket(ws_read, state_sender).await;
+			Self::read_socket(ws_read, state_sender, socket_checker).await;
 		});
 		self.game_sender = Some(sender);
 		Ok(())
@@ -290,7 +279,7 @@ impl Game {
 		let player2_score: u8 =  msg[25];
 		Ok((left_y, right_y, ball_x, ball_y, _speed_x, _speed_y, player1_score, player2_score))
 	}
-	async fn send_game(mut ws_write: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>, mut receiver: mpsc::Receiver<u8>, game_sender: mpsc::Sender<bool>) -> Result<()> {
+	async fn send_game(mut ws_write: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>, mut receiver: mpsc::Receiver<u8>, game_sender: watch::Sender<bool>) -> Result<()> {
 		let mut up: (bool, Instant, u128) = (false, std::time::Instant::now(), 0);
 		let mut down: (bool, Instant, u128) = (false, std::time::Instant::now(), 0);
 		let mut to_send = String::new();
@@ -312,7 +301,7 @@ impl Game {
 			if poll(Duration::from_millis(16))? {
 				let event = event::read()?;
 				if should_exit(&event)? == true {
-					game_sender.send(true).await?;
+					game_sender.send(true)?;
 					break;
 				} 
 				else if let Event::Key(key_event) = event {
@@ -344,7 +333,8 @@ impl Game {
 		ws_write.close().await?;
 		Ok(())
 	}
-	async fn read_socket(mut ws_read: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>, state_sender: watch::Sender<(Option<Bytes>, Option<Utf8Bytes>)>) {
+	async fn read_socket(mut ws_read: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>, 
+			state_sender: watch::Sender<(Option<Bytes>, Option<Utf8Bytes>)>, socket_checker: watch::Receiver<bool>) {
 		loop {
 			match ws_read.next().await {
 				Some(msg) => {
@@ -364,6 +354,10 @@ impl Game {
 					}
 				}
 				_ => {}
+			}
+			match socket_checker.has_changed() {
+				Ok(false) => {},
+				_ => break,
 			}
 		}
 	}

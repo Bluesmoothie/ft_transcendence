@@ -1,39 +1,15 @@
 use std::{
-  io::{Write, stdout}, time::Duration,
+  time::Duration,
 };
 
-use anyhow::{Result, anyhow};
-use serde_json;
+use anyhow::Result;
 
-use reqwest::{Client};
-use tokio_tungstenite::tungstenite::protocol::frame;
+use crate::{login::Authentify};
 
-use crate::{login::Authentify, welcome::{draw_welcome_screen, game_setup, setup_terminal}};
-
-// use crate::login::{create_guest_session};
-use tokio::{net::unix::pipe::Receiver, sync::mpsc};
-
-use crossterm::{
-  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
-};
+use crossterm::event::{self, poll, Event, KeyCode, KeyEventKind};
 use crate::login::Field;
-use crate::LOGO;
 use crate::CurrentScreen;
 use crate::friends::FriendsDisplay;
-use crate::login;
-use ratatui::{
-    text::Span,
-    buffer::Buffer,
-    layout::Rect,
-    style::Stylize,
-    symbols::border,
-    text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
-    DefaultTerminal, Frame,
-};
-
-pub const WIDTH: u16 = 90;
-pub const HEIGHT: u16 = 30;
 
 use super::{Infos, should_exit};
 

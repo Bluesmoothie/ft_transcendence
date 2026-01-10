@@ -8,7 +8,7 @@ pub struct Demo {
 }
 
 impl Demo {
-    pub fn update(&mut self, width: u16, height: u16) {
+    pub fn update(&mut self) {
         self.ball_x += self.ball_dx;
         self.ball_y += self.ball_dy;
         if self.ball_x <= 5.0 || self.ball_x >= 95 as f64 {
