@@ -23,7 +23,7 @@ use tokio::{sync::mpsc, time::Duration};
 use crate::login::Auth;
 
 use crossterm::{
-  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
+  ExecutableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyModifiers, PopKeyboardEnhancementFlags}, terminal
 };
 
 use welcome::LOGO;
@@ -167,9 +167,12 @@ impl Infos {
     self.get_indexed_friends().await?;
     let height: usize = (terminal.get_frame().area().height - 2) as usize;
     let len = self.friends.len();
-    let modulo: usize = match len % height {
+    let modulo: usize = match height {
       0 => 0,
-      _ => 1
+      _ => match len % height {
+          0 => 0,
+          _ => 1
+        },
     };
     if height < len && height != 0 {
       self.index_max = len / height + modulo;

@@ -15,7 +15,7 @@ use crossterm::{
 use futures::stream::{StreamExt};
 use futures_util::{SinkExt, stream::SplitStream};
 use futures_util::stream::SplitSink;
-use std::time::{Duration, Instant};
+use std::{any, time::{Duration, Instant}};
 use std::{
 	collections::HashMap,
 	io::{Write, stdout},
@@ -25,7 +25,7 @@ use crate::{HEIGHT, WIDTH};
 
 use std::sync::{Arc};
 
-use crate::{should_exit, cleanup_and_quit};
+use crate::{should_exit};
 use bytes::Bytes;
 
 use tokio_tungstenite::{connect_async_tls_with_config, tungstenite::Utf8Bytes};
@@ -41,42 +41,13 @@ use crate::Infos;
 use tokio::{net::unix::pipe::Receiver, sync::{Mutex, mpsc, watch}};
 use tokio::net::TcpStream;
 
-// enum Params
-// {
-// 	PADDLE_HEIGHT = 15,
-// 	PADDLE_WIDTH = 2,
-// 	PADDLE_PADDING = 2,
-// 	BALL_SIZE = 2,
-// 	BACKGROUND_OPACITY = 0.4,
-// 	COLOR = (255, 255, 255),
-// 	COUNTDOWN_START = 3,
-// 	IPS = 60,
-// }
-
-// enum Keys
-// {
-// 	PLAY_AGAIN: KeyCode = KeyCode::Enter,
-// 	DEFAULT_UP: KeyCode = KeyCode::Up,
-// 	DEFAULT_DOWN: KeyCode = KeyCode::Down,
-// 	PLAYER1_UP: KeyCode = KeyCode::Char('w'),
-// 	PLAYER1_DOWN: KeyCode = KeyCode::Char('s'),
-// 	PLAYER2_UP: KeyCode = KeyCode::Up,
-// 	PLAYER2_DOWN: KeyCode = KeyCode::Down,
-// }
-
-// enum Msgs
-// {
-// 	SEARCHING = "Searching for opponent...",
-// 	WIN = "wins !",
-// 	PLAY_AGAIN = "Press ${Keys.PLAY_AGAIN} to play again",
-// }
 #[derive(Default)]
 pub struct Game {
 	location: String,
 	id: u64,
 	client: Client,
 	game_id: String,
-	opponent_id: u64,
+	pub opponent_name: String,
 	player_side: u64,
 	receiver: Option<watch::Receiver<(Option<Bytes>, Option<Utf8Bytes>)>>,
 	pub game_checker: Option<mpsc::Receiver<bool>>,
@@ -137,7 +108,7 @@ impl Gameplay for Infos {
 			};
 		}
 		let response = receiver.try_recv()?;
-		let game = Game::new(&self, response)?;
+		let game = Game::new(&self, response).await?;
 		self.game = game;
 		self.screen = crate::CurrentScreen::StartGame;
 		Ok(())
@@ -220,7 +191,7 @@ async fn send_post_game_request(game_main: &Infos, mode: &str) -> Result<()> {
 }
 
 impl Game {
-	fn new(info: &Infos, value: serde_json::Value) -> Result<Game> {
+	async fn new(info: &Infos, value: serde_json::Value) -> Result<Game> {
 		let game_id: String = match value["gameId"].as_str() {
 			Some(id) => id.to_string(),
 			_ => return Err(anyhow!("No game Id in response")),
@@ -229,6 +200,7 @@ impl Game {
 			Some(id) => id,
 			_ => return Err(anyhow!("No opponent id in response")),
 		};
+		let opponent_name: String = get_opponent_name(info, opponent_id).await?;
 		let player_side: u64 = match value["playerSide"].as_u64() {
 			Some(nbr) => nbr,
 			_ => return Err(anyhow!("No player Id in response")),
@@ -239,6 +211,7 @@ impl Game {
 			client: info.client.clone(), 
 			game_id,
 			player_side: player_side,
+			opponent_name: opponent_name,
 			..Default::default()
 		})
 	}
@@ -394,4 +367,17 @@ impl Game {
 			}
 		}
 	}
+}
+
+
+async fn get_opponent_name(infos: &Infos, id: u64) -> Result<String> {
+	let apiloc = format!("https://{}/api/user/get_profile_id?user_id={}", infos.location, id);
+	let response = infos.client.get(apiloc)
+			.send()
+			.await?;
+	let response: serde_json::Value = response.json().await?;
+	if let Some(result) = response["name"].as_str() {
+		return Ok(result.to_string());
+	}
+	Err(anyhow!("Opponent as no name"))
 }

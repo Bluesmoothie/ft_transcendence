@@ -1,30 +1,7 @@
-use std::{
-  io::{Write, stdout},
-};
-
-use anyhow::{Result, anyhow};
-use serde_json;
-
-use reqwest::{Client};
-use tokio_tungstenite::tungstenite::protocol::frame;
-
-use crate::welcome::{draw_welcome_screen, game_setup, setup_terminal};
-// use crate::game::{create_game};
-// use crate::friends::social_life;
-
-use tokio::{net::unix::pipe::Receiver, sync::mpsc};
-
-use std::thread::{sleep};
-
-use crossterm::{
-  ExecutableCommand, QueueableCommand, cursor::{self, SetCursorStyle}, event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, PopKeyboardEnhancementFlags}, style::*, terminal
-};
 use crate::login::Field;
 use crate::friends::FriendsDisplay;
-use crate::game::GameStats;
 use crate::LOGO;
-use crate::CurrentScreen;
-use ratatui::widgets::canvas::{Circle, Shape, Rectangle};
+use ratatui::widgets::canvas::{Circle, Rectangle};
 use ratatui::{
     prelude::{
         Color,
@@ -36,10 +13,8 @@ use ratatui::{
     layout::{Rect, Alignment},
     style::{Style, Modifier, Stylize},
     symbols::{border, Marker},
-    text::{Line, Text},
+    text::{Line},
     widgets::{Block, Paragraph, Widget, canvas::Canvas, Borders},
-    DefaultTerminal, 
-    Frame,
     text::Span,
 };
 
@@ -206,9 +181,9 @@ impl ScreenDisplayer for Infos {
             })
             .render(layout[0], buf);
             let line = Line::from(vec![
-                    format!("YOU: {}", self.game.game_stats.player1_score).bold(),
+                    format!("You: {}", self.game.game_stats.player1_score).bold(),
                     "    |     ".bold(),
-                    format!("ENEMY: {}", self.game.game_stats.player2_score).bold(),
+                    format!("{}: {}", self.game.opponent_name, self.game.game_stats.player2_score).bold(),
                 ]);
             Paragraph::new(line)
                 .block(Block::bordered().border_set(border::THICK).title("Score".bold()))
