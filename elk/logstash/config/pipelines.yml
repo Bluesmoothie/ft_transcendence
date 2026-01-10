@@ -9,3 +9,6 @@
 
 - pipeline.id: elasticsearch
   path.config: "/usr/share/logstash/pipeline/elasticsearch.conf"
+
+- pipeline.id: kibana
+  path.config: "/usr/share/logstash/pipeline/kibana.conf"

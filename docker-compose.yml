@@ -141,6 +141,7 @@ services:
       - modsecurity_logs:/var/log/nginx:ro
       - grafana-logs:/var/log/grafana:ro
       - elastic-logs:/var/log/elasticsearch:ro
+      - kibana-logs:/var/log/kibana:ro
     depends_on:
       - elasticsearch
       - modsecurity
@@ -153,7 +154,8 @@ services:
     image: docker.elastic.co/kibana/kibana:8.12.0
     container_name: kibana
     volumes:
-      - ./elk/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+      - ./elk/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+      - kibana-logs:/usr/share/kibana/logs:rw
     ports:
       - "5601:5601"
     depends_on:
@@ -205,3 +207,4 @@ volumes:
   grafana:
   grafana-logs:
   elastic-logs:
+  kibana-logs:
