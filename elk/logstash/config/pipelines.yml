@@ -12,3 +12,6 @@
 
 - pipeline.id: kibana
   path.config: "/usr/share/logstash/pipeline/kibana.conf"
+
+- pipeline.id: prometheus
+  path.config: "/usr/share/logstash/pipeline/prometheus.conf"

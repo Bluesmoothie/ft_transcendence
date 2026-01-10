@@ -85,9 +85,11 @@ services:
     container_name: prometheus
     volumes:
       - ./monitoring/conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-logs:/prometheus/logs:rw
     networks:
       - monitoring_net
       - export_net
+    user: root
 
   grafana:
     image: grafana/grafana:12.4.0-20836657505
@@ -142,6 +144,7 @@ services:
       - grafana-logs:/var/log/grafana:ro
       - elastic-logs:/var/log/elasticsearch:ro
       - kibana-logs:/var/log/kibana:ro
+      - prometheus-logs:/var/log/prometheus:ro
     depends_on:
       - elasticsearch
       - modsecurity
@@ -208,3 +211,4 @@ volumes:
   grafana-logs:
   elastic-logs:
   kibana-logs:
+  prometheus-logs:
