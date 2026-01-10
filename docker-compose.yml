@@ -113,7 +113,8 @@ services:
     image: nginx/nginx-prometheus-exporter:1.5.1
     container_name: nginx_prom_export
     networks:
-      - export_net
+      export_net:
+        ipv4_address: 172.200.0.10
     depends_on:
       - prometheus
       - modsecurity
@@ -188,13 +189,16 @@ services:
       - elk_net
 
 networks:
+  export_net:
+    ipam:
+      config:
+        - subnet: 172.200.0.0/24
   entrypoint_net:
     driver: bridge
   backend_net:
   frontend_net:
   vault_net:
   monitoring_net:
-  export_net:
   elk_net:
 
 volumes:
