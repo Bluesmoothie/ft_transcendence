@@ -22,7 +22,7 @@ use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::Connector;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-
+use crate::CurrentScreen;
 use anyhow::{Result, anyhow};
 use crate::Infos;
 
@@ -67,43 +67,39 @@ pub trait Gameplay {
 impl Gameplay for Infos {
 	async fn create_game(&mut self, mode: &str) -> Result<()> {
 		send_post_game_request(&self, mode).await?;
-		let receiver = match self.receiver.as_mut() {
-			Some(value) => value,
-			_ => return Err(anyhow!("Empty receiver")),
-		};
 		loop {
 			match poll(Duration::from_millis(16)) {
 				Ok(true) => {
-					if !receiver.is_empty() {
+					if !self.authent.borrow_mut().receiver.as_mut().expect("empty receiver").is_empty() {
 						break ;
 					}
 					let event = event::read()?;
 					match should_exit(&event) {
 						Ok(true) => {
 							self.send_remove_from_queue_request().await?;
-							self.screen = crate::CurrentScreen::GameChoice;
+							self.screen.set(CurrentScreen::GameChoice);
 							return Ok(());
 						}
 						_ => {},
 					}
 				},
 				Ok(false) => {
-						if !receiver.is_empty() {
+						if !self.authent.borrow_mut().receiver.as_mut().expect("empty receiver").is_empty() {
 							break ;
 					}
 				},
 				_ => return Err(anyhow!("error in poll".to_string()))
 			};
 		}
-		let response = receiver.try_recv()?;
+		let response = self.authent.borrow_mut().receiver.as_mut().expect("empty receiver").try_recv()?;
 		let game = Game::new(&self, response).await?;
 		self.game = game;
-		self.screen = crate::CurrentScreen::StartGame;
+		self.screen.set(crate::CurrentScreen::StartGame);
 		Ok(())
 	}
 	async fn launch_game(&mut self) -> Result<()> {
 		self.game.start_game().await?;
-		self.screen = crate::CurrentScreen::PlayGame;
+		self.screen.set(crate::CurrentScreen::PlayGame);
 		Ok(())
 	}
 	async fn handle_game_events(&mut self) -> Result<()> {
@@ -113,7 +109,7 @@ impl Gameplay for Infos {
 		};
 		if let Some(checker) = &mut self.game.game_checker {
 			if let Ok(true) = checker.has_changed() {
-				self.screen = crate::CurrentScreen::GameChoice;
+				self.screen.set(crate::CurrentScreen::GameChoice);
 			}
 		};
 		if let Some(sender) = &self.game.game_sender {
@@ -123,7 +119,7 @@ impl Gameplay for Infos {
 				(Some(bytes), _none) => {self.game.decode_and_update(bytes)?;},
 				(_none, Some(text)) => {
 					self.game.end_game(text, sender.clone()).await?;
-					self.screen = crate::CurrentScreen::EndGame;
+					self.screen.set(crate::CurrentScreen::EndGame);
 				},
 				_ => {}
 			};
@@ -134,10 +130,10 @@ impl Gameplay for Infos {
 		if poll(Duration::from_millis(16))? {
 			let event = event::read()?;
 			if should_exit(&event)? {
-				self.screen = crate::CurrentScreen::GameChoice;
+				self.screen.set(crate::CurrentScreen::GameChoice);
 			} else if let Event::Key(keyevent) = event {
 				match keyevent.code {
-					KeyCode::Enter => {self.screen = crate::CurrentScreen::GameChoice},
+					KeyCode::Enter => {self.screen.set(crate::CurrentScreen::GameChoice)},
 					_ => {},
 				}
 			}
@@ -148,34 +144,16 @@ impl Gameplay for Infos {
 		let mut map = HashMap::new();
 		let mut headers = HeaderMap::new();
 		headers.insert("Content-Type", "application/json".parse()?);
-		let id: &str = &self.id.to_string();
+		let id: &str = &self.authent.borrow().id.to_string();
 		map.insert("id", id);
-		let mut url = self.location.clone();
-		url = format!("https://{url}/api/chat/removeQueue");
-		self.client.delete(url)
+		let url = format!("https://{}/api/chat/removeQueue", self.context.location);
+		self.context.client.delete(url)
 			.headers(headers)
 			.json(&map)
 			.send()
 			.await?;
 		Ok(())
 	}
-}
-
-async fn send_post_game_request(game_main: &Infos, mode: &str) -> Result<()> {
-	let mut map = HashMap::new();
-	let mut headers = HeaderMap::new();
-	headers.insert("Content-Type", "application/json".parse()?);
-    map.insert("mode", mode);
-	let id: &str = &game_main.id.to_string();
-	map.insert("playerName", id);
-	let mut url = game_main.location.clone();
-	url = format!("https://{url}/api/create-game");
-	game_main.client.post(url)
-        .headers(headers)
-        .json(&map)
-        .send()
-        .await?;
-	Ok(())
 }
 
 impl Game {
@@ -194,9 +172,9 @@ impl Game {
 			_ => return Err(anyhow!("No player Id in response")),
 		};
 		Ok(Game{
-			location: info.location.clone(), 
-			id: info.id,
-			client: info.client.clone(), 
+			location: info.context.location.clone(), 
+			id: info.authent.borrow().id,
+			client: info.context.client.clone(), 
 			game_id,
 			player_side: player_side,
 			opponent_name: opponent_name,
@@ -311,8 +289,6 @@ impl Game {
 							KeyEventKind::Repeat => {up = (true, std::time::Instant::now(), 100)},
 							KeyEventKind::Release => {up = (false, std::time::Instant::now(), 100)},
 						},
-						// KeyCode::Up => up = (true, std::time::Instant::now()),
-						// KeyCode::Down => down = (true, std::time::Instant::now(), 100),
 						KeyCode::Down => match key_event.kind {
 							KeyEventKind::Press => {down = (true, std::time::Instant::now(), 100)},
 							KeyEventKind::Repeat => {down = (true, std::time::Instant::now(), 100)},
@@ -363,10 +339,9 @@ impl Game {
 	}
 }
 
-
 async fn get_opponent_name(infos: &Infos, id: u64) -> Result<String> {
-	let apiloc = format!("https://{}/api/user/get_profile_id?user_id={}", infos.location, id);
-	let response = infos.client.get(apiloc)
+	let apiloc = format!("https://{}/api/user/get_profile_id?user_id={}", infos.context.location, id);
+	let response = infos.context.client.get(apiloc)
 			.send()
 			.await?;
 	let response: serde_json::Value = response.json().await?;
@@ -374,4 +349,21 @@ async fn get_opponent_name(infos: &Infos, id: u64) -> Result<String> {
 		return Ok(result.to_string());
 	}
 	Err(anyhow!("Opponent as no name"))
+}
+
+async fn send_post_game_request(game_main: &Infos, mode: &str) -> Result<()> {
+	let mut map = HashMap::new();
+	let mut headers = HeaderMap::new();
+	headers.insert("Content-Type", "application/json".parse()?);
+    map.insert("mode", mode);
+	let id: &str = &game_main.authent.borrow().id.to_string();
+	map.insert("playerName", id);
+	let mut url = game_main.context.location.clone();
+	url = format!("https://{url}/api/create-game");
+	game_main.context.client.post(url)
+        .headers(headers)
+        .json(&map)
+        .send()
+        .await?;
+	Ok(())
 }

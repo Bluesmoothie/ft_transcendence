@@ -1,5 +1,5 @@
 use crate::login::Field;
-use crate::friends::FriendsDisplay;
+use crate::friends::Friends;
 use crate::LOGO;
 use ratatui::widgets::canvas::{Circle, Rectangle};
 use ratatui::{
@@ -20,7 +20,7 @@ use ratatui::{
 
 use super::Infos;
 
-pub trait ScreenDisplayer: FriendsDisplay {
+pub trait ScreenDisplayer {
     fn display_welcome_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_gamechoice_screen(&self, area: Rect, buf: &mut Buffer);
     fn display_social_screen(&self, area: Rect, buf: &mut Buffer);
@@ -124,15 +124,15 @@ impl ScreenDisplayer for Infos {
                 .border_set(border::THICK);
         let mut friends_display: Vec<String> = vec![];
         let height: usize = (area.height - 2) as usize;
-        let max: usize = match (self.index * height + height + 1) >= self.friends.len() {
-            true => self.friends.len(),
-            false => (self.index * height) + height + 1
+        let max: usize = match (self.friend.borrow().index * height + height + 1) >= self.friend.borrow().friends.len() {
+            true => self.friend.borrow().friends.len(),
+            false => (self.friend.borrow().index * height) + height + 1
         };
-        let min = match self.index * height < self.friends.len() {
-            true => self.index * height,
-            false => self.friends.len(),
+        let min = match self.friend.borrow().index * height < self.friend.borrow().friends.len() {
+            true => self.friend.borrow().index * height,
+            false => self.friend.borrow().friends.len(),
         };
-        for friend in &self.friends[min..max] {
+        for friend in &self.friend.borrow().friends[min..max] {
             friends_display.push(friend.clone());
         }
         let lines: Vec<Line> = friends_display
@@ -205,18 +205,18 @@ impl ScreenDisplayer for Infos {
     }
     fn display_signup_screen(&self, area: Rect, buf: &mut Buffer) {
         let mail = format!("{}{}", 
-            self.auth.get_email(),
-            if self.auth.blinks(Field::Mail) {"|"} else {""}
+            self.authent.borrow().get_email(),
+            if self.authent.borrow().blinks(Field::Mail) {"|"} else {""}
             );
         let username = format!("{}{}", 
-            self.auth.get_username(),
-            if self.auth.blinks(Field::Username) {"|"} else {""}
+            self.authent.borrow().get_username(),
+            if self.authent.borrow().blinks(Field::Username) {"|"} else {""}
             );
         let mut password = String::new();
-        for _ in 0..self.auth.get_password().len() {
+        for _ in 0..self.authent.borrow().get_password().len() {
             password.push('*');
         }
-        if self.auth.blinks(Field::Password) {
+        if self.authent.borrow().blinks(Field::Password) {
             password.push('|')
         }
         let content = vec![
@@ -249,19 +249,19 @@ impl ScreenDisplayer for Infos {
     }
     fn display_login_screen(&self, area: Rect, buf: &mut Buffer) {
         let mail = format!("{}{}", 
-            self.auth.get_email(),
-            if self.auth.blinks(Field::Mail) {"|"} else {""}
+            self.authent.borrow().get_email(),
+            if self.authent.borrow().blinks(Field::Mail) {"|"} else {""}
             );
         let mut password = String::new();
-        for _ in 0..self.auth.get_password().len() {
+        for _ in 0..self.authent.borrow().get_password().len() {
             password.push('*');
         }
-        if self.auth.blinks(Field::Password) {
+        if self.authent.borrow().blinks(Field::Password) {
             password.push('|')
         }
         let totp = format!("{}{}", 
-            self.auth.get_totp(),
-            if self.auth.blinks(Field::Totp) {"|"} else {""}
+            self.authent.borrow().get_totp(),
+            if self.authent.borrow().blinks(Field::Totp) {"|"} else {""}
             );
         let content = vec![
             Line::from(Span::styled(
@@ -302,7 +302,7 @@ impl ScreenDisplayer for Infos {
     //a changer le auth.blink avec friends.blink
     fn display_addfriends_screen(&self, area: Rect, buf: &mut Buffer) {
         let friend = format!("{}{}", 
-            self.friend_tmp, if self.auth.blink {"|"} else {""});
+            self.friend.borrow().friend_tmp, if self.authent.borrow().blink {"|"} else {""});
         let content = vec![
             Line::from(Span::styled(
                 "Add a friend",
@@ -326,7 +326,7 @@ impl ScreenDisplayer for Infos {
     //a changer le auth.blink avec friends.blink
     fn display_delete_friends_screen(&self, area: Rect, buf: &mut Buffer) {
         let friend = format!("{}{}", 
-            self.friend_tmp, if self.auth.blink {"|"} else {""});
+            self.friend.borrow().friend_tmp, if self.authent.borrow().blink {"|"} else {""});
         let content = vec![
             Line::from(Span::styled(
                 "Delete a friend",

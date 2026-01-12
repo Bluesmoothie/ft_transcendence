@@ -5,11 +5,12 @@ use anyhow::{Result, anyhow};
 use tokio_tungstenite::{
     Connector, MaybeTlsStream, WebSocketStream, connect_async_tls_with_config, tungstenite::protocol::Message
 };
-use crate::Infos;
 use crate::Context;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use futures_util::{StreamExt};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 #[derive(Default, PartialEq)]
 pub enum Field {
@@ -22,7 +23,7 @@ pub enum Field {
 
 #[derive(Default)]
 pub struct Auth {
-    context: std::sync::Arc<Context>,
+    context: Rc<Context>,
     token: String,
     email: String,
     password: String,
@@ -31,10 +32,16 @@ pub struct Auth {
     field: Field,
     pub id: u64,
     pub blink: bool,
-    receiver: Option<mpsc::Receiver<serde_json::Value>>,
+    pub receiver: Option<mpsc::Receiver<serde_json::Value>>,
 }
 
 impl Auth {
+    pub fn new(context: Rc<Context>) -> Self {
+        Auth {
+            context: context,
+            ..Default::default()
+        }
+    }
     pub fn up_field_signup(&mut self) {
         match self.field {
             Field::Password => {self.field = Field::Username},
@@ -117,16 +124,6 @@ impl Auth {
         self.totp.clear();
         self.field = Field::Mail;
     }
-}
-
-pub trait Authentify {
-    async fn signup(&mut self) -> Result<()>;
-    async fn create_guest_session(&mut self) -> Result<()>;
-    async fn get_id_and_launch_chat(&mut self) -> Result<()>;
-    async fn login(&mut self) -> Result<()>;
-}
-
-impl Auth {
     pub async fn signup(&mut self) -> Result<()> {
         let apiloc = format!("https://{}/api/user/create", self.context.location);
         let mut body: HashMap<&str, &str> = HashMap::new();
