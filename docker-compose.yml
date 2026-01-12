@@ -258,6 +258,17 @@ services:
     networks:
       - elk_net
 
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:v1.10.2
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+    volumes:
+      - '/:/host:ro,rslave'
+    networks:
+      - monitoring_net
+
 networks:
   export_net:
     ipam:

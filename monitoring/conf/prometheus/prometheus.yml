@@ -27,3 +27,6 @@ scrape_configs:
     scheme: http
     static_configs:
       - targets: ['elasticsearch_exporter:9114']
+  - job_name: 'node'
+    static_configs:
+    - targets: ['node_exporter:9100']
