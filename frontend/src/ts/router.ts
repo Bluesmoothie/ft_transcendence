@@ -49,11 +49,15 @@ export class GameRouter
 	{
 		if (!this.m_view)
 			return ;
-		this.m_view.addTrackListener(this.m_view.querySelector('#local-game'), "click", this.localGameClickHandler);
-		this.m_view.addTrackListener(this.m_view.querySelector('#online-game'), "click", this.onlineGameClickHandler);
-		this.m_view.addTrackListener(this.m_view.querySelector('#bot-game'), "click", this.botGameClickHandler);
-		this.m_view.addTrackListener(this.m_view.querySelector('#game'), "click", this.menuGameClickHandler);
-		this.m_view.addTrackListener(this.m_view.querySelector('#tournament'), "click", this.menuTournamentClickHandler);
+		this.m_view.querySelector('#local-game')?.addEventListener("click", this.localGameClickHandler);
+		this.m_view.querySelector('#online-game')?.addEventListener("click", this.onlineGameClickHandler);
+		this.m_view.querySelector('#bot-game')?.addEventListener("click", this.botGameClickHandler);
+		this.m_view.querySelector('#game')?.addEventListener("click", this.menuGameClickHandler);
+		this.m_view.querySelector('#tournament')?.addEventListener("click", this.menuTournamentClickHandler);
+		// this.m_view.addTrackListener(this.m_view.querySelector('#online-game'), "click", this.onlineGameClickHandler);
+		// this.m_view.addTrackListener(this.m_view.querySelector('#bot-game'), "click", this.botGameClickHandler);
+		// this.m_view.addTrackListener(this.m_view.querySelector('#game'), "click", this.menuGameClickHandler);
+		// this.m_view.addTrackListener(this.m_view.querySelector('#tournament'), "click", this.menuTournamentClickHandler);
 	}
 
 	private menuGameClickHandler = () =>
@@ -156,7 +160,7 @@ export class GameRouter
 
 	public navigateTo(page: string, mode: string): void
 	{
-		history.pushState({page: page}, '', `#${page}`);
+		// history.pushState({page: page}, '', `#${page}`);
 		this.showPage(page, mode);
 	}
 
@@ -185,7 +189,8 @@ export class GameRouter
 				return this.m_gameMenu;
 			case 'game':
 				if (this.m_chat && this.m_user)
-					return (new GameClient(this, mode!, this.m_user, this.m_chat));
+					this.gameInstance = new GameClient(this, mode!, this.m_user, this.m_chat);
+					return (this.gameInstance);
 			case 'tournament-menu':
 				return (new TournamentMenu(this));
 			case 'tournament-create':

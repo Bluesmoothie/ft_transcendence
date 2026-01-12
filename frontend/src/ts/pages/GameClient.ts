@@ -135,6 +135,8 @@ export class GameClient extends Utils
 
 	private async createGameFeedback(json: any)
 	{
+		console.log("hello")
+		// this.m_router.navigateTo("game", "online");
 		this.gameId = json.gameId.toString();
 		this.m_user2 = await getUserFromId(json.opponentId.toString());
 		this.playerSide = json.playerSide;
@@ -145,12 +147,13 @@ export class GameClient extends Utils
 		this.launchCountdown();
 	}
 
-	private async createGame(): Promise<void>
+	public async createGame(): Promise<void>
 	{
 		if (!this.m_user)
 			return ;
 		try
 		{
+			console.log("hello");
 			// window.addEventListener('beforeunload', this.destroy);
 
 			const response = await fetch(`https://${window.location.host}/api/create-game`,
@@ -180,8 +183,10 @@ export class GameClient extends Utils
 		}
 	}
 
-	private launchCountdown(): void
+	public launchCountdown(gameId?: string): void
 	{
+		if (gameId)
+			this.gameId = gameId;
 		let count: number = Params.COUNTDOWN_START;
 		const countdownIntervalTime =  (count > 0) ? 1000 : 0;
 		this.hide('searching-msg');
@@ -197,7 +202,7 @@ export class GameClient extends Utils
 			{
 				clearInterval(this.countdownInterval);
 				this.showElements();
-				this.startGame();
+				this.startGame(gameId);
 			}
 		}, countdownIntervalTime);
 	}
@@ -220,21 +225,25 @@ export class GameClient extends Utils
 			this.m_player2.updateHtml(this.m_user2);
 	}
 
-	private async startGame(): Promise<void>
+	public async startGame(gameId? : string ): Promise<void>
 	{
-		console.log(this.playerSide);
-		const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
+		if (!gameId)
 		{
-			method: 'POST',
-		});
 
-		if (!response.ok)
-		{
-			console.error('Failed to start game:', response.status, response.statusText);
-			return ;
+			console.log(this.playerSide);
+			const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
+			{
+				method: 'POST',
+			});
+
+			if (!response.ok)
+			{
+				console.error('Failed to start game:', response.status, response.statusText);
+				return ;
+			}
+			this.updateGameState(await response.arrayBuffer());
 		}
 
-		this.updateGameState(await response.arrayBuffer());
 
 		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerSide}`);
 		this.socket.binaryType = 'arraybuffer';

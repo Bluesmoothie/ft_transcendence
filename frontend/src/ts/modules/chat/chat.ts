@@ -86,7 +86,7 @@ export class Chat
 		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
 
 		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
-		Router.addEventListener(chatInput, "keypress", (e) => this.sendMsgFromInput(e));
+		chatInput.addEventListener("keypress", (e) => this.sendMsgFromInput(e));
 		registerCmds(this);
 	}
 
@@ -176,7 +176,7 @@ export class Chat
 
 		if (message == "START")
 		{
-			this.m_onStartGame.forEach(cb => cb(json));
+			this.startGameCb(json);
 		}
 		const user = new User();
 		user.setUser(-1, username, "", "", UserStatus.UNKNOW);
@@ -213,6 +213,11 @@ export class Chat
 		}
 
 		await newMsg.sendToAll(this);
+	}
+
+	public startGameCb(json: any)
+	{
+		this.m_onStartGame.forEach(cb => cb(json));
 	}
 }
 

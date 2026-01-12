@@ -16,14 +16,15 @@ export class LoginView extends ViewComponent
 
 	public async enable()
 	{
+		console.log("login");
 		const vars = getUrlVar();
 		if (vars.get("oauth_token"))
 		{
-			console.log("session:", vars.get("oauth_token"))
 			setCookie("jwt_session", vars.get("oauth_token"), 10);
 			window.history.replaceState({}, document.title, "/login");
 		}
 
+		console.log(Router.Instance?.prevView);
 		await this.m_user.loginSession();
 		if (this.m_user.id != -1)
 		{

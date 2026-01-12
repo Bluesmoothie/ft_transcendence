@@ -1,6 +1,7 @@
 import { setCookie, getCookie} from 'modules/utils/utils.js';
 import { hashString } from 'modules/utils/sha256.js'
 import { UserElement, UserElementType } from 'modules/user/UserElement.js';
+import { GameRouter } from 'router';
 
 export enum UserStatus {
 	UNKNOW = -2,
@@ -290,6 +291,7 @@ function newOption(optionName: string) : HTMLOptionElement
 	option = document.createElement("option");
 	option.innerText = optionName;
 	option.value = optionName;
+	option.setAttribute("data-i18n", optionName);
 	return option;
 }
 
@@ -299,6 +301,11 @@ export class MainUser extends User
 	private m_userElement: UserElement | null = null;
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
+	private m_gameRouter:	GameRouter | null = null;
+
+	get gameRouter(): GameRouter | null { return this.m_gameRouter; }
+	set gameRouter(router: GameRouter | null) { this.m_gameRouter = router; }
+
 
 	constructor()
 	{
@@ -618,5 +625,19 @@ export class MainUser extends User
 		});
 		await this.updateSelf();
 		return res.status;
+	}
+
+	public async startDuel(json: any)
+	{
+		if (!this.m_gameRouter)
+		{
+			console.warn("no game router in user, aborting.");
+			return ;
+		}
+
+		this.m_gameRouter.navigateTo("game", "online");
+
+		// await this.m_gameRouter.gameInstance?.createGame();
+		
 	}
 }
