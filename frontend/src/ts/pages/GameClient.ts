@@ -93,7 +93,7 @@ export class GameClient extends Utils
 		if (user)
 			this.m_user = user;
 		this.createPlayerHtml();
-		if (chat)
+		if (chat) // TODO use this to start game
 			chat.onGameCreated((json) => this.createGameFeedback(json));
 
 		if (this.isModeValid())

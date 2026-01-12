@@ -31,7 +31,7 @@ export class Message
 	*/
 	public toHtml() : HTMLElement | null
 	{
-		const template = Router.getElementById("chat-item-template") as HTMLTemplateElement;
+		const template = document.getElementById("chat-item-template") as HTMLTemplateElement;
 		if (!template)
 			return null;
 
@@ -81,7 +81,6 @@ export class Chat
 		this.m_user = user;
 		this.m_user.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
 
-		user.onLogin((user: MainUser) => this.resetChat(user));
 		user.onLogout((user: MainUser) => this.resetChat(user));
 
 		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
@@ -104,6 +103,11 @@ export class Chat
 		this.m_ws?.close();
 		if (this.m_user)
 		{
+			if (this.m_chatbox)
+				this.m_chatbox.innerHTML = "";
+			
+			this.m_user.removeFromQueue();
+
 			this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${this.m_user.id}`);
 			this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
 		}
@@ -172,7 +176,6 @@ export class Chat
 
 		if (message == "START")
 		{
-			console.log(json);
 			this.m_onStartGame.forEach(cb => cb(json));
 		}
 		const user = new User();
@@ -187,7 +190,10 @@ export class Chat
 	{
 		const html = newMsg.toHtml();
 		if (this.m_chatbox && html)
+		{
+
 			this.m_chatbox.prepend(html);
+		}
 	}
 
 	public async sendMsg(sender: User, msg: string)

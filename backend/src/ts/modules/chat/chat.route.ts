@@ -1,8 +1,8 @@
-import * as core from '@core/core.js';
+import * as core from 'core/core.js';
 import { FastifyRequest, FastifyReply, FastifyInstance, FastifyPluginOptions } from 'fastify';
-import * as chat from '@modules/chat/chat.js';
-import { getUserById, getUserByName } from '@modules/users/user.js';
-import { jwtVerif } from '@modules/jwt/jwt.js';
+import * as chat from 'modules/chat/chat.js';
+import { getUserById, getUserByName } from 'modules/users/user.js';
+import { jwtVerif } from 'modules/jwt/jwt.js';
 
 export async function chatRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
@@ -15,7 +15,8 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 
 	fastify.get('/api/chat/ping', (request: FastifyRequest, reply: FastifyReply) => {
 		return reply.code(200).send({ message: "pong" });
-	})
+	});
+
 
 	fastify.delete('/api/chat/removeQueue', {
 		schema: {
@@ -36,7 +37,7 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 
 		chat.removePlayerFromQueue(data.id);
 		return reply.code(200).send({ message: "removed" });
-	})
+	});
 
 	fastify.post('/api/chat/dm', {
 		schema: {
@@ -85,5 +86,5 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		if (success)
 			return reply.code(200).send({ message: "Success" });
 		return reply.code(200).send({ message: "user is offline" });
-	})
+	});
 }

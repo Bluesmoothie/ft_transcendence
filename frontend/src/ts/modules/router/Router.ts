@@ -75,6 +75,10 @@ export class Router
 		this.m_activeView.enable();
 		this.m_activeView.style.display = "block";
 		this.m_activeView.style.height = "100%";
+
+		setTimeout(() => {
+			window.scrollTo(0, 0);
+		}, 0);
 	}
 
 	/**

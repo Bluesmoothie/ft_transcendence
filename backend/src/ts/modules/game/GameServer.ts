@@ -1,13 +1,16 @@
 import { GameInstance } from './GameInstance.js';
 import { Bot } from './Bot.js';
 import { FastifyInstance } from 'fastify';
-import { getUserByName } from '@modules/users/user.js';
+import { getUserByName } from 'modules/users/user.js';
 import * as core from 'core/core.js';
-import { addPlayerToQueue } from '@modules/chat/chat.js';
+import { addPlayerToQueue } from 'modules/chat/chat.js';
 import { Tournament } from './Tournament.js';
+import { notifyMatch } from 'modules/chat/chat.js';
 
 export class GameServer
 {
+	private static m_instance: GameServer | null = null;
+
 	private static readonly FPS: number = 60;
 	private static readonly FPS_INTERVAL: number = 1000 / GameServer.FPS;
 	private static readonly BOT_FPS: number = 1;
@@ -19,10 +22,16 @@ export class GameServer
 	private pendingTournaments: Map<string, Set<[string, string]> > = new Map();
 	private activeTournaments: Map<string, Tournament> = new Map();
 
+
 	constructor(server: FastifyInstance)
 	{
+		if (GameServer.m_instance == null)
+			GameServer.m_instance = this;
+
 		this.server = server;
 	}
+
+	static get Instance(): GameServer | null { return GameServer.m_instance; }
 
 	public async init(): Promise<void>
 	{
@@ -40,6 +49,23 @@ export class GameServer
 		{
 			console.error('Error starting server:', error);
 		}
+	}
+
+	/**
+	 * start a duel between two player
+	 * @param player1 first player
+	 * @param player2 second player
+	 * @returns the id of the created game
+	*/
+	public async startDuel(player1: number, player2: number): Promise<string>
+	{
+		console.log(`${player1} will play against ${player2}`);
+		const gameId = crypto.randomUUID();
+		await notifyMatch(player1, player2, gameId, 1);
+		await notifyMatch(player2, player1, gameId, 2);
+
+		this.activeGames.set(gameId, new GameInstance('online', player1, player2));
+		return gameId;
 	}
 
 	private createGame(): void

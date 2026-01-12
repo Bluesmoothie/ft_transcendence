@@ -1,4 +1,4 @@
-import * as core from '@core/core.js';
+import * as core from 'core/core.js';
 import { getUserById, getBlockUser, getUserStatus } from 'modules/users/user.js';
 import { WebSocket } from '@fastify/websocket';
 import * as utils from 'utils.js';
@@ -34,11 +34,11 @@ async function getPlayerName(id: number) : Promise<string>
 	return "undifined";
 }
 
-async function notifyMatch(id: number, opponentId: number, gameId: string, playerSide: number)
+export async function notifyMatch(id: number, opponentId: number, gameId: string, playerSide: number)
 {
-		const res = JSON.stringify({ username: "SERVER", message: "START", opponentId: opponentId, gameId: gameId, playerSide: playerSide});
-		sendTo(id, res)
-		sendTo(id, serverMsg(`you will play against: ${await getPlayerName(opponentId)}`));
+	const res = JSON.stringify({ username: "SERVER", message: "START", opponentId: opponentId, gameId: gameId, playerSide: playerSide});
+	sendTo(id, res)
+	sendTo(id, serverMsg(`you will play against: ${await getPlayerName(opponentId)}`));
 }
 
 export function removePlayerFromQueue(playerId: number)

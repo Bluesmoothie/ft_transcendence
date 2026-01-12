@@ -43,7 +43,7 @@ export class ThemeController
 		const theme = this.findTheme(themeName);
 		if (!theme)
 		{
-			console.log(`can't find ${themeName}`);
+			console.warn(`can't find ${themeName}`);
 			return 1;
 		}
 		this.applyTheme(theme);

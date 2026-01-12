@@ -1,4 +1,4 @@
-import { addGameToHist, GameRes } from '@modules/users/user.js';
+import { addGameToHist, GameRes } from 'modules/users/user.js';
 import { GameState } from './GameState.js';
 import * as core from 'core/core.js';
 

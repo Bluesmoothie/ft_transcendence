@@ -2,6 +2,7 @@ import { ThemeController, Theme } from "modules/pages/Theme.js";
 import { ChatCommand } from "./Command.js";
 import { Chat } from "./chat.js";
 import { serverReply } from "./chat_utils.js";
+import { User, getUserFromId } from "modules/user/User.js";
 
 async function displayResponse(chat: Chat, response: Response)
 {
@@ -73,10 +74,132 @@ export function registerCmds(chat: Chat)
 
 	cmd.register("listTheme", "\n\tlist all available themes", async (chat: Chat, argv: Array<string>) => {
 		const themes: Theme[] = ThemeController.Instance ? ThemeController.Instance.themes : [];
+		var themeStr = "+++ themes +++";
+
 		ThemeController.Instance?.setGlobalTheme(argv[1]);
 		themes.forEach((theme: Theme) => {
-			chat.displayMessage(serverReply(theme.name));
+			themeStr += `\n\t+${theme.name}`;
 		});
+		chat.displayMessage(serverReply(themeStr));
+	});
+
+	cmd.register("listInvite", "\n\tlist all pending invite", async (chat: Chat, argv: Array<string>) => {
+		if (!chat.user)
+			return ;
+
+		if (argv.length != 1)
+		{
+			chat.displayMessage(serverReply("usage: /listInvite"));
+			return ;
+		}
+		const res = await fetch("/api/duel/list", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ token: chat.user.token })
+		});
+		const json = await res.json();
+		console.log(json);
+		var str = "+++ listing invite +++";
+		for (let i = 0; i < json.length; i ++) {
+			const el: any = json[i ];
+
+			console.log(json);
+			const sender = await getUserFromId(el.senderId);
+			const receiver = await getUserFromId(el.id);
+			if (!sender || !receiver || !chat.user)
+				return ;
+			if (sender.id === chat.user.id)
+				str += `\n-${receiver.name} (awaiting confirmation)`;
+			else
+				str += `\n+${sender.name} (use /accept or /decline)`;
+			
+		}
+		chat.displayMessage(serverReply(str));
+		// displayResponse(chat, res);
+	});
+
+	cmd.register("invite", "<username>\n\tsend invite to user for a duel", async (chat: Chat, argv: Array<string>) => {
+		if (!chat.user)
+			return ;
+
+		if (argv.length != 2)
+		{
+			chat.displayMessage(serverReply("usage: /invite <username>"));
+			return ;
+		}
+		const username = argv[1];
+		var res = await fetch(`/api/user/get_profile_name?profile_name=${username}`);
+		if (res.status != 200)
+		{
+			displayResponse(chat, res);
+			return ;
+		}
+		const json = await res.json();
+		res = await fetch("/api/duel/invite", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				token: chat.user.token,
+				id: json.id
+			})
+		});
+		displayResponse(chat, res);
+	});
+
+	cmd.register("accept", "<username>\n\taccept invite of <username>", async (chat: Chat, argv: Array<string>) => {
+		if (!chat.user)
+			return ;
+
+		if (argv.length != 2)
+		{
+			chat.displayMessage(serverReply("usage: /accept <username>"));
+			return ;
+		}
+		const username = argv[1];
+		var res = await fetch(`/api/user/get_profile_name?profile_name=${username}`);
+		if (res.status != 200)
+		{
+			displayResponse(chat, res);
+			return ;
+		}
+		const json = await res.json();
+		res = await fetch("/api/duel/accept", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				token: chat.user.token,
+				id: json.id
+			})
+		});
+		displayResponse(chat, res);
+	});
+
+	cmd.register("decline", "<username>\n\tdecline invite of <username>", async (chat: Chat, argv: Array<string>) => {
+		if (!chat.user)
+			return ;
+
+		if (argv.length != 2)
+		{
+			chat.displayMessage(serverReply("usage: /decline <username>"));
+			return ;
+		}
+		const username = argv[1];
+		var res = await fetch(`/api/user/get_profile_name?profile_name=${username}`);
+		if (res.status != 200)
+		{
+			displayResponse(chat, res);
+			return ;
+		}
+		const json = await res.json();
+		res = await fetch("/api/duel/decline", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				token: chat.user.token,
+				id: json.id
+			})
+		});
+		displayResponse(chat, res);
 	});
 
 	cmd.register("getFriend", "\n\treturn friends", async (chat: Chat, argv: Array<string>) => {

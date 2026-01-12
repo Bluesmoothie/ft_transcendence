@@ -1,4 +1,4 @@
-import * as base64Url from '@modules/jwt/base64Url.js'
+import * as base64Url from 'modules/jwt/base64Url.js'
 
 /**
  * create new jwt token

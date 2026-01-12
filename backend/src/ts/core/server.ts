@@ -1,7 +1,7 @@
-import { initFastify } from '@core/init.js';
-import * as core from '@core/core.js';
-import { ServerSideRendering } from '@modules/ssr/ServerSideRendering.js';
-import { GameServer } from '@modules/game/GameServer.js';
+import { initFastify } from 'core/init.js';
+import * as core from 'core/core.js';
+import { ServerSideRendering } from 'modules/ssr/ServerSideRendering.js';
+import { GameServer } from 'modules/game/GameServer.js';
 
 await core.createServer();
 await initFastify();

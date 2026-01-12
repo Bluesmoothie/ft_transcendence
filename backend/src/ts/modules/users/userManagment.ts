@@ -5,14 +5,14 @@ import path from 'path';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { randomBytes } from "crypto";
 
-import * as core from '@core/core.js';
-import { DbResponse, uploadDir } from "@core/core.js";
+import * as core from 'core/core.js';
+import { DbResponse, uploadDir } from "core/core.js";
 import { getUserById, getUserByName } from "./user.js";
-import { hashString } from "@modules/sha256.js";
-import { check_totp } from "@modules/2fa/totp.js";
-import { AuthSource } from "@modules/oauth2/routes.js";
+import { hashString } from "modules/sha256.js";
+import { check_totp } from "modules/2fa/totp.js";
+import { AuthSource } from "modules/oauth2/routes.js";
 import { getSqlDate } from "utils.js";
-import { jwtVerif } from "@modules/jwt/jwt.js";
+import { jwtVerif } from "modules/jwt/jwt.js";
 
 
 function validate_email(email:string)

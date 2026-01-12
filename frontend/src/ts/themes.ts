@@ -11,6 +11,5 @@ export async function loadTheme(): Promise<Theme[]>
 	themesJson.forEach(async (theme: Theme) => {
 		themes.push(theme);
 	});
-	console.log(themes);
 	return themes;
 }

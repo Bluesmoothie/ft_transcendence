@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { createUserOAuth2, loginOAuth2 } from '@modules/users/userManagment.js';
-import * as core from '@core/core.js';
+import { createUserOAuth2, loginOAuth2 } from 'modules/users/userManagment.js';
+import * as core from 'core/core.js';
 import * as jwt from 'modules/jwt/jwt.js';
-import { AuthSource } from '@modules/oauth2/routes.js';
+import { AuthSource } from 'modules/oauth2/routes.js';
 
 export function githubOAuth2Routes (
 	fastify: FastifyInstance,

@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import * as core from '@core/core.js';
-import * as user from '@modules/users/user.js'
+import * as core from 'core/core.js';
+import * as user from 'modules/users/user.js'
 import { GameRes } from 'modules/users/user.js';
-import { jwtVerif } from '@modules/jwt/jwt.js';
+import { jwtVerif } from 'modules/jwt/jwt.js';
 import * as mgmt from 'modules/users/userManagment.js';
 
 export async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)

@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { createUserOAuth2, loginOAuth2 } from '@modules/users/userManagment.js';
-import * as core from '@core/core.js';
-import { AuthSource } from '@modules/oauth2/routes.js'
+import { createUserOAuth2, loginOAuth2 } from 'modules/users/userManagment.js';
+import * as core from 'core/core.js';
+import { AuthSource } from 'modules/oauth2/routes.js'
 
 export function googleOAuth2Routes (
 	fastify: FastifyInstance,

@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify'
-import * as core from '@core/core.js';
-import * as mgmt from '@modules/users/userManagment.js';
+import * as core from 'core/core.js';
+import * as mgmt from 'modules/users/userManagment.js';
 import * as jwt from 'modules/jwt/jwt.js';
 
 //
