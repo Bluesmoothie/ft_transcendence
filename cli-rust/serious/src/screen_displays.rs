@@ -298,10 +298,9 @@ impl ScreenDisplayer for Infos {
             .block(block)
             .render(area, buf);
     }
-    //a changer le auth.blink avec friends.blink
     fn display_addfriends_screen(&self, area: Rect, buf: &mut Buffer) {
         let friend = format!("{}{}", 
-            self.friend.borrow().friend_tmp, if self.authent.borrow().blink {"|"} else {""});
+            self.friend.borrow().friend_tmp, if self.friend.borrow().blink {"|"} else {""});
         let content = vec![
             Line::from(Span::styled(
                 "Add a friend",
