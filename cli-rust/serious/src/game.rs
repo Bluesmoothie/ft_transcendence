@@ -1,6 +1,5 @@
 use reqwest::{
 	header::HeaderMap,
-	Client,
 };
 
 use crossterm::{
@@ -13,9 +12,10 @@ use futures_util::stream::SplitSink;
 use std::{time::{Duration, Instant}};
 use std::collections::HashMap;
 
-use crate::should_exit;
+use crate::utils::should_exit;
 use bytes::Bytes;
-
+use std::rc::Rc;
+use crate::{Auth, Context};
 use tokio_tungstenite::{connect_async_tls_with_config, tungstenite::Utf8Bytes};
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::WebSocketStream;
@@ -25,15 +25,14 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use crate::CurrentScreen;
 use anyhow::{Result, anyhow};
 use crate::Infos;
-
+use std::cell::RefCell;
 use tokio::sync::{mpsc, watch};
 use tokio::net::TcpStream;
 
 #[derive(Default)]
 pub struct Game {
-	location: String,
-	id: u64,
-	client: Client,
+	auth: Rc<RefCell<Auth>>,
+	context: Rc<Context>,
 	game_id: String,
 	pub opponent_name: String,
 	player_side: u64,
@@ -172,9 +171,8 @@ impl Game {
 			_ => return Err(anyhow!("No player Id in response")),
 		};
 		Ok(Game{
-			location: info.context.location.clone(), 
-			id: info.authent.borrow().id,
-			client: info.context.client.clone(), 
+			context: info.context.clone(),
+			auth: info.authent.clone(),
 			game_id,
 			player_side: player_side,
 			opponent_name: opponent_name,
@@ -188,9 +186,9 @@ impl Game {
 	// 	Ok(())
 	// }
 	async fn start_game(&mut self) -> Result<()> {
-		let url = format!("https://{}/api/start-game/{}", self.location, self.game_id);
-		self.client.post(url).send().await?;
-		let request = format!("wss://{}/api/game/{}/{}", self.location, self.game_id, self.player_side).into_client_request()?;
+		let url = format!("https://{}/api/start-game/{}", self.context.location, self.game_id);
+		self.context.client.post(url).send().await?;
+		let request = format!("wss://{}/api/game/{}/{}", self.context.location, self.game_id, self.player_side).into_client_request()?;
 		let connector = Connector::NativeTls(
 			native_tls::TlsConnector::builder()
 				.danger_accept_invalid_certs(true)
@@ -224,7 +222,7 @@ impl Game {
 	}
 	async fn end_game(&mut self, text: Utf8Bytes, sender: mpsc::Sender<u8>) -> Result<()> {
 		let value = serde_json::to_string(text.as_str())?;
-		match value.find(&self.id.to_string()) {
+		match value.find(&self.auth.borrow().id.to_string()) {
 			Some(_) => self.game_stats.winner = true,
 			_ => self.game_stats.winner = false,
 		};

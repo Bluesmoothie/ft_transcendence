@@ -1,15 +1,10 @@
-use std::{
-  time::Duration,
-};
-
+use std::time::Duration;
 use anyhow::Result;
-
 use crossterm::event::{self, poll, Event, KeyCode, KeyEventKind};
 use crate::login::Field;
 use crate::CurrentScreen;
-use crate::friends::Friends;
-
-use super::{Infos, should_exit};
+use crate::utils::should_exit;
+use crate::infos::Infos;
 
 pub trait EventHandler {
     fn handle_welcome_events(&mut self) -> Result<()>;

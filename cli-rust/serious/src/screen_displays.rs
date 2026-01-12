@@ -1,5 +1,4 @@
 use crate::login::Field;
-use crate::friends::Friends;
 use crate::LOGO;
 use ratatui::widgets::canvas::{Circle, Rectangle};
 use ratatui::{
@@ -124,15 +123,15 @@ impl ScreenDisplayer for Infos {
                 .border_set(border::THICK);
         let mut friends_display: Vec<String> = vec![];
         let height: usize = (area.height - 2) as usize;
-        let max: usize = match (self.friend.borrow().index * height + height + 1) >= self.friend.borrow().friends.len() {
-            true => self.friend.borrow().friends.len(),
+        let max: usize = match (self.friend.borrow().index * height + height + 1) >= self.friend.borrow().friends_list.len() {
+            true => self.friend.borrow().friends_list.len(),
             false => (self.friend.borrow().index * height) + height + 1
         };
-        let min = match self.friend.borrow().index * height < self.friend.borrow().friends.len() {
+        let min = match self.friend.borrow().index * height < self.friend.borrow().friends_list.len() {
             true => self.friend.borrow().index * height,
-            false => self.friend.borrow().friends.len(),
+            false => self.friend.borrow().friends_list.len(),
         };
-        for friend in &self.friend.borrow().friends[min..max] {
+        for friend in &self.friend.borrow().friends_list[min..max] {
             friends_display.push(friend.clone());
         }
         let lines: Vec<Line> = friends_display
@@ -323,10 +322,9 @@ impl ScreenDisplayer for Infos {
             .alignment(Alignment::Left)
             .render(area, buf);        
     }
-    //a changer le auth.blink avec friends.blink
     fn display_delete_friends_screen(&self, area: Rect, buf: &mut Buffer) {
         let friend = format!("{}{}", 
-            self.friend.borrow().friend_tmp, if self.authent.borrow().blink {"|"} else {""});
+            self.friend.borrow().friend_tmp, if self.friend.borrow().blink {"|"} else {""});
         let content = vec![
             Line::from(Span::styled(
                 "Delete a friend",

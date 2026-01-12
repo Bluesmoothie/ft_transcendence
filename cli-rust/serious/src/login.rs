@@ -10,7 +10,6 @@ use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use futures_util::{StreamExt};
 use std::rc::Rc;
-use std::cell::RefCell;
 
 #[derive(Default, PartialEq)]
 pub enum Field {
