@@ -33,6 +33,7 @@ export class ThemeController
 
 	get themeName(): string { return this.m_themeName; }
 	get themes(): Theme[] { return this.m_themes; }
+	get currentTheme(): Theme | null { return this.findTheme(this.m_themeName); }
 	static get Instance(): ThemeController | null
 	{
 		return ThemeController.m_instance;

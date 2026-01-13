@@ -109,7 +109,6 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 			const res = await mgmt.loginSession(token, core.db);
 			if (res.code != 200)
 				return reply.code(res.code).send(res.data);
-			Logger.log("user is login has:", res.data.name);
 			return reply.code(res.code).send(res.data);
 		})
 

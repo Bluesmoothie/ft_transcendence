@@ -11,17 +11,19 @@ import { Logger } from 'modules/logger.js';
 export const connections = new Map<WebSocket, number>(); // websocket => user login
 var matchQueue: number[] = [];
 
-function serverMsg(str: string): string
+export function serverMsg(str: string, data_i18n?: string): string
 {
 	const val = Array.from(connections.values());
-	return JSON.stringify({ username: "<SERVER>", message: str, connections: val });
+	return JSON.stringify({ username: "<SERVER>", message: str, connections: val, data_i18n: data_i18n});
 }
 
-function sendTo(userId: number, msg: string)
+export async function sendTo(userId: number, msg: string)
 {
-	connections.forEach((id: number, ws: WebSocket) => {
+	Logger.debug(connections.values());
+	connections.forEach(async (id: number, ws: WebSocket) => {
 		if (userId == id)
 		{
+			Logger.debug("sending msg to ", await getUserName(id));
 			ws.send(msg);
 		}
 	});
@@ -106,9 +108,9 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 			if (!conn)
 				return ;
 			removePlayerFromQueue(conn);
-			connections.delete(ws);
 			broadcast(serverMsg(`${login} has left the room`), ws);
 			Logger.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
+			connections.delete(ws);
 		});
 
 		broadcast(serverMsg(`${login} has join the room`), ws);
@@ -125,12 +127,12 @@ async function broadcast(message: any, sender: WebSocket)
 	if (!senderId)
 		return ;
 
+	Logger.log("sending", message, connections.values());
 	connections.forEach(async (id: number, conn: WebSocket) => {
 
 		if (conn === sender || conn.readyState !== conn.OPEN)
 		{
 			return ;
-
 		}
 		try
 		{

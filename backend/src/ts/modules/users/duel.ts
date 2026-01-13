@@ -2,7 +2,9 @@ import * as core from 'core/core.js';
 import { getUserById } from './user.js';
 import { DbResponse } from 'core/core.js';
 import { GameServer } from 'modules/game/GameServer.js';
+import { getUserName } from './user.js';
 import { Logger } from 'modules/logger.js';
+import { sendTo, serverMsg } from 'modules/chat/chat.js';
 
 type Duel = {
 	senderId:	number,
@@ -38,6 +40,7 @@ export async function inviteDuel(senderId: number, id: number): Promise<DbRespon
 		return { code: 200, data: { message: "awaiting user response" }};
 
 	duels.push({ senderId: senderId, id: id });
+	sendTo(id, serverMsg(`${await getUserName(senderId)} is inviting you for a duel\n(/accept | /decline)`));
 	return { code: 200, data: { message: "invite sent" }};
 }
 
@@ -62,8 +65,9 @@ export async function declineDuel(senderId: number, id: number): Promise<DbRespo
 	if (!duel)
 		return { code: 404, data: { message: "invite not found" }};
 	removeDuel(duel);
+	sendTo(id, serverMsg(`${await getUserName(senderId)} has declined the invite.`));
 
-	return { code: 200, data: { message: "not implemented" }};
+	return { code: 200, data: { message: "invite has been declined" }};
 }
 
 export async function acceptDuel(senderId: number, id: number): Promise<DbResponse>
@@ -78,5 +82,9 @@ export async function acceptDuel(senderId: number, id: number): Promise<DbRespon
 
 	removeDuel(duel);
 	const gameId = await GameServer.Instance.startDuel(senderId, id);
+
+	sendTo(id, serverMsg(`${await getUserName(senderId)} accepted your invite.`));
+	sendTo(senderId, serverMsg(`${await getUserName(id)} accepted your invite.`));
+
 	return { code: 200, data: { id: gameId, message: "starting game" }};
 }

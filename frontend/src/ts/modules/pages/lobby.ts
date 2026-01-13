@@ -50,8 +50,9 @@ export class LobbyView extends ViewComponent
 		if (!chatInput || !chatOutput)
 			return ;
 
-		if (!this.m_chat)
+		if (!this.m_chat || this.m_chat.user?.id != this.m_user.id)
 		{
+			console.log("reseting chat");
 			this.m_chat = new Chat(this.m_user, chatOutput, chatInput);
 			this.m_chat.onConnRefresh((conns: User[]) => this.fillUserList(conns));
 		}

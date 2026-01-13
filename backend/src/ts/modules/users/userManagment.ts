@@ -136,7 +136,10 @@ export async function createUser(email: string, passw: string, username: string,
 		return { code: 403, data: { message: "error: email not valid" }};
 	const res = await getUserByName(username, core.db);	
 	if (res.code != 404)
+	{
+		Logger.warn(`${username} is already in database`);
 		return { code: 409, data: { message: "user is already in database" }};
+	}
 
 	try
 	{

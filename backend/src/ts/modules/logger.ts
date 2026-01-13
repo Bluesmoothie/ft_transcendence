@@ -12,7 +12,6 @@ export class Logger
 {
 	constructor() {}
 
-
 	private static getTime()
 	{
 		return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Paris"})).toISOString().slice(0, 19).replace('T', ' ').slice(11);
@@ -36,6 +35,11 @@ export class Logger
 	public static error(...args: any)
 	{
 		console.log(`${Logger.getTime()} ${colors.red}[ERROR]  ${colors.reset}`, ...args);
+	}
+
+	public static debug(...args: any)
+	{
+		console.log(`${Logger.getTime()} ${colors.blue}[DEBUG]  ${colors.reset}`, ...args);
 	}
 
 }

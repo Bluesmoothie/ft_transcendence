@@ -72,5 +72,7 @@
 	"unavailable": "indisponible",
 	"busy": "occupé",
 	"in_game": "en jeu",
-	"no_data": "pas de données"
+	"no_data": "pas de données",
+
+	"duel_invite": "une nouvelle invitation est arrivé (/listInvite)"
 }

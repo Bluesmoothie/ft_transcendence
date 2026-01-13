@@ -4,16 +4,19 @@ import { User, UserStatus, MainUser, getUserFromId } from 'modules/user/User.js'
 import { Router } from 'modules/router/Router.js';
 import { registerCmds } from './chatCommands.js';
 import * as utils from './chat_utils.js'
+import { ThemeController } from 'modules/pages/Theme.js';
 
 export class Message
 {
 	private m_sender:	User;
 	private m_msg:		string;
+	private m_json:		any | null;
 
-	constructor(sender: User, msg: string)
+	constructor(sender: User, msg: string, json: any | null)
 	{
 		this.m_sender = sender;
 		this.m_msg = msg;
+		this.m_json = json;
 	}
 
 	public getSender() : User	{ return this.m_sender; }
@@ -23,6 +26,23 @@ export class Message
 	{
 		const packet = { username: this.m_sender.name, message: this.m_msg, isCmd: false };
 		chat.ws?.send(JSON.stringify(packet));
+	}
+
+	private randomColor(str: string): string
+	{
+		const theme = ThemeController.Instance?.currentTheme;
+		if (!theme)
+			return "#ffffff";
+		
+		const colors = [theme.red, theme.blue, theme.green, theme.white, theme.purple, theme.yellow];
+
+		var total = 0;
+		for (let i = 0; i < str.length; i++)
+		{
+			total += str.charCodeAt(i);
+		}
+
+		return colors[total % colors.length];
 	}
 
 	/**
@@ -41,12 +61,15 @@ export class Message
 			console.warn("no senderTxt found");
 
 		senderTxt.textContent = utils.applyMsgStyle(this.m_sender.name);
-		senderTxt.style.color = strToCol(this.m_sender.name);
+		senderTxt.style.color = this.randomColor(this.m_sender.name);
 
 		const msgTxt = clone.querySelector("#message") as HTMLElement;
 		if (!msgTxt)
 			console.warn("no senderTxt found");
 		msgTxt.textContent = this.getMsg();
+
+		if (this.m_json && this.m_json.data_i18n)
+			msgTxt.setAttribute('data-i18n', this.m_json.data_i18n);
 
 		return clone;
 	}
@@ -82,6 +105,7 @@ export class Chat
 		this.m_user.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
 
 		user.onLogout((user: MainUser) => this.disconnect());
+		user.onLogin((user: MainUser) => this.resetChat(user));
 
 		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
 
@@ -122,6 +146,7 @@ export class Chat
 	public disconnect()
 	{
 		this.m_user?.removeFromQueue();
+		this.m_user = null;
 		this.m_ws?.close();
 		if (this.m_chatbox)
 			this.m_chatbox.innerHTML = "";
@@ -167,7 +192,6 @@ export class Chat
 		const json = JSON.parse(event.data);
 		const username = json.username;
 		const message = json.message;
-		console.log(message, json);
 
 		if ("connections" in json)
 		{
@@ -181,10 +205,11 @@ export class Chat
 		}
 		const user = new User();
 		user.setUser(-1, username, "", "", UserStatus.UNKNOW);
-		const newMsg = new Message(user, message);
+		const newMsg = new Message(user, message, json);
 
 		if (this.user?.status != UserStatus.UNAVAILABLE && this.user?.status != UserStatus.BUSY)
 			this.displayMessage(newMsg);
+		window.dispatchEvent(new CustomEvent('pageChanged'));
 	}
 
 	public displayMessage(newMsg: Message)
@@ -192,14 +217,13 @@ export class Chat
 		const html = newMsg.toHtml();
 		if (this.m_chatbox && html)
 		{
-
 			this.m_chatbox.prepend(html);
 		}
 	}
 
 	public async sendMsg(sender: User, msg: string)
 	{
-		var newMsg = new Message(sender, msg);
+		var newMsg = new Message(sender, msg, null);
 
 		const html = newMsg.toHtml();
 		if (this.m_chatbox && html)
@@ -218,7 +242,6 @@ export class Chat
 
 	public startGameCb(json: any)
 	{
-		console.log(this.m_onStartGame);
 		this.m_onStartGame.forEach(cb => cb(json));
 	}
 }
