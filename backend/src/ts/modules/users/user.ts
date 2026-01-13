@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { Database } from 'sqlite'
 import { DbResponse } from 'core/core.js';
 import * as core from 'core/core.js';
+import { Logger } from 'modules/logger.js';
 
 export interface GameRes {
 	user1_id:		number;
@@ -22,7 +23,7 @@ export async function getUserName(id: number): Promise<string>
 	}
 	catch (err)
 	{
-		console.error(`database error: ${err}`);
+		Logger.error(`database error: ${err}`);
 		return "";
 	}
 }
@@ -37,7 +38,7 @@ export async function updateUserStats(id: number, win: boolean, db: Database)
 			await db.run(winSql, [id]);
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return 500;
 	}
 }
@@ -53,7 +54,7 @@ export async function getUserByName(username: string, db: Database) : Promise<Db
 		return { code: 200, data: row };
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error ${err}` }};
 	}
 }
@@ -84,17 +85,17 @@ export async function addGameToHist(game: GameRes, db: Database) : Promise<DbRes
 			user1Elo = await db.get(sql_elo, [-10, id1]);
 			user2Elo = await db.get(sql_elo, [10, id2]);
 		}
-		console.log(user1Elo, user2Elo)
+		Logger.log(user1Elo, user2Elo)
 
 		const response = await db.run(sql, [id1, id2, game.user1_score, game.user2_score, date, user1Elo.elo, user2Elo.elo]);
-		console.log(`added game to history. id: ${response.lastID}`);
+		Logger.log(`added game to history. id: ${response.lastID}`);
 		await updateUserStats(id1, game.user1_score > game.user2_score, db);
 		await updateUserStats(id2, game.user2_score > game.user1_score, db);
 
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -109,7 +110,7 @@ export async function getUserStats(username: string, db: Database) : Promise<[ n
 		return [ 200, row ];
 	}
 	catch (err) {
-		console.error(`database err: ${err}`)
+		Logger.error(`database err: ${err}`)
 		return [500, { message: "database error" }];
 	}
 }
@@ -123,16 +124,16 @@ export async function getUserHistByName(request: FastifyRequest, reply: FastifyR
 	try {
 		const rows = await db.all(sql, [id, id]);
 		if (!rows || rows.length === 0) {
-			console.log('no games found');
+			Logger.log('no games found');
 			return reply.code(404).send({ message: 'no games :(' });
 		}
 
-		console.log(rows);
+		Logger.log(rows);
 		return reply.code(200).send(rows);
 
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return reply.code(500).send({ message: `database error ${err}` });
 	}
 }
@@ -148,7 +149,7 @@ export async function getUserById(user_id: number, db: Database) : Promise<DbRes
 		return { code: 200, data: row};
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -170,7 +171,7 @@ export async function getBlockedUsrById(id: number, db: Database) : Promise<DbRe
 		return { code: 200, data: rows };
 	}
 	catch (err) {
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -188,7 +189,7 @@ export async function getUserStatus(id: number): Promise<DbResponse>
 	}
 	catch (err)
 	{
-		console.log(`Database Error: ${err}`)
+		Logger.log(`Database Error: ${err}`)
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -207,7 +208,7 @@ export async function getBlockUser(user1: number, user2: number): Promise<DbResp
 	}
 	catch (err)
 	{
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -223,7 +224,7 @@ export async function getAllUsers(): Promise<DbResponse>
 		return { code: 200, data: rows };
 	}
 	catch (err) {
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -239,7 +240,7 @@ export async function getAllUserIds(): Promise<DbResponse>
 		return { code: 200, data: rows };
 	}
 	catch (err) {
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }

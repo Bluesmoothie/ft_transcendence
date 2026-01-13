@@ -81,7 +81,7 @@ export class Chat
 		this.m_user = user;
 		this.m_user.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
 
-		user.onLogout((user: MainUser) => this.resetChat(user));
+		user.onLogout((user: MainUser) => this.disconnect());
 
 		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
 
@@ -167,6 +167,7 @@ export class Chat
 		const json = JSON.parse(event.data);
 		const username = json.username;
 		const message = json.message;
+		console.log(message, json);
 
 		if ("connections" in json)
 		{

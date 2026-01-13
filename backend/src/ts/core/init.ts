@@ -22,10 +22,12 @@ async function loadConfig(path: string, db: Database)
 	const json = JSON.parse(data);
 
 	const users = json.default_users;
-	users.forEach(async (user: any) => {
+	for (let i = 0; i < users.length; i++)
+	{
+		const user = users[i];
 		const hash = await hashString(user.passw);
 		await createUser(user.email, hash, user.name, AuthSource.INTERNAL, db);
-	});
+	}
 }
 
 export async function initFastify()

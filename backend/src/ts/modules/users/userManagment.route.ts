@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } f
 import * as core from 'core/core.js';
 import * as mgmt from 'modules/users/userManagment.js';
 import * as jwt from 'modules/jwt/jwt.js';
+import { Logger } from 'modules/logger.js';
 
 //
 // User managment
@@ -15,7 +16,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 			const res = await mgmt.loginSession(token, core.db);
 			if (res.code != 200)
 				return reply.code(res.code).send(res.data);
-			console.log("user is login has:", res.data.name);
+			Logger.log("user is login has:", res.data.name);
 			return reply.code(res.code).send(res.data);
 		}
 		else
@@ -87,7 +88,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		if (res.code == 200)
 		{
 			const token = await jwt.jwtCreate({ id: res.data.id }, core.sessionKey);
-			console.log("creating new token:", token);
+			Logger.log("creating new token:", token);
 			return reply.code(200).send({ token: token });
 		}
 		return reply.code(res.code).send(res.data);

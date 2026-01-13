@@ -4,6 +4,7 @@ import { open } from 'sqlite'
 import Fastify, { FastifyInstance } from "fastify";
 import '@fastify/session';
 import { getJwtSecret } from 'modules/vault/secrets.js';
+import { Logger } from "modules/logger.js";
 
 export interface DbResponse {
 	code:	number;
@@ -32,15 +33,17 @@ export async function createServer()
 
 	fastify = Fastify({ logger: false });
 	sessionKey = await getJwtSecret();
-	console.log("server created");
 }
 
 export async function start() {
-	try {
+	try
+	{
 		await fastify.listen({ port: 3000, host: '0.0.0.0' });
-		console.log("server ready!")
-		console.log(`access at: https://${process.env.HOST}:8081`)
-	} catch (err) {
+		Logger.success("server ready!")
+		Logger.log(`access at: https://${process.env.HOST}:8081`)
+	}
+	catch (err)
+	{
 		fastify.log.error(err);
 		process.exit(1)
 	}
@@ -56,9 +59,9 @@ export async function shutdown()
 	}
 	catch (err)
 	{
-		console.error(`error on shutdown: ${err}`);
+		Logger.error(`error on shutdown: ${err}`);
 	}
 	db.close();
-	console.log('shutdown complete, bye.');
+	Logger.log('shutdown complete, bye.');
 	process.exit(0);
 }

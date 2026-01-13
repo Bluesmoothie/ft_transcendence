@@ -1,10 +1,11 @@
 import * as core from 'core/core.js';
-import { getUserById, getBlockUser, getUserStatus } from 'modules/users/user.js';
+import { getUserById, getBlockUser, getUserStatus, getUserName } from 'modules/users/user.js';
 import { WebSocket } from '@fastify/websocket';
 import * as utils from 'utils.js';
 import { FastifyRequest } from 'fastify';
 import { GameServer } from 'modules/game/GameServer.js';
 import { GameInstance } from 'modules/game/GameInstance.js'
+import { Logger } from 'modules/logger.js';
 
 // TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
 export const connections = new Map<WebSocket, number>(); // websocket => user login
@@ -41,10 +42,10 @@ export async function notifyMatch(id: number, opponentId: number, gameId: string
 	sendTo(id, serverMsg(`you will play against: ${await getPlayerName(opponentId)}`));
 }
 
-export function removePlayerFromQueue(playerId: number)
+export async function removePlayerFromQueue(playerId: number)
 {
 	matchQueue = matchQueue.filter(num => num != Number(playerId));
-	console.log(playerId, "has been removed from matchQueue");
+	Logger.log(`${await getUserName(playerId)} has been removed from matchQueue`);
 }
 
 export async function addPlayerToQueue(playerId: number, server: GameServer): Promise<string | null>
@@ -56,7 +57,7 @@ export async function addPlayerToQueue(playerId: number, server: GameServer): Pr
 		if (!player2)
 			return null;
 
-		console.log(`${player1} will play against ${player2}`);
+		Logger.log(`${player1} will play against ${player2}`);
 		const gameId = crypto.randomUUID();
 		await notifyMatch(player1, player2, gameId, 1);
 		await notifyMatch(player2, player1, gameId, 2);
@@ -78,7 +79,7 @@ async function onMessage(message: any, connection: WebSocket)
 	}
 	catch (err)
 	{
-		console.log(`failed to process message: ${err}`);
+		Logger.log(`failed to process message: ${err}`);
 	}
 }
 
@@ -97,7 +98,7 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 		ws.on('message', async (message: any) => onMessage(message, ws));
 
 		ws.on('error', (error: any) => {
-			console.error(`${login}: websocket error: ${error}`);
+			Logger.error(`${login}: websocket error: ${error}`);
 		})
 
 		ws.on('close', (code: any, reason: any) => {
@@ -107,14 +108,14 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 			removePlayerFromQueue(conn);
 			connections.delete(ws);
 			broadcast(serverMsg(`${login} has left the room`), ws);
-			console.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
+			Logger.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
 		});
 
 		broadcast(serverMsg(`${login} has join the room`), ws);
 	}
 	catch (err)
 	{
-		console.log(err);
+		Logger.log(`${err}`);
 	}
 }
 
@@ -127,22 +128,23 @@ async function broadcast(message: any, sender: WebSocket)
 	connections.forEach(async (id: number, conn: WebSocket) => {
 
 		if (conn === sender || conn.readyState !== conn.OPEN)
+		{
 			return ;
-		const status = await getUserStatus(id);
-		console.log(id, status);
+
+		}
 		try
 		{
 			const data = await getBlockUser(id, senderId);
-			// console.log(`${senderId} <=> ${id}: `, data);
 			if (data.code == 200) // user is blocked
 			{
+				Logger.log(`${await getUserName(senderId)} has block ${await getUserName(id)}`);
 				return;
 			}
 			conn.send(message);
 		}
 		catch (err: any)
 		{
-			console.error(`Broadcast error: ${err}`);
+			Logger.error(`Broadcast error: ${err}`);
 			connections.delete(conn);
 		}
 	})

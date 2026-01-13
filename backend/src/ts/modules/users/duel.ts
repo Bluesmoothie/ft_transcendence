@@ -2,6 +2,7 @@ import * as core from 'core/core.js';
 import { getUserById } from './user.js';
 import { DbResponse } from 'core/core.js';
 import { GameServer } from 'modules/game/GameServer.js';
+import { Logger } from 'modules/logger.js';
 
 type Duel = {
 	senderId:	number,
@@ -76,8 +77,6 @@ export async function acceptDuel(senderId: number, id: number): Promise<DbRespon
 		return { code: 404, data: { message: "invite not found" }};
 
 	removeDuel(duel);
-	console.log("hello\n");
 	const gameId = await GameServer.Instance.startDuel(senderId, id);
-	console.log("id", gameId);
 	return { code: 200, data: { id: gameId, message: "starting game" }};
 }

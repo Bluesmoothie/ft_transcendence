@@ -6,6 +6,7 @@ import * as core from 'core/core.js';
 import { addPlayerToQueue } from 'modules/chat/chat.js';
 import { Tournament } from './Tournament.js';
 import { notifyMatch } from 'modules/chat/chat.js';
+import { Logger } from 'modules/logger.js';
 
 export class GameServer
 {
@@ -47,7 +48,7 @@ export class GameServer
 		}
 		catch (error)
 		{
-			console.error('Error starting server:', error);
+			Logger.error('Error starting server:', error);
 		}
 	}
 
@@ -59,7 +60,7 @@ export class GameServer
 	*/
 	public async startDuel(player1: number, player2: number): Promise<string>
 	{
-		console.log(`starting duel between: ${await getUserName(player1)} and ${await getUserName(player2)}`);
+		Logger.log(`starting duel between: ${await getUserName(player1)} and ${await getUserName(player2)}`);
 		const gameId = crypto.randomUUID();
 		await notifyMatch(player1, player2, gameId, 1);
 		await notifyMatch(player2, player1, gameId, 2);
@@ -109,7 +110,7 @@ export class GameServer
 			}
 			catch (error)
 			{
-				console.error('Error creating game:', error);
+				Logger.error('Error creating game:', error);
 				reply.status(500).send({ error });
 			}
 		});
@@ -142,7 +143,7 @@ export class GameServer
 			}
 			catch (error)
 			{
-				console.error('Error starting game:', error);
+				Logger.error('Error starting game:', error);
 				reply.status(500).send({ error });
 			}
 		});
@@ -235,7 +236,7 @@ export class GameServer
 						const bot = this.bots.get(gameId);
 						if (!bot)
 						{
-							console.error(`Bot not found for game ${gameId}`);
+							Logger.error(`Bot not found for game ${gameId}`);
 						}
 
 						bot?.destroy();
@@ -250,13 +251,13 @@ export class GameServer
 
 				connection.on('error', () =>
 				{
-					console.error(`Connection error for game ${gameId}`);
+					Logger.error(`Connection error for game ${gameId}`);
 					closeConnection();
 				});
 			}
 			catch (error)
 			{
-				console.error('Error in websocket connection:', error);
+				Logger.error('Error in websocket connection:', error);
 				connection.close();
 			}
 		});
@@ -283,12 +284,12 @@ export class GameServer
 				participants.add([playerName, "president"]);
 				this.pendingTournaments.set(tournamentId, participants);
 
-				console.log(`Tournament ${tournamentId} created by ${playerName}`);
+				Logger.log(`Tournament ${tournamentId} created by ${playerName}`);
 				reply.status(201).send({ tournamentId });
 			}
 			catch (error)
 			{
-				console.error('Error creating tournament:', error);
+				Logger.error('Error creating tournament:', error);
 				reply.status(500).send({ error });
 			}
 		});
@@ -331,7 +332,7 @@ export class GameServer
 			}
 			catch (error)
 			{
-				console.error('Error joining tournament:', error);
+				Logger.error('Error joining tournament:', error);
 				reply.status(500).send({ error });
 			}
 		});
@@ -372,7 +373,7 @@ export class GameServer
 			}
 			catch (error)
 			{
-				console.error('Error joining tournament:', error);
+				Logger.error('Error joining tournament:', error);
 				reply.status(500).send({ error });
 			}
 		});
@@ -412,7 +413,7 @@ export class GameServer
 			}
 			catch (error)
 			{
-				console.error('Error joining tournament:', error);
+				Logger.error('Error joining tournament:', error);
 				reply.status(500).send({ error });
 			}
 		});

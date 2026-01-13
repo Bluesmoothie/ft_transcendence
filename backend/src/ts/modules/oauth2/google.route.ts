@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { createUserOAuth2, loginOAuth2 } from 'modules/users/userManagment.js';
 import * as core from 'core/core.js';
 import { AuthSource } from 'modules/oauth2/routes.js'
+import { Logger } from 'modules/logger.js';
 
 export function googleOAuth2Routes (
 	fastify: FastifyInstance,
@@ -19,7 +20,7 @@ export function googleOAuth2Routes (
 			if (err)
 			{
 				reply.send(err)
-				console.log(err);
+				Logger.log(err);
 				return
 			}
 
@@ -47,8 +48,8 @@ export function googleOAuth2Routes (
 			if (res.code == 200 || res.code == 500) // TODO: 500 ?
 			{
 				res = await loginOAuth2(id, AuthSource.GOOGLE, core.db);
-				console.log(res.code);
-				console.log(res.data);
+				Logger.log(res.code);
+				Logger.log(res.data);
 				request.session.user = data.id;
 				return reply.code(res.code).send({ message: "Success"});
 			}

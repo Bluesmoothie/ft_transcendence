@@ -3,6 +3,7 @@ import { FastifyRequest, FastifyReply, FastifyInstance, FastifyPluginOptions } f
 import * as chat from 'modules/chat/chat.js';
 import { getUserById, getUserByName } from 'modules/users/user.js';
 import { jwtVerif } from 'modules/jwt/jwt.js';
+import { Logger } from 'modules/logger.js';
 
 export async function chatRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
@@ -70,7 +71,7 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		if (res.code != 200)
 			return reply.code(404).send({ message: "user does not exist" });
 
-		console.log(res.data);
+		Logger.log(res.data);
 
 		var success = false;
 		for (var [key, value] of chat.connections)
