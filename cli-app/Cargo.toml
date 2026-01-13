@@ -1,5 +1,5 @@
 [package]
-name = "serious"
+name = "transcendence_cli_app"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,7 +7,7 @@ edition = "2024"
 anyhow = "1.0.100"
 bytes = "1.11.0"
 crossterm = "0.29.0"
-ctrlc-async = "3.2.2"
+device_query = "4.0.1"
 env = "1.0.1"
 futures = "0.3.31"
 futures-util = "0.3.31"
