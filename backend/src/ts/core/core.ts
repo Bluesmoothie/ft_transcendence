@@ -39,7 +39,9 @@ export async function start() {
 	try {
 		await fastify.listen({ port: 3000, host: '0.0.0.0' });
 		console.log("server ready!")
-		console.log(`access at: https://${process.env.HOST}:8081`)
+		console.log(`pong access at: https://${process.env.HOST}:8081`);
+		console.log(`grafana access at: https://${process.env.HOST}:8081/admin/grafana`);
+		console.log(`kibana access at: https://${process.env.HOST}:8081/admin/kibana`);
 	} catch (err) {
 		fastify.log.error(err);
 		process.exit(1)
