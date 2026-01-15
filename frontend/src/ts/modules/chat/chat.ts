@@ -1,7 +1,5 @@
-import { strToCol, hashString } from 'modules/utils/sha256.js';
 import { ChatCommand } from './Command.js';
 import { User, UserStatus, MainUser, getUserFromId } from 'modules/user/User.js'
-import { Router } from 'modules/router/Router.js';
 import { registerCmds } from './chatCommands.js';
 import * as utils from './chat_utils.js'
 import { ThemeController } from 'modules/pages/Theme.js';
@@ -28,6 +26,10 @@ export class Message
 		chat.ws?.send(JSON.stringify(packet));
 	}
 
+	/**
+	 * return a random color of the theme based on the value of all char in str
+	 * @param str seed string
+	 */
 	private randomColor(str: string): string
 	{
 		const theme = ThemeController.Instance?.currentTheme;
@@ -197,6 +199,18 @@ export class Chat
 		{
 			const connectionsId = json.connections;
 			this.populateConnections(connectionsId);
+		}
+
+		if (json.flag && json.flag === "health")
+		{
+			fetch("/api/chat/healthCallback", {
+				method: "POST",
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					token: this.m_user?.token
+				})
+			});
+			return ;
 		}
 
 		if (message == "START")

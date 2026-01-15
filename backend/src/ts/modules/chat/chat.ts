@@ -1,31 +1,86 @@
 import * as core from 'core/core.js';
-import { getUserById, getBlockUser, getUserStatus, getUserName } from 'modules/users/user.js';
+import { getUserById, getBlockUser, getUserName } from 'modules/users/user.js';
 import { WebSocket } from '@fastify/websocket';
 import * as utils from 'utils.js';
 import { FastifyRequest } from 'fastify';
 import { GameServer } from 'modules/game/GameServer.js';
 import { GameInstance } from 'modules/game/GameInstance.js'
 import { Logger } from 'modules/logger.js';
+import { logoutUser } from 'modules/users/userManagment.js';
+import { clearDuel } from 'modules/users/duel.js';
 
-// TODO: use flag in chat (e.g: if flag == DM them msg is underlined)
 export const connections = new Map<WebSocket, number>(); // websocket => user login
-var matchQueue: number[] = [];
 
-export function serverMsg(str: string, data_i18n?: string): string
+var healthQueue: number[] = [];
+var matchQueue: number[] = [];
+var timerId: NodeJS.Timeout | null = null;
+
+export function serverMsg(str: string, flag?: string, data_i18n?: string): string
 {
 	const val = Array.from(connections.values());
-	return JSON.stringify({ username: "<SERVER>", message: str, connections: val, data_i18n: data_i18n});
+	return JSON.stringify({ username: "<SERVER>", message: str, connections: val, flag: flag, data_i18n: data_i18n});
+}
+
+/**
+ * send a health check call to every client, if they don't responde before next check
+ * they are consider afk
+ */
+export function checkHealth()
+{
+	connections.forEach(async (id: number, ws: WebSocket) => {
+		Logger.log("checking health for:", await getUserName(id));
+		const idx = healthQueue.indexOf(id); 
+		if (idx == -1)
+		{
+			healthQueue.push(id);
+			sendTo(id, serverMsg("check health", "health"));
+		}
+		else
+		{
+			Logger.warn(await getUserName(id), "has failed health check");
+			disconnectClient(ws);
+		}
+	});
+}
+
+export async function HealthCallback(id: number)
+{
+	for (var i = 0; i < healthQueue.length; i++)
+	{
+		if (healthQueue[i] == id)
+			break
+	}
+	
+	if (i == healthQueue.length)
+		return;
+
+	Logger.success(await getUserName(id), "has confirm health check");
+	healthQueue = healthQueue.filter(num => num != Number(id));
+}
+
+export async function disconnectClient(ws: WebSocket)
+{
+	if (!connections.has(ws))
+	{
+		Logger.log("client to disconnect not found");
+		return ;
+	}
+
+	const id = connections.get(ws);
+	if (!id)
+		return ;
+	await logoutUser(id, core.db);
+	ws.close();
+	connections.delete(ws);
+	clearDuel(id);
+	Logger.success(await getUserName(id), "was disconnected");
 }
 
 export async function sendTo(userId: number, msg: string)
 {
-	Logger.debug(connections.values());
 	connections.forEach(async (id: number, ws: WebSocket) => {
 		if (userId == id)
-		{
-			Logger.debug("sending msg to ", await getUserName(id));
 			ws.send(msg);
-		}
 	});
 }
 
@@ -59,7 +114,7 @@ export async function addPlayerToQueue(playerId: number, server: GameServer): Pr
 		if (!player2)
 			return null;
 
-		Logger.log(`${player1} will play against ${player2}`);
+		Logger.log(`${await getUserName(player1)} will play against ${await getUserName(player2)}`);
 		const gameId = crypto.randomUUID();
 		await notifyMatch(player1, player2, gameId, 1);
 		await notifyMatch(player2, player1, gameId, 2);
@@ -95,7 +150,13 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 		var login = "Guest"; // will stay at -1 if user is not login
 		if (res.code === 200)
 			login = res.data.name;
-		
+
+		if (connections.size == 0)
+		{
+			Logger.log("starting health checker");
+			const timer: number = process.env.HEALTH_CHECK_TIMER ? Number(process.env.HEALTH_CHECK_TIMER) : 60; // if env var missing then 60s
+			timerId = setInterval(() => checkHealth(), timer * 1000);
+		}
 		connections.set(ws, id);
 		ws.on('message', async (message: any) => onMessage(message, ws));
 
@@ -103,14 +164,20 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 			Logger.error(`${login}: websocket error: ${error}`);
 		})
 
-		ws.on('close', (code: any, reason: any) => {
+		ws.on('close', async (code: any, reason: any) => {
 			const conn = connections.get(ws);
 			if (!conn)
 				return ;
 			removePlayerFromQueue(conn);
 			broadcast(serverMsg(`${login} has left the room`), ws);
-			Logger.log(`${login}: disconnected - Code: ${code}, Reason: ${reason?.toString() || 'none'}`);
-			connections.delete(ws);
+
+			await disconnectClient(ws);
+			if (connections.size == 0 && timerId != null)
+			{
+				Logger.log("no more connection stopping health check");
+				clearInterval(timerId);
+				timerId = null;
+			}
 		});
 
 		broadcast(serverMsg(`${login} has join the room`), ws);
@@ -127,7 +194,6 @@ async function broadcast(message: any, sender: WebSocket)
 	if (!senderId)
 		return ;
 
-	Logger.log("sending", message, connections.values());
 	connections.forEach(async (id: number, conn: WebSocket) => {
 
 		if (conn === sender || conn.readyState !== conn.OPEN)

@@ -88,3 +88,17 @@ export async function acceptDuel(senderId: number, id: number): Promise<DbRespon
 
 	return { code: 200, data: { id: gameId, message: "starting game" }};
 }
+
+/**
+ * decline all duel of user
+ * @param id id of user to clear
+*/
+export function clearDuel(id: number)
+{
+	for (let i = 0; i < duels.length; i++)
+	{
+		const duel = duels[i];
+		if (duel.id == id || duel.senderId == id)
+			declineDuel(duel.id, duel.senderId);
+	}
+}

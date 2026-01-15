@@ -24,11 +24,6 @@ export class ProfileView extends ViewComponent
 	{
 		this.m_main = new MainUser();
 		await this.m_main.loginSession();
-		if (this.m_main.id == -1) // user not login
-		{
-			Router.Instance?.navigateTo("/");
-			return ;
-		}
 		this.m_main.onLogout(() => { Router.Instance?.navigateTo("/") })
 		new HeaderSmall(this.m_main, this, "header-container");
 
@@ -36,9 +31,14 @@ export class ProfileView extends ViewComponent
 		const usernameQuery = utils.getUrlVar().get("username");
 		if (usernameQuery)
 			this.m_user = await getUserFromName(usernameQuery);
-		if (!this.m_user) return;
+		if (!this.m_user)
+		{
+			await this.setUnknowProfile();
+			return;
+		}
 
 		const stats: Stats = this.m_user.stats;
+		console.warn(stats);
 		new FriendManager(this.m_user, "pndg-container", "friend-container", "blocked-container", this.m_main);
 		this.setBtn();
 		this.addMatch(this.m_user);
@@ -129,14 +129,20 @@ export class ProfileView extends ViewComponent
 
 	private async setBtn()
 	{
+		var addBtn = this.querySelector("#main-btn-friend") as HTMLButtonElement;
+		var blockBtn = this.querySelector("#main-btn-block") as HTMLButtonElement;
+
 		if (!this.m_main || !this.m_user)
+		{
+			addBtn.style.display = "none";
+			blockBtn.style.display = "none";
 			return ;
+		}
 
 		await this.m_main.updateSelf();
 		this.replaceBtn();
-
-		const addBtn = this.querySelector("#main-btn-friend") as HTMLButtonElement;
-		const blockBtn = this.querySelector("#main-btn-block") as HTMLButtonElement;
+		addBtn = this.querySelector("#main-btn-friend") as HTMLButtonElement;
+		blockBtn = this.querySelector("#main-btn-block") as HTMLButtonElement;
 
 		if (this.m_user.id == this.m_main.id)
 		{
@@ -327,6 +333,22 @@ export class ProfileView extends ViewComponent
 		eloData.set(json.created_at, elo);
 
 		return clone;
+	}
+
+	private async setUnknowProfile()
+	{
+		await this.setBtn();
+		const profile_extended = this.querySelector("#profile-extended");
+		if (profile_extended)
+		{
+			const status = profile_extended?.querySelector("#user-status") as HTMLElement;
+			if (status)
+				UserElement.setStatusColor(this.m_user, status);
+			(<HTMLImageElement>profile_extended.querySelector("#avatar-img")).src = "/public/avatars/default.png";
+			(<HTMLElement>profile_extended.querySelector("#name")).textContent = "USER NOT FOUND";
+			(<HTMLElement>profile_extended.querySelector("#created_at")).innerText	= `USER NOT FOUND`;
+		}
+
 	}
 
 }

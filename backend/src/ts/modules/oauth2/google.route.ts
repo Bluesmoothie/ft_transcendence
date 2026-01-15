@@ -45,7 +45,7 @@ export function googleOAuth2Routes (
 			};
 
 			var res = await createUserOAuth2(email, name, id, AuthSource.GOOGLE, picture, core.db);
-			if (res.code == 200 || res.code == 500) // TODO: 500 ?
+			if (res.code == 200 || res.code == 500)
 			{
 				res = await loginOAuth2(id, AuthSource.GOOGLE, core.db);
 				Logger.log(res.code);

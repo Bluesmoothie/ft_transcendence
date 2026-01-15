@@ -4,8 +4,6 @@ import LanguageDetector from 'https://cdn.skypack.dev/i18next-browser-languagede
 
 const selectElement = document.getElementById('language-selector');
 
-console.log("hello from translation")
-
 i18n.use(Backend).use(LanguageDetector).init({
 	fallbackLng: 'en',
 	backend: {

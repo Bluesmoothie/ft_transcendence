@@ -129,6 +129,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 			const data: any = await jwt.jwtVerif(token, core.sessionKey);
 			if (!data)
 				return reply.code(400).send({ message: "token is invalid" });
+			Logger.debug("hello?");
 			const res = await mgmt.resetUser(data.id);
 			return reply.code(res.code).send(res.data);
 		})
@@ -160,13 +161,13 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 				type: "object",
 				properties: {
 					token: { type: "string" },
-					new_status: { type: "string" }
+					new_status: { type: "number" }
 				},
 				required: ["token", "new_status"]
 			}
 		}
 	}, async (request: FastifyRequest, reply: FastifyReply) => {
-		const { token, new_status} = request.body as { token: string, new_status: string };
+		const { token, new_status} = request.body as { token: string, new_status: number };
 		const data: any = await jwt.jwtVerif(token, core.sessionKey);
 		if (!data)
 			return reply.code(400).send({ message: "invalid token" });

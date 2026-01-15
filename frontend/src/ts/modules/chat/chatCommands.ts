@@ -98,16 +98,16 @@ export function registerCmds(chat: Chat)
 			body: JSON.stringify({ token: chat.user.token })
 		});
 		const json = await res.json();
-		console.log(json);
 		var str = "+++ listing invite +++";
-		for (let i = 0; i < json.length; i ++) {
-			const el: any = json[i ];
+		for (let i = 0; i < json.length; i++) {
+			const el: any = json[i];
 
-			console.log(json);
 			const sender = await getUserFromId(el.senderId);
 			const receiver = await getUserFromId(el.id);
 			if (!sender || !receiver || !chat.user)
+			{
 				return ;
+			}
 			if (sender.id === chat.user.id)
 				str += `\n-${receiver.name} (awaiting confirmation)`;
 			else
@@ -115,7 +115,6 @@ export function registerCmds(chat: Chat)
 			
 		}
 		chat.displayMessage(serverReply(str));
-		// displayResponse(chat, res);
 	});
 
 	cmd.register("invite", "<username>\n\tsend invite to user for a duel", async (chat: Chat, argv: Array<string>) => {

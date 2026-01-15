@@ -7,9 +7,6 @@ import { Router } from "modules/router/Router.js"
 import { toggleCrtEffect, getCookie } from "modules/utils/utils.js";
 import { ThemeController } from "./Theme.js";
 
-// TODO: quand on ce log en guest que on vas dans settings, que on ce delog et relog en internal, les settings inderdi sont toujours cache
-// TODO: si on delete account et que on retourne dans le setting le confirm panel est toujour up
-
 export class SettingsView extends ViewComponent
 {
 	private m_user: MainUser | null = null;
@@ -136,13 +133,20 @@ export class SettingsView extends ViewComponent
 		if (!this.m_user || !this.delete2faBtn)
 			return ;
 
+		console.log(this.m_user.source)
 		if (this.m_user.source !== AuthSource.INTERNAL)
 		{
 			(<HTMLElement>this.querySelector("#email-settings")).style.display = "none";
 			(<HTMLElement>this.querySelector("#passw-settings")).style.display = "none";
 			(<HTMLElement>this.querySelector("#settings-2fa")).style.display = "none";
 			this.delete2faBtn.style.display = "none";
-			return ;
+		}
+		else
+		{
+			(<HTMLElement>this.querySelector("#email-settings")).style.display = "block";
+			(<HTMLElement>this.querySelector("#passw-settings")).style.display = "flex";
+			(<HTMLElement>this.querySelector("#settings-2fa")).style.display = "flex";
+			this.delete2faBtn.style.display = "block";
 		}
 	}
 
@@ -173,7 +177,6 @@ export class SettingsView extends ViewComponent
 			setPlaceHolderText(`error: ${data.message}`);
 			return 1;
 		}
-		console.log(res.status, data);
 		return 0;
 	}
 
@@ -222,7 +225,6 @@ export class SettingsView extends ViewComponent
 				error = true;
 				setPlaceHolderText(`error: ${data.message}`);
 			}
-			console.log(res.status, data);
 		}
 
 		if (this.emailInput && this.emailInput.value !== "")
@@ -244,7 +246,6 @@ export class SettingsView extends ViewComponent
 				error = true;
 				setPlaceHolderText(`error: ${data.message}`);
 			}
-			console.log(res.status, data);
 		}
 
 		if (error === false)
@@ -274,7 +275,6 @@ export class SettingsView extends ViewComponent
 		img.alt = "TOTP qrcode";
 		this.holder.innerHTML = "";
 		this.holder.appendChild(img);
-		console.log(status, JSON.stringify(data));
 	}
 
 	private showConfirmPanel(fn: () => any)
@@ -299,6 +299,8 @@ export class SettingsView extends ViewComponent
 				if (target.value === "confirm")
 				{
 					fn();
+					const holder = this.querySelector("#panel-holder") as HTMLElement;
+					holder.innerHTML = "";
 				}
 			}
 		})

@@ -7,7 +7,8 @@
 		"leaderboard": "LEADERBOARD",
 		"links": "LINKS",
 		"chosen_modules": "CHOSEN MODULES",
-		"contributors": "CONTRIBUTORS"
+		"contributors": "CONTRIBUTORS",
+		"welcome": "WELCOME TO FT_TRANSCENDENCE"
 	},
 	"text": {
 		"guest": "*all data will be lost on logout",
@@ -76,6 +77,18 @@
 	"busy": "busy",
 	"in_game": "in_game",
 	"no_data": "no data",
+
+	"tut": {
+		"chat": "use the chatbox to talk to other people",
+		"chat-cmd": "type '/help' in chat for a list of all commands",
+		"user-list": "use this button to list connected users",
+		"friend-list": "use this button to list friends",
+		"user": "clicking on a user will show you his profile",
+		"settings": "change your theme / toggle crt effect in the settings",
+		"move": "in online / bot use ↑/↓ to move",
+		"local-move": "in local use w/s for player1 and ↑/↓ to move player2",
+		"continue": "continue"
+	},
 
 	"about_page": {
 		"web": "Web",

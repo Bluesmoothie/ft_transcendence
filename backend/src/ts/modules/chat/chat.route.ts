@@ -18,6 +18,28 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		return reply.code(200).send({ message: "pong" });
 	});
 
+	fastify.post('/api/chat/healthCallback', {
+		schema: {
+			body: {
+				type: "object",
+				properties: {
+					token: { type: "string" }
+				},
+				required: ["token"]
+			}
+		}
+	},
+	async (request: FastifyRequest, reply: FastifyReply) => {
+		const { token } = request.body as { token: string };
+
+		const data: any = await jwtVerif(token, core.sessionKey);
+		if (!data)
+			return reply.code(400).send({ message: "invalid token" });
+		
+		chat.HealthCallback(data.id);
+
+		return reply.code(200).send({ message: "Success" });
+	});
 
 	fastify.delete('/api/chat/removeQueue', {
 		schema: {

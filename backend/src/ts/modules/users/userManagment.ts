@@ -14,6 +14,7 @@ import { AuthSource } from "modules/oauth2/routes.js";
 import { getSqlDate } from "utils.js";
 import { jwtVerif } from "modules/jwt/jwt.js";
 import { Logger } from "modules/logger.js";
+import { getUserName } from "./user.js";
 
 
 function validate_email(email:string)
@@ -163,12 +164,13 @@ export async function resetUser(user_id: number)
 	var sql = "UPDATE users SET elo = 1000, wins = 0, games_played = 0 WHERE id = ?";
 	try
 	{
+		Logger.debug("deleting", await getUserName(user_id));
 		await core.db.run(sql, user_id);
 		sql = "DELETE FROM friends WHERE user1_id = ? OR user2_id = ?";
-		await core.db.run(sql, user_id);
+		await core.db.run(sql, [user_id, user_id]);
 		sql = "DELETE FROM games WHERE user1_id = ? OR user2_id = ?";
-		await core.db.run(sql, user_id);
-		Logger.log(`user: ${user_id} has reseted his account`);
+		await core.db.run(sql, [user_id, user_id]);
+		Logger.success(`user: ${await getUserName(user_id)} has reseted his account`);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err)
@@ -226,7 +228,7 @@ export async function logoutUser(user_id: number, db: Database) : Promise<DbResp
 	}
 }
 
-export async function setUserStatus(user_id: number, newStatus: string, db: Database) : Promise<DbResponse>
+export async function setUserStatus(user_id: number, newStatus: number, db: Database) : Promise<DbResponse>
 {
 	const sql = "UPDATE users SET status = ? WHERE id = ?;";
 	try {

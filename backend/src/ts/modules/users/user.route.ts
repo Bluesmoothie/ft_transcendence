@@ -142,4 +142,23 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		const res = await user.getAllUsers();
 		return reply.code(res.code).send(res.data);
 	});
+
+	fastify.post('/complete_tutorial', {
+		schema: {
+			body: {
+				type: "object",
+				properties: {
+					token: { type: "string" }
+				},
+				required: ["token"]
+			}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { token } = request.body as { token: string };
+			const data: any = await jwtVerif(token, core.sessionKey);
+			if (!data)
+				return reply.code(400).send({ message: "invalid token" });
+			const res = await user.completeTutorial(data.id);
+			return reply.code(res.code).send(res.data);
+		})
 }

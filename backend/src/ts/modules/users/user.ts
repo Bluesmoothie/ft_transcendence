@@ -244,3 +244,20 @@ export async function getAllUserIds(): Promise<DbResponse>
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
+
+export async function completeTutorial(id: number): Promise<DbResponse>
+{
+	var sql = 'UPDATE users SET show_tutorial = 0 WHERE id = ?';
+	try
+	{
+		await core.db.run(sql, id);
+		Logger.success(await getUserName(id), "has completed the tutorial")
+		return { code: 200, data: { message: "Success" }};
+	}
+	catch (err)
+	{
+		Logger.log(`Database error: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+
+}
