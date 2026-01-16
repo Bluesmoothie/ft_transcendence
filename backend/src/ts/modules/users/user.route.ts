@@ -1,12 +1,11 @@
-import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as core from 'core/core.js';
 import * as user from 'modules/users/user.js'
 import { GameRes } from 'modules/users/user.js';
 import { jwtVerif } from 'modules/jwt/jwt.js';
 import * as mgmt from 'modules/users/userManagment.js';
-import { Logger } from 'modules/logger.js';
 
-export async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
+export async function userRoutes(fastify: FastifyInstance)
 {
 	fastify.get('/get_history_name/:username', async (request: FastifyRequest, reply: FastifyReply) => {
 		return await user.getUserHistByName(request, reply, core.db);
@@ -106,7 +105,7 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		}, async (request: FastifyRequest, reply: FastifyReply) => {
 			const { token } = request.body as { token: string};
 
-			const res = await mgmt.loginSession(token, core.db);
+			const res = await mgmt.loginSession(token);
 			if (res.code != 200)
 				return reply.code(res.code).send(res.data);
 			return reply.code(res.code).send(res.data);
@@ -134,11 +133,15 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		)
 
 	fastify.get('/get_all', async (request: FastifyRequest, reply: FastifyReply) => {
+		void request; 
+
 		const res = await user.getAllUsers();
 		return reply.code(res.code).send(res.data);
 	});
 
 	fastify.get('/get_all_id', async (request: FastifyRequest, reply: FastifyReply) => {
+		void request;
+
 		const res = await user.getAllUsers();
 		return reply.code(res.code).send(res.data);
 	});

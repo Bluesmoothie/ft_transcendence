@@ -1,11 +1,9 @@
 import * as core from 'core/core.js';
 import * as duel from 'modules/users/duel.js';
-import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { jwtVerif } from 'modules/jwt/jwt.js';
 
-// TODO: quand deco, delete tous les invite
-
-export async function duelRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
+export async function duelRoutes(fastify: FastifyInstance)
 {
 
 	fastify.post('/list', {

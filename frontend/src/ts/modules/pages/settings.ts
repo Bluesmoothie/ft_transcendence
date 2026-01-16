@@ -43,7 +43,7 @@ export class SettingsView extends ViewComponent
 			Router.Instance?.navigateTo("/");
 			return ;
 		}
-		this.m_user.onLogout((user: MainUser) => Router.Instance?.navigateTo("/"));
+		this.m_user.onLogout(() => Router.Instance?.navigateTo("/"));
 
 		new HeaderSmall(this.m_user, this, "header-container");
 
@@ -118,6 +118,7 @@ export class SettingsView extends ViewComponent
 
 	public async disable()
 	{
+		this.clearTrackListener();
 		const container = this.querySelector("#user-container");
 		if (container)
 			container.innerHTML = "";
@@ -264,6 +265,7 @@ export class SettingsView extends ViewComponent
 			return ;
 
 		const { status, data } = result;
+		void status;
 		this.holderParent.classList.remove("hide");
 		var qrcode = data.qrcode;
 		if (!qrcode)

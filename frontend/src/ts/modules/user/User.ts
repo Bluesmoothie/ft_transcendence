@@ -3,6 +3,7 @@ import { hashString } from 'modules/utils/sha256.js'
 import { UserElement, UserElementType } from 'modules/user/UserElement.js';
 import { GameRouter } from 'router';
 import { Router } from 'modules/router/Router.js';
+import { Utils } from 'pages/Utils';
 
 export enum UserStatus {
 	UNKNOW = -2,
@@ -99,6 +100,24 @@ export class User {
 		this.m_blockUsr = [];
 		this.m_stats = { gamePlayed: 0, gameWon: 0, currElo: 0, maxElo: 0, avrTime: "", shortTime: "" };
 		this.m_source = AuthSource.GUEST;
+	}
+
+	public newUser()
+	{
+		this.m_id = -1;
+		this.name = "";
+		this.m_email = "";
+		this.m_avatarPath = "/public/avatars/default.png";
+		this.m_status = UserStatus.UNKNOW;
+		this.m_source = 0;
+		this.m_created_at = "";
+		this.m_stats.currElo = 0;
+		this.m_stats.gameWon = 0;
+		this.m_stats.gamePlayed = 0;
+		this.m_showTutorial = 0;
+		this.m_friends = [];
+		this.m_blockUsr = [];
+		this.m_pndgFriends = new Map<User, number>();
 	}
 
 	public setUserJson(json: any)
@@ -318,7 +337,6 @@ function newOption(optionName: string) : HTMLOptionElement
 
 export class MainUser extends User
 {
-
 	private m_userElement: UserElement | null = null;
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
@@ -339,7 +357,7 @@ export class MainUser extends User
 
 	public displayTutorial()
 	{
-		const tutorial = Router.getElementById("tutorial_panel") as HTMLElement;
+		const tutorial = Router.getElementById("tutorial_panel_holder") as HTMLElement;
 		if (!tutorial)
 		{
 			console.warn("no tutorial_panel");
@@ -353,6 +371,9 @@ export class MainUser extends User
 		}
 
 		tutorial.style.display = "flex";
+		const panel = tutorial.querySelector("#tutorial_panel") as HTMLElement
+		if (panel)
+			panel.classList.add("crt_anim");
 		const btn = tutorial.querySelector("#continue-btn") as HTMLButtonElement;
 		if (!btn)
 		{
@@ -360,7 +381,7 @@ export class MainUser extends User
 			return ;
 		}
 
-		btn.addEventListener("click", () => {
+		Router.addEventListener(btn, "click", () => {
 			tutorial.style.display = "none";
 			fetch('/api/user/complete_tutorial', {
 				method: "POST",
@@ -420,8 +441,13 @@ export class MainUser extends User
 
 	public async loginSession()
 	{
+		const token = getCookie("jwt_session");
+		if (!token)
+			return;
+
 		const response = await fetch("/api/user/get_session");
 		const data = await response.json();
+		this.m_token = token;
 
 		if (response.status == 200)
 		{
@@ -454,13 +480,13 @@ export class MainUser extends User
 
 	public async logout()
 	{
-		// document.cookie = "jwt_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-		setCookie("jwt_session", "", 0);
 		await this.logoutDB();
 		if (this.m_userElement)
 			this.m_userElement.updateHtml(null);
 
 		this.m_onLogoutCb.forEach(cb => cb(this));
+
+		setCookie("jwt_session", "", 0);
 	}
 
 	public async refreshSelf()
@@ -681,19 +707,5 @@ export class MainUser extends User
 		});
 		await this.updateSelf();
 		return res.status;
-	}
-
-	public async startDuel(json: any)
-	{
-		if (!this.m_gameRouter)
-		{
-			console.warn("no game router in user, aborting.");
-			return ;
-		}
-
-		this.m_gameRouter.navigateTo("game", "online");
-
-		// await this.m_gameRouter.gameInstance?.createGame();
-		
 	}
 }

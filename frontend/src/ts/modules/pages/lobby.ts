@@ -25,12 +25,18 @@ export class LobbyView extends ViewComponent
 	constructor()
 	{
 		super();
+		this.m_user = new MainUser();
 	}
 
 	public async enable()
 	{
+		if (!this.m_user)
+		{
+			console.warn("no main user");
+			return;
+		}
+
 		this.m_userContainer = this.querySelector("#user-container");
-		this.m_user = new MainUser();
 
 		await this.m_user.loginSession();
 
@@ -40,8 +46,7 @@ export class LobbyView extends ViewComponent
 			return ;
 		}
 		this.m_user.displayTutorial();
-		this.m_user.onLogout((user: MainUser) => Router.Instance?.navigateTo("/"));
-		new HeaderSmall(this.m_user, this, "header-container");
+		this.m_user.onLogout(() => Router.Instance?.navigateTo("/"));
 
 		const chatInput: HTMLInputElement = this.querySelector("#chat-in") as HTMLInputElement;
 		const chatOutput: HTMLInputElement = this.querySelector("#chat-out") as HTMLInputElement;
@@ -50,7 +55,6 @@ export class LobbyView extends ViewComponent
 
 		if (!this.m_chat || this.m_chat.user?.id != this.m_user.id)
 		{
-			console.log("reseting chat");
 			this.m_chat = new Chat(this.m_user, chatOutput, chatInput);
 			this.m_chat.onConnRefresh((conns: User[]) => this.fillUserList(conns));
 		}
@@ -78,6 +82,8 @@ export class LobbyView extends ViewComponent
 			this.showListContainer(ListState.FRIEND, this.m_chat, this.m_user);
 			window.dispatchEvent(new CustomEvent('pageChanged'));
 		});
+
+		new HeaderSmall(this.m_user, this, "header-container");
 	}
 
 
@@ -87,9 +93,8 @@ export class LobbyView extends ViewComponent
 
 		if (this.m_user)
 		{
-			this.m_user.removeFromQueue();
 			this.m_user.resetCallbacks();
-			// this.m_user = null;
+			this.m_user.newUser();
 		}
 
 		if (this.m_gameRouter?.m_gameMenu)

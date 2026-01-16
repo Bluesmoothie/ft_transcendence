@@ -13,7 +13,6 @@ export class ProfileView extends ViewComponent
 {
 	private m_main: MainUser | null = null;
 	private m_user: User | null = null;
-	private m_searchInput: HTMLInputElement | null = null;
 
 	constructor()
 	{
@@ -38,7 +37,6 @@ export class ProfileView extends ViewComponent
 		}
 
 		const stats: Stats = this.m_user.stats;
-		console.warn(stats);
 		new FriendManager(this.m_user, "pndg-container", "friend-container", "blocked-container", this.m_main);
 		this.setBtn();
 		this.addMatch(this.m_user);
@@ -51,7 +49,7 @@ export class ProfileView extends ViewComponent
 				UserElement.setStatusColor(this.m_user, status);
 			(<HTMLImageElement>profile_extended.querySelector("#avatar-img")).src = this.m_user.avatarPath;
 			(<HTMLElement>profile_extended.querySelector("#name")).textContent = this.m_user.name;
-			(<HTMLElement>profile_extended.querySelector("#created_at")).innerText	= `created at: ${this.m_user.created_at.split(' ')[0]}`;
+			(<HTMLElement>profile_extended.querySelector("#created_at")).innerText	= `creation: ${this.m_user.created_at.split(' ')[0]}`;
 		}
 
 		(<HTMLElement>this.querySelector("#game-played")).innerText		= `${stats.gamePlayed}`;
@@ -144,7 +142,7 @@ export class ProfileView extends ViewComponent
 		addBtn = this.querySelector("#main-btn-friend") as HTMLButtonElement;
 		blockBtn = this.querySelector("#main-btn-block") as HTMLButtonElement;
 
-		if (this.m_user.id == this.m_main.id)
+		if (this.m_main.id == -1 || this.m_user.id == this.m_main.id)
 		{
 			addBtn.style.display = "none";
 			blockBtn.style.display = "none";
@@ -223,11 +221,18 @@ export class ProfileView extends ViewComponent
 
 		if (code == 404)
 		{
-			const text = document.createElement("p");
+			const template = this.querySelector("#no-histo-template") as HTMLTemplateElement;
+			if (!template)
+				return;
+			const clone = template.content.cloneNode(true) as HTMLElement;
+			histContainer.append(clone);
 
-			text.innerText = "no recorded history";
-			text.setAttribute("data-i18n", "no_history");
-			histContainer.append(text);
+			// const text = document.createElement("p");
+
+			// text.innerText = "no recorded history";
+			// text.setAttribute("data-i18n", "no_history");
+			// histContainer.append(text);
+
 			window.dispatchEvent(new CustomEvent('pageChanged'));
 			return ;
 		}

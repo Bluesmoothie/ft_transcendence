@@ -58,6 +58,14 @@ export async function HealthCallback(id: number)
 	healthQueue = healthQueue.filter(num => num != Number(id));
 }
 
+export async function disconnectClientById(user_id: number)
+{
+	connections.forEach(async (id: number, ws: WebSocket) => {
+		if (user_id == id)
+			disconnectClient(ws);
+	});
+}
+
 export async function disconnectClient(ws: WebSocket)
 {
 	if (!connections.has(ws))
@@ -74,6 +82,13 @@ export async function disconnectClient(ws: WebSocket)
 	connections.delete(ws);
 	clearDuel(id);
 	Logger.success(await getUserName(id), "was disconnected");
+
+	if (connections.size == 0 && timerId != null)
+	{
+		Logger.log("no more connection stopping health check");
+		clearInterval(timerId);
+		timerId = null;
+	}
 }
 
 export async function sendTo(userId: number, msg: string)
@@ -92,6 +107,9 @@ async function getPlayerName(id: number) : Promise<string>
 	return "undifined";
 }
 
+/**
+ * send dm to id for starting match
+ */
 export async function notifyMatch(id: number, opponentId: number, gameId: string, playerSide: number)
 {
 	const res = JSON.stringify({ username: "SERVER", message: "START", opponentId: opponentId, gameId: gameId, playerSide: playerSide});
@@ -164,20 +182,17 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 			Logger.error(`${login}: websocket error: ${error}`);
 		})
 
-		ws.on('close', async (code: any, reason: any) => {
+		ws.on('close', async (code: any, reason: any) =>
+		{
 			const conn = connections.get(ws);
 			if (!conn)
 				return ;
+
 			removePlayerFromQueue(conn);
+			Logger.log(`${login} has left the room for ${reason} {${code}}`);
 			broadcast(serverMsg(`${login} has left the room`), ws);
 
 			await disconnectClient(ws);
-			if (connections.size == 0 && timerId != null)
-			{
-				Logger.log("no more connection stopping health check");
-				clearInterval(timerId);
-				timerId = null;
-			}
 		});
 
 		broadcast(serverMsg(`${login} has join the room`), ws);
@@ -194,8 +209,8 @@ async function broadcast(message: any, sender: WebSocket)
 	if (!senderId)
 		return ;
 
-	connections.forEach(async (id: number, conn: WebSocket) => {
-
+	connections.forEach(async (id: number, conn: WebSocket) =>
+	{
 		if (conn === sender || conn.readyState !== conn.OPEN)
 		{
 			return ;

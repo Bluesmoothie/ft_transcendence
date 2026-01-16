@@ -47,5 +47,5 @@ if (themeCookie)
 	defaultTheme = themeCookie;
 
 const themes = await loadTheme();
-const themeController = new ThemeController(themes, defaultTheme);
+new ThemeController(themes, defaultTheme);
 

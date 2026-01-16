@@ -2,7 +2,7 @@ import { ThemeController, Theme } from "modules/pages/Theme.js";
 import { ChatCommand } from "./Command.js";
 import { Chat } from "./chat.js";
 import { serverReply } from "./chat_utils.js";
-import { User, getUserFromId } from "modules/user/User.js";
+import { getUserFromId } from "modules/user/User.js";
 
 async function displayResponse(chat: Chat, response: Response)
 {

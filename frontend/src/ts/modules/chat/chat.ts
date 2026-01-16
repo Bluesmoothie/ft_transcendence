@@ -106,8 +106,8 @@ export class Chat
 		this.m_user = user;
 		this.m_user.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
 
-		user.onLogout((user: MainUser) => this.disconnect());
-		user.onLogin((user: MainUser) => this.resetChat(user));
+		user.onLogout(() => this.disconnect());
+		user.onLogin(() => this.resetChat());
 
 		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
 
@@ -124,7 +124,7 @@ export class Chat
 	get ws(): WebSocket | null			{ return this.m_ws; }
 	get conns(): User[] | null			{ return this.m_connections; }
 
-	public resetChat(user: MainUser) : void
+	public resetChat() : void
 	{
 		this.m_ws?.close();
 		if (this.m_user)

@@ -2,11 +2,11 @@ import { Database } from "sqlite";
 import { pipeline } from 'stream/promises';
 import { createWriteStream } from 'fs';
 import path from 'path';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyRequest } from 'fastify';
 import { randomBytes } from "crypto";
 
 import * as core from 'core/core.js';
-import { DbResponse, uploadDir } from "core/core.js";
+import { DbResponse } from "core/core.js";
 import { getUserById, getUserByName } from "./user.js";
 import { hashString } from "modules/sha256.js";
 import { check_totp } from "modules/2fa/totp.js";
@@ -15,6 +15,7 @@ import { getSqlDate } from "utils.js";
 import { jwtVerif } from "modules/jwt/jwt.js";
 import { Logger } from "modules/logger.js";
 import { getUserName } from "./user.js";
+import { disconnectClientById } from "modules/chat/chat.js";
 
 
 function validate_email(email:string)
@@ -31,7 +32,6 @@ export async function createGuest(): Promise<DbResponse>
 	const sql = "INSERT INTO users (name, source, created_at) VALUES (?, ?, ?) RETURNING id";
 	try
 	{
-
 		const date = getSqlDate();
 		const highest = await core.db.get("SELECT MAX(id) FROM users;");
 		const rBytes = randomBytes(8).toString('hex');
@@ -48,7 +48,7 @@ export async function createGuest(): Promise<DbResponse>
 
 }
 
-export async function loginSession(token: string, db: Database) : Promise<DbResponse>
+export async function loginSession(token: string) : Promise<DbResponse>
 {
 	const data: any = await jwtVerif(token, core.sessionKey);
 	if (!data)
@@ -72,7 +72,7 @@ export async function loginSession(token: string, db: Database) : Promise<DbResp
 	}
 }
 
-export async function login(email: string, passw: string, totp: string, db: Database) : Promise<DbResponse>
+export async function login(email: string, passw: string, totp: string) : Promise<DbResponse>
 {
 	var sql = 'UPDATE users SET is_login = 1 WHERE email = ? AND passw = ? RETURNING *';
 
@@ -110,6 +110,9 @@ export async function loginOAuth2(id: string, source: number, db: Database) : Pr
 
 export async function createUserOAuth2(email: string, name: string, id: string, source: number, avatar: string, db: Database) : Promise<DbResponse>
 {
+	const res = await loginOAuth2(id, source, db);
+	if (res.code == 200)
+		return { code: 200, data: { message: "User already in db" }};
 	const sql = 'INSERT INTO users (name, email, oauth_id, source, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)';
 
 	try {
@@ -121,11 +124,6 @@ export async function createUserOAuth2(email: string, name: string, id: string, 
 		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error: ${err}` }};
 	}
-}
-
-export async function updateUserRank(userId: number, newRank: number, login: string) : Promise<DbResponse>
-{
-	return { code: 200, data: { message: "route is deprecated"}}
 }
 
 export async function createUser(email: string, passw: string, username: string, source: AuthSource, db: Database) : Promise<DbResponse>
@@ -217,6 +215,7 @@ export async function logoutUser(user_id: number, db: Database) : Promise<DbResp
 	}
 
 	const sql = "UPDATE users SET is_login = 0 WHERE id = ?";
+	disconnectClientById(user_id);
 
 	try {
 		await db.run(sql, [user_id]);
@@ -232,7 +231,7 @@ export async function setUserStatus(user_id: number, newStatus: number, db: Data
 {
 	const sql = "UPDATE users SET status = ? WHERE id = ?;";
 	try {
-		const result = await db.run(sql, [newStatus, user_id]);
+		await db.run(sql, [newStatus, user_id]);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {

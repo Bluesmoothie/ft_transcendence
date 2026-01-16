@@ -16,11 +16,10 @@ export class LoginView extends ViewComponent
 
 	public async init()
 	{
-
 		this.querySelector("#create_btn")?.addEventListener("click", () => this.submitNewUser());
 		this.querySelector("#login_btn")?.addEventListener("click", () => this.login());
 		this.querySelector("#forty_two_log_btn")?.addEventListener("click", () => oauthLogin("/api/oauth2/forty_two"));
-		this.querySelector("#forty_gitub_btn")?.addEventListener("click", () => oauthLogin("/api/oauth2/github"));
+		this.querySelector("#github_log_btn")?.addEventListener("click", () => oauthLogin("/api/oauth2/github"));
 		this.querySelector("#guest_log_btn")?.addEventListener("click", () => this.logAsGuest());
 
 		this.querySelector("#home_btn")?.addEventListener("click", () => { 
@@ -35,18 +34,11 @@ export class LoginView extends ViewComponent
 		{
 			setCookie("jwt_session", vars.get("oauth_token"), 10);
 			window.history.replaceState({}, document.title, "/login");
+			Router.Instance?.setView("/lobby");
 		}
 
 		await this.m_user.loginSession();
-		if (this.m_user.id != -1)
-		{
-			if (Router.Instance?.prevView && Router.Instance.prevView.routePath == "/lobby")
-				Router.Instance.navigateTo("/");
-			else
-				Router.Instance?.navigateTo("/lobby");
-		}
-
-		this.m_user.onLogin((user) => { Router.Instance?.navigateTo("/lobby") })
+		this.m_user.onLogin(() => { Router.Instance?.navigateTo("/lobby") })
 	}
 
 	public async disable()

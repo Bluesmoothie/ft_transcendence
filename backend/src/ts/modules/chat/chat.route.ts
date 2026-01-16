@@ -5,7 +5,7 @@ import { getUserById, getUserByName } from 'modules/users/user.js';
 import { jwtVerif } from 'modules/jwt/jwt.js';
 import { Logger } from 'modules/logger.js';
 
-export async function chatRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
+export async function chatRoutes(fastify: FastifyInstance)
 {
 
 	fastify.register(async function (fastify) {
@@ -15,6 +15,7 @@ export async function chatRoutes(fastify: FastifyInstance, options: FastifyPlugi
 	});
 
 	fastify.get('/api/chat/ping', (request: FastifyRequest, reply: FastifyReply) => {
+		void request;
 		return reply.code(200).send({ message: "pong" });
 	});
 
