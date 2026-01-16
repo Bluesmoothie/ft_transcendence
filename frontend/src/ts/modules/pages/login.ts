@@ -14,12 +14,25 @@ export class LoginView extends ViewComponent
 		this.m_user = new MainUser();
 	}
 
+	public async init()
+	{
+
+		this.querySelector("#create_btn")?.addEventListener("click", () => this.submitNewUser());
+		this.querySelector("#login_btn")?.addEventListener("click", () => this.login());
+		this.querySelector("#forty_two_log_btn")?.addEventListener("click", () => oauthLogin("/api/oauth2/forty_two"));
+		this.querySelector("#forty_gitub_btn")?.addEventListener("click", () => oauthLogin("/api/oauth2/github"));
+		this.querySelector("#guest_log_btn")?.addEventListener("click", () => this.logAsGuest());
+
+		this.querySelector("#home_btn")?.addEventListener("click", () => { 
+			Router.Instance?.navigateTo("/");
+		});
+	}
+
 	public async enable()
 	{
 		const vars = getUrlVar();
 		if (vars.get("oauth_token"))
 		{
-			console.log("session:", vars.get("oauth_token"))
 			setCookie("jwt_session", vars.get("oauth_token"), 10);
 			window.history.replaceState({}, document.title, "/login");
 		}
@@ -34,20 +47,11 @@ export class LoginView extends ViewComponent
 		}
 
 		this.m_user.onLogin((user) => { Router.Instance?.navigateTo("/lobby") })
-
-		this.addTrackListener(this.querySelector("#create_btn"), "click", () => this.submitNewUser());
-		this.addTrackListener(this.querySelector("#login_btn"), 'click', () => this.login());
-		this.addTrackListener(this.querySelector("#forty_two_log_btn"), "click", () => oauthLogin("/api/oauth2/forty_two"));
-		this.addTrackListener(this.querySelector("#github_log_btn"), "click", () => oauthLogin("/api/oauth2/github"));
-		this.addTrackListener(this.querySelector("#guest_log_btn"), "click", () => this.logAsGuest());
-
-		this.addTrackListener(this.querySelector("#home_btn"), "click", () => { 
-			Router.Instance?.navigateTo("/");
-		});
 	}
 
 	public async disable()
 	{
+		this.clearTrackListener();
 		if (this.m_user)
 		{
 			this.m_user.resetCallbacks();
@@ -63,7 +67,6 @@ export class LoginView extends ViewComponent
 		const { status, data } = await this.m_user.login(emailInput.value, passwInput.value, totpInput.value);
 		if (status == 200)
 		{
-			console.log("session:", data.token)
 			setCookie("jwt_session", data.token, 10);
 			Router.Instance?.navigateTo("/lobby");
 			return ;
@@ -89,7 +92,6 @@ export class LoginView extends ViewComponent
 		const data = await res.json();
 		if (res.status == 200)
 		{
-			console.log("session:", data.token)
 			setCookie("jwt_session", data.token, 10);
 			this.m_user.loginSession();
 		}
@@ -129,7 +131,6 @@ export class LoginView extends ViewComponent
 			const { status, data } = await this.m_user.login(email, passw, "");
 			if (status == 200)
 			{
-				console.log("session:", data.token)
 				setCookie("jwt_session", data.token, 10);
 				this.m_user.loginSession();
 				return ;

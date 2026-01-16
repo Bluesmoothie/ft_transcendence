@@ -1,19 +1,20 @@
-import { strToCol, hashString } from 'modules/utils/sha256.js';
 import { ChatCommand } from './Command.js';
 import { User, UserStatus, MainUser, getUserFromId } from 'modules/user/User.js'
-import { Router } from 'modules/router/Router.js';
 import { registerCmds } from './chatCommands.js';
 import * as utils from './chat_utils.js'
+import { ThemeController } from 'modules/pages/Theme.js';
 
 export class Message
 {
 	private m_sender:	User;
 	private m_msg:		string;
+	private m_json:		any | null;
 
-	constructor(sender: User, msg: string)
+	constructor(sender: User, msg: string, json: any | null)
 	{
 		this.m_sender = sender;
 		this.m_msg = msg;
+		this.m_json = json;
 	}
 
 	public getSender() : User	{ return this.m_sender; }
@@ -26,12 +27,33 @@ export class Message
 	}
 
 	/**
+	 * return a random color of the theme based on the value of all char in str
+	 * @param str seed string
+	 */
+	private randomColor(str: string): string
+	{
+		const theme = ThemeController.Instance?.currentTheme;
+		if (!theme)
+			return "#ffffff";
+		
+		const colors = [theme.red, theme.blue, theme.green, theme.white, theme.purple, theme.yellow];
+
+		var total = 0;
+		for (let i = 0; i < str.length; i++)
+		{
+			total += str.charCodeAt(i);
+		}
+
+		return colors[total % colors.length];
+	}
+
+	/**
 	* convert the msg to html
 	* @returns an html version of a message or null if no template is found
 	*/
 	public toHtml() : HTMLElement | null
 	{
-		const template = Router.getElementById("chat-item-template") as HTMLTemplateElement;
+		const template = document.getElementById("chat-item-template") as HTMLTemplateElement;
 		if (!template)
 			return null;
 
@@ -41,12 +63,15 @@ export class Message
 			console.warn("no senderTxt found");
 
 		senderTxt.textContent = utils.applyMsgStyle(this.m_sender.name);
-		senderTxt.style.color = strToCol(this.m_sender.name);
+		senderTxt.style.color = this.randomColor(this.m_sender.name);
 
 		const msgTxt = clone.querySelector("#message") as HTMLElement;
 		if (!msgTxt)
 			console.warn("no senderTxt found");
 		msgTxt.textContent = this.getMsg();
+
+		if (this.m_json && this.m_json.data_i18n)
+			msgTxt.setAttribute('data-i18n', this.m_json.data_i18n);
 
 		return clone;
 	}
@@ -81,13 +106,13 @@ export class Chat
 		this.m_user = user;
 		this.m_user.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
 
+		user.onLogout((user: MainUser) => this.disconnect());
 		user.onLogin((user: MainUser) => this.resetChat(user));
-		user.onLogout((user: MainUser) => this.resetChat(user));
 
 		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
 
 		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
-		Router.addEventListener(chatInput, "keypress", (e) => this.sendMsgFromInput(e));
+		chatInput.addEventListener("keypress", (e) => this.sendMsgFromInput(e));
 		registerCmds(this);
 	}
 
@@ -104,6 +129,11 @@ export class Chat
 		this.m_ws?.close();
 		if (this.m_user)
 		{
+			if (this.m_chatbox)
+				this.m_chatbox.innerHTML = "";
+			
+			this.m_user.removeFromQueue();
+
 			this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${this.m_user.id}`);
 			this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
 		}
@@ -118,6 +148,7 @@ export class Chat
 	public disconnect()
 	{
 		this.m_user?.removeFromQueue();
+		this.m_user = null;
 		this.m_ws?.close();
 		if (this.m_chatbox)
 			this.m_chatbox.innerHTML = "";
@@ -170,29 +201,43 @@ export class Chat
 			this.populateConnections(connectionsId);
 		}
 
+		if (json.flag && json.flag === "health")
+		{
+			fetch("/api/chat/healthCallback", {
+				method: "POST",
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					token: this.m_user?.token
+				})
+			});
+			return ;
+		}
+
 		if (message == "START")
 		{
-			console.log(json);
-			this.m_onStartGame.forEach(cb => cb(json));
+			this.startGameCb(json);
 		}
 		const user = new User();
 		user.setUser(-1, username, "", "", UserStatus.UNKNOW);
-		const newMsg = new Message(user, message);
+		const newMsg = new Message(user, message, json);
 
 		if (this.user?.status != UserStatus.UNAVAILABLE && this.user?.status != UserStatus.BUSY)
 			this.displayMessage(newMsg);
+		window.dispatchEvent(new CustomEvent('pageChanged'));
 	}
 
 	public displayMessage(newMsg: Message)
 	{
 		const html = newMsg.toHtml();
 		if (this.m_chatbox && html)
+		{
 			this.m_chatbox.prepend(html);
+		}
 	}
 
 	public async sendMsg(sender: User, msg: string)
 	{
-		var newMsg = new Message(sender, msg);
+		var newMsg = new Message(sender, msg, null);
 
 		const html = newMsg.toHtml();
 		if (this.m_chatbox && html)
@@ -207,6 +252,11 @@ export class Chat
 		}
 
 		await newMsg.sendToAll(this);
+	}
+
+	public startGameCb(json: any)
+	{
+		this.m_onStartGame.forEach(cb => cb(json));
 	}
 }
 

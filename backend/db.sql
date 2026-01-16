@@ -22,13 +22,15 @@ CREATE TABLE IF NOT EXISTS users (
 
 	-- 1=player 0=admin
 	rank			INTEGER NOT NULL DEFAULT 1,
-	created_at		DATE NOT NULL
+	created_at		DATE NOT NULL,
+
+	show_tutorial	INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS blocked_usr (
 	user1_id		INTEGER NOT NULL,
 	user2_id		INTEGER NOT NULL,
-	blocked_by		INTERER NOT NULL,
+	blocked_by		INTEGER NOT NULL,
 
 	PRIMARY KEY (user1_id, user2_id)
 	CHECK(user1_id < user2_id)
@@ -39,7 +41,7 @@ CREATE TABLE IF NOT EXISTS friends (
 	user2_id		INTEGER NOT NULL,
 
 	pending			INTEGER NOT NULL,
-	sender_id		INTERER NOT NULL,
+	sender_id		INTEGER NOT NULL,
 
 	PRIMARY KEY (user1_id, user2_id),
 	FOREIGN KEY (user1_id) REFERENCES users(id),

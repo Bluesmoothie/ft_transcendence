@@ -5,14 +5,16 @@ import path from 'path';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { randomBytes } from "crypto";
 
-import * as core from '@core/core.js';
-import { DbResponse, uploadDir } from "@core/core.js";
+import * as core from 'core/core.js';
+import { DbResponse, uploadDir } from "core/core.js";
 import { getUserById, getUserByName } from "./user.js";
-import { hashString } from "@modules/sha256.js";
-import { check_totp } from "@modules/2fa/totp.js";
-import { AuthSource } from "@modules/oauth2/routes.js";
+import { hashString } from "modules/sha256.js";
+import { check_totp } from "modules/2fa/totp.js";
+import { AuthSource } from "modules/oauth2/routes.js";
 import { getSqlDate } from "utils.js";
-import { jwtVerif } from "@modules/jwt/jwt.js";
+import { jwtVerif } from "modules/jwt/jwt.js";
+import { Logger } from "modules/logger.js";
+import { getUserName } from "./user.js";
 
 
 function validate_email(email:string)
@@ -40,7 +42,7 @@ export async function createGuest(): Promise<DbResponse>
 	}
 	catch (err)
 	{
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 
@@ -48,16 +50,14 @@ export async function createGuest(): Promise<DbResponse>
 
 export async function loginSession(token: string, db: Database) : Promise<DbResponse>
 {
-	console.log("token", token);
 	const data: any = await jwtVerif(token, core.sessionKey);
 	if (!data)
 	{
-		console.log("invalid", data);
+		Logger.error(`invalid token ${data}`);
 		return { code: 400, data: { message: "jwt token invalid" }};
 	}
 
 	var id = data.id
-	console.log("res", data, id);
 	var sql = 'UPDATE users SET is_login = 1 WHERE id = ? RETURNING *';
 
 	try {
@@ -67,7 +67,7 @@ export async function loginSession(token: string, db: Database) : Promise<DbResp
 		return { code: 200, data: row};
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -88,7 +88,7 @@ export async function login(email: string, passw: string, totp: string, db: Data
 		return { code: 200, data: row};
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -103,7 +103,7 @@ export async function loginOAuth2(id: string, source: number, db: Database) : Pr
 		return { code: 200, data: row}
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error: ${err}` }};
 	}
 }
@@ -114,11 +114,11 @@ export async function createUserOAuth2(email: string, name: string, id: string, 
 
 	try {
 		const result = await db.run(sql, [name, email, id, source, avatar, getSqlDate()]);
-		console.log(`Inserted row with id ${result.lastID}`);
+		Logger.log(`Inserted row with id ${result.lastID}`);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error: ${err}` }};
 	}
 }
@@ -126,35 +126,35 @@ export async function createUserOAuth2(email: string, name: string, id: string, 
 export async function updateUserRank(userId: number, newRank: number, login: string) : Promise<DbResponse>
 {
 	return { code: 200, data: { message: "route is deprecated"}}
-
-	const res = await getUserById(userId, core.db);
-	if (res.code != 200) return res;
-
-	if (res.data.rank < newRank)
-		return { code: 403, data: { message: "permission denied" }}
 }
 
 export async function createUser(email: string, passw: string, username: string, source: AuthSource, db: Database) : Promise<DbResponse>
 {
 	const sql = 'INSERT INTO users (name, email, passw, source, created_at) VALUES (?, ?, ?, ?, ?)';
-	console.log("creating", username);
+	Logger.log(`creating ${username}`);
 
 	if (!validate_email(email) && source == AuthSource.INTERNAL)
 		return { code: 403, data: { message: "error: email not valid" }};
 	const res = await getUserByName(username, core.db);	
 	if (res.code != 404)
+	{
+		Logger.warn(`${username} is already in database`);
 		return { code: 409, data: { message: "user is already in database" }};
+	}
 
-	try {
+	try
+	{
 		const result = await db.run(sql, [username, email, passw, source, getSqlDate()]);
 		if (!result.lastID)
 			throw new Error("failed to create user");
-		console.log(`Inserted row with id ${result.lastID}`);
+
+		Logger.success(`${username} has been register with id: ${result.lastID}`);
 		await updateAvatarPath(result.lastID, 'default.png');
 		return { code: 200, data: { message: "Success", id: result.lastID }};
 	}
-	catch (err) {
-		console.error(`database err: ${err}`);
+	catch (err)
+	{
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error: ${err}` }};
 	}
 }
@@ -164,17 +164,18 @@ export async function resetUser(user_id: number)
 	var sql = "UPDATE users SET elo = 1000, wins = 0, games_played = 0 WHERE id = ?";
 	try
 	{
+		Logger.debug("deleting", await getUserName(user_id));
 		await core.db.run(sql, user_id);
 		sql = "DELETE FROM friends WHERE user1_id = ? OR user2_id = ?";
-		await core.db.run(sql, user_id);
+		await core.db.run(sql, [user_id, user_id]);
 		sql = "DELETE FROM games WHERE user1_id = ? OR user2_id = ?";
-		await core.db.run(sql, user_id);
-		console.log(`user: ${user_id} has reseted his account`);
+		await core.db.run(sql, [user_id, user_id]);
+		Logger.success(`user: ${await getUserName(user_id)} has reseted his account`);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err)
 	{
-		console.log(`Database Error: ${err}`);
+		Logger.log(`Database Error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -184,7 +185,7 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 	var res = await getUserById(user_id, db);
 	if (res.code != 200)
 	{
-		console.error("login out none existing user in logoutUser? id:", user_id);
+		Logger.error(`deleting none existing user in deleteUser? id: ${user_id}`);
 		return res; // should not happen
 	}
 
@@ -195,23 +196,23 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 	{
 		await updateAvatarPath(user_id, 'default.png');
 		await db.run(sql, [name, rBytes, rBytes, rBytes, AuthSource.DELETED, user_id]);
-		console.log(`user has been deleted`)
+		Logger.success(`user has been deleted`)
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err)
 	{
-		console.log(`Database Error: ${err}`);
+		Logger.log(`Database Error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
 
 export async function logoutUser(user_id: number, db: Database) : Promise<DbResponse>
 {
-	console.log("login out");
+	Logger.log("login out");
 	const res = await getUserById(user_id, db);
 	if (res.code != 200)
 	{
-		console.error("login out none existing user in logoutUser? id:", user_id);
+		Logger.error(`login out none existing user in logoutUser? id: ${user_id}`);
 		return res; // should not happen
 	}
 
@@ -222,12 +223,12 @@ export async function logoutUser(user_id: number, db: Database) : Promise<DbResp
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error ${err}` }};
 	}
 }
 
-export async function setUserStatus(user_id: number, newStatus: string, db: Database) : Promise<DbResponse>
+export async function setUserStatus(user_id: number, newStatus: number, db: Database) : Promise<DbResponse>
 {
 	const sql = "UPDATE users SET status = ? WHERE id = ?;";
 	try {
@@ -235,7 +236,7 @@ export async function setUserStatus(user_id: number, newStatus: string, db: Data
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return { code: 500, data: { message: `database error ${err}` }};
 	}
 }
@@ -264,7 +265,7 @@ export async function uploadAvatar(request: FastifyRequest, reply: any, id: numb
 		await pipeline(data.file, createWriteStream(filepath));
 		await updateAvatarPath(Number(res.data.id), filename);
 
-		console.log(`${res.data.name} has changed is avatar. location=${filepath}`);
+		Logger.log(`${res.data.name} has changed is avatar. location=${filepath}`);
 
 		return {
 			Success:	true,
@@ -276,7 +277,7 @@ export async function uploadAvatar(request: FastifyRequest, reply: any, id: numb
 	}
 	catch (error)
 	{
-		console.error(error);
+		Logger.error(`${error}`);
 		return reply.code(500).send({ error: "failed to upload file" });
 	}
 }
@@ -295,7 +296,7 @@ export async function blockUser(userId: number, target: number, db: Database) : 
 	}
 	catch (err: any)
 	{
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "user already blocked" }};
 
@@ -315,7 +316,7 @@ export async function unBlockUser(userId: number, target: number, db: Database) 
 	}
 	catch (err: any)
 	{
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -332,7 +333,7 @@ export async function updatePassw(user_id: number, oldPass: string, newPass: str
 	}
 	catch (err)
 	{
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -347,7 +348,7 @@ export async function updateName(user_id: number, name: string): Promise<DbRespo
 	}
 	catch (err: any)
 	{
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "username already taken" }};
 		return { code: 500, data: { message: "Database Error" }};
@@ -364,7 +365,7 @@ export async function updateEmail(user_id: number, email: string): Promise<DbRes
 	}
 	catch (err: any)
 	{
-		console.log(`Database error: ${err}`);
+		Logger.log(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "email already taken" }};
 		return { code: 500, data: { message: "Database Error" }};

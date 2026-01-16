@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import OAuth2, { OAuth2Namespace } from '@fastify/oauth2';
-import { getSecrets } from '@modules/vault/secrets.js';
+import { getSecrets } from 'modules/vault/secrets.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -66,6 +66,7 @@ export async function registerOAuth2Providers(fastify: FastifyInstance) {
 		callbackUri: `https://${process.env.HOST}:8081/api/oauth2/forty_two/callback`,
 		scope: 'public'
 	};
+
 
 	await fastify.register(OAuth2, fortyTwoOAuth2Options);
 	await fastify.register(OAuth2, googleOAuth2Options);

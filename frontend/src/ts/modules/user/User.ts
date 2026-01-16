@@ -1,6 +1,8 @@
 import { setCookie, getCookie} from 'modules/utils/utils.js';
 import { hashString } from 'modules/utils/sha256.js'
 import { UserElement, UserElementType } from 'modules/user/UserElement.js';
+import { GameRouter } from 'router';
+import { Router } from 'modules/router/Router.js';
 
 export enum UserStatus {
 	UNKNOW = -2,
@@ -73,6 +75,7 @@ export class User {
 	private m_created_at:	string = "";
 	private m_stats:		Stats;
 	private m_source:		AuthSource;
+	private m_showTutorial:	number = 0;
 
 	private m_blockUsr:		User[];
 	private m_friends:		User[] = []; // accepted request
@@ -98,6 +101,24 @@ export class User {
 		this.m_source = AuthSource.GUEST;
 	}
 
+	public setUserJson(json: any)
+	{
+		this.m_id = json.id;
+		this.name = json.name;
+		this.m_email = json.email;
+		this.m_avatarPath = json.avatar;
+		this.m_status = json.status;
+		this.m_source = json.source;
+		this.m_created_at = json.created_at;
+		this.m_stats.currElo = json.elo;
+		this.m_stats.gameWon = json.wins;
+		this.m_stats.gamePlayed = json.games_played;
+		this.m_showTutorial = json.show_tutorial;
+		this.m_friends = [];
+		this.m_blockUsr = [];
+		this.m_pndgFriends = new Map<User, number>();
+	}
+
 	public setUser(id: number, name: string, email: string, avatar: string, status: UserStatus) {
 		this.m_id = id;
 		this.name = name;
@@ -121,6 +142,7 @@ export class User {
 	get gamePlayed(): number				{ return this.m_stats.gamePlayed; }
 	get	stats(): Stats						{ return this.m_stats; }
 	get	source(): AuthSource				{ return this.m_source; }
+	get showTutorial(): number				{ return this.m_showTutorial; }
 	get token(): string						{ return this.m_token; }
 	set token(token: string)				{ this.m_token = token; }
 
@@ -202,7 +224,7 @@ export class User {
 			return 0;
 
 		this.m_blockUsr = [];
-		const response = await fetch('/api/user/blocked_users', { // TODO renvoyer tous les user ou blocked_by === id
+		const response = await fetch('/api/user/blocked_users', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ token: this.m_token })
@@ -300,6 +322,11 @@ export class MainUser extends User
 	private m_userElement: UserElement | null = null;
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
+	private m_gameRouter:	GameRouter | null = null;
+
+	get gameRouter(): GameRouter | null { return this.m_gameRouter; }
+	set gameRouter(router: GameRouter | null) { this.m_gameRouter = router; }
+
 
 	constructor()
 	{
@@ -308,6 +335,42 @@ export class MainUser extends User
 
 		this.m_onLoginCb = [];
 		this.m_onLogoutCb = [];
+	}
+
+	public displayTutorial()
+	{
+		const tutorial = Router.getElementById("tutorial_panel") as HTMLElement;
+		if (!tutorial)
+		{
+			console.warn("no tutorial_panel");
+			return;
+		}
+
+		if (!this.showTutorial)
+		{
+			tutorial.style.display = "none";
+			return ;
+		}
+
+		tutorial.style.display = "flex";
+		const btn = tutorial.querySelector("#continue-btn") as HTMLButtonElement;
+		if (!btn)
+		{
+			console.error("no btn");
+			return ;
+		}
+
+		btn.addEventListener("click", () => {
+			tutorial.style.display = "none";
+			fetch('/api/user/complete_tutorial', {
+				method: "POST",
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					token: this.token
+				})
+			})
+		});
+
 	}
 
 	/**
@@ -324,7 +387,6 @@ export class MainUser extends User
 			statusSelect.prepend(newOption("available"));
 			statusSelect.prepend(newOption("unavailable"));
 			statusSelect.prepend(newOption("busy"));
-			statusSelect.prepend(newOption("in_game"));
 			statusSelect.addEventListener("change", () => this.updateStatus(statusSelect.value, this, this.m_userElement));
 			switch (this.status)
 			{
@@ -343,7 +405,6 @@ export class MainUser extends User
 				case UserStatus.IN_GAME:
 					statusSelect.value = "in_game";
 					break;
-
 			}
 		}
 	}
@@ -364,11 +425,7 @@ export class MainUser extends User
 
 		if (response.status == 200)
 		{
-			var status = data.status;
-			this.setUser(data.id, data.name, data.email, data.avatar, status);
-			this.setStatus(this.status);
-			await this.refreshSelf();
-
+			this.setUserJson(data);
 			this.m_onLoginCb.forEach(cb => cb(this));
 		}
 		else
@@ -398,7 +455,6 @@ export class MainUser extends User
 	public async logout()
 	{
 		// document.cookie = "jwt_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-		console.log("hello")
 		setCookie("jwt_session", "", 0);
 		await this.logoutDB();
 		if (this.m_userElement)
@@ -576,7 +632,13 @@ export class MainUser extends User
 
 	public async resetUser(): Promise<number>
 	{
-		const res = await fetch('/api/user/reset', { method: "DELETE" });
+		const res = await fetch ('api/user/reset', {
+			method: "DELETE",
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				token: this.m_token
+			})
+		});
 		return res.status;
 	}
 
@@ -619,5 +681,19 @@ export class MainUser extends User
 		});
 		await this.updateSelf();
 		return res.status;
+	}
+
+	public async startDuel(json: any)
+	{
+		if (!this.m_gameRouter)
+		{
+			console.warn("no game router in user, aborting.");
+			return ;
+		}
+
+		this.m_gameRouter.navigateTo("game", "online");
+
+		// await this.m_gameRouter.gameInstance?.createGame();
+		
 	}
 }

@@ -13,7 +13,7 @@ enum Params
 	PADDLE_PADDING = 2,
 	BALL_SIZE = 2,
 	BACKGROUND_OPACITY = '0.4',
-	COLOR = 'var(--white)',
+	COLOR = 'var(--color-white)',
 	COUNTDOWN_START = 1,
 	IPS = 60,
 }
@@ -94,7 +94,10 @@ export class GameClient extends Utils
 			this.m_user = user;
 		this.createPlayerHtml();
 		if (chat)
+		{
+			console.log("adding listener");
 			chat.onGameCreated((json) => this.createGameFeedback(json));
+		}
 
 		if (this.isModeValid())
 		{
@@ -116,7 +119,8 @@ export class GameClient extends Utils
 	{
 		return (this.mode === 'local'
 			|| this.mode === 'online'
-			|| this.mode === 'bot');
+			|| this.mode === 'bot'
+			|| this.mode === 'duel');
 	}
 
 	private init(): void
@@ -135,17 +139,17 @@ export class GameClient extends Utils
 
 	private async createGameFeedback(json: any)
 	{
+		console.error("init", this);
 		this.gameId = json.gameId.toString();
 		this.m_user2 = await getUserFromId(json.opponentId.toString());
 		this.playerSide = json.playerSide;
-		console.log(this.playerSide);
 		this.createPlayerHtml();
 		this.m_player2?.updateHtml(this.m_user2);
 
 		this.launchCountdown();
 	}
 
-	private async createGame(): Promise<void>
+	public async createGame(): Promise<void>
 	{
 		if (!this.m_user)
 			return ;
@@ -180,8 +184,10 @@ export class GameClient extends Utils
 		}
 	}
 
-	private launchCountdown(): void
+	public launchCountdown(gameId?: string): void
 	{
+		if (gameId)
+			this.gameId = gameId;
 		let count: number = Params.COUNTDOWN_START;
 		const countdownIntervalTime =  (count > 0) ? 1000 : 0;
 		this.hide('searching-msg');
@@ -197,7 +203,7 @@ export class GameClient extends Utils
 			{
 				clearInterval(this.countdownInterval);
 				this.showElements();
-				this.startGame();
+				this.startGame(gameId);
 			}
 		}, countdownIntervalTime);
 	}
@@ -220,21 +226,25 @@ export class GameClient extends Utils
 			this.m_player2.updateHtml(this.m_user2);
 	}
 
-	private async startGame(): Promise<void>
+	public async startGame(gameId? : string ): Promise<void>
 	{
-		console.log(this.playerSide);
-		const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
+		if (!gameId)
 		{
-			method: 'POST',
-		});
 
-		if (!response.ok)
-		{
-			console.error('Failed to start game:', response.status, response.statusText);
-			return ;
+			console.log(this.playerSide);
+			const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
+			{
+				method: 'POST',
+			});
+
+			if (!response.ok)
+			{
+				console.error('Failed to start game:', response.status, response.statusText);
+				return ;
+			}
+			this.updateGameState(await response.arrayBuffer());
 		}
 
-		this.updateGameState(await response.arrayBuffer());
 
 		this.socket = new WebSocket(`wss://${window.location.host}/api/game/${this.gameId}/${this.playerSide}`);
 		this.socket.binaryType = 'arraybuffer';
@@ -289,7 +299,7 @@ export class GameClient extends Utils
 			return ;
 		this.keysToSend = '';
 
-		if (this.mode === 'online' || this.mode === 'bot')
+		if (this.mode === 'online' || this.mode === 'bot' || this.mode === 'duel')
 		{
 			this.keysPressed.forEach((key) => { this.getKeyToSend1Player(key); });
 		}

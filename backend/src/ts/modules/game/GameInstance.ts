@@ -1,4 +1,4 @@
-import { addGameToHist, GameRes } from '@modules/users/user.js';
+import { addGameToHist, GameRes } from 'modules/users/user.js';
 import { GameState } from './GameState.js';
 import * as core from 'core/core.js';
 
@@ -137,7 +137,7 @@ export class GameInstance
 			this._winner = player;
 			this._isRunning = false;
 			console.log(`${this._winner} won the game (mode: ${this.mode})`);
-			if (this.mode == 'online' || this.mode == 'bot')
+			if (this.mode == 'duel' || this.mode == 'online' || this.mode == 'bot')
 			{
 				if (!this._Player1Id || !this._Player2Id)
 					return ;

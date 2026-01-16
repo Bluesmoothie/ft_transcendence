@@ -9,7 +9,6 @@ services:
       - sqlite:/var/lib/sqlite
       - avatars:/var/www/server/public/avatars
       - vault_key:/vault/config
-      # - ./backend/src/public:/var/www/server/public # remove comment for working on webpage
     networks:
       - backend_net
       - vault_net

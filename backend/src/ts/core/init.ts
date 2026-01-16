@@ -1,19 +1,20 @@
 import { promises as fs } from 'fs'
-import { createUser, updateAvatarPath } from '@modules/users/userManagment.js';
+import { createUser, updateAvatarPath } from 'modules/users/userManagment.js';
 import { Database } from 'sqlite';
-import { hashString } from '@modules/sha256.js';
+import { hashString } from 'modules/sha256.js';
 import fastifyStatic from '@fastify/static';
 
 import { registerCorsProvider } from 'providers/cors.js';
 import { registerOAuth2Providers } from 'providers/oauth2.js';
-import { userManagmentRoutes } from '@modules/users/userManagment.route.js';
-import { AuthSource, OAuthRoutes } from '@modules/oauth2/routes.js';
-import { friendsRoutes } from '@modules/users/friends.route.js';
-import { userRoutes } from '@modules/users/user.route.js';
-import { chatRoutes } from '@modules/chat/chat.route.js';
-import { totpRoutes } from '@modules/2fa/2fa.route.js';
+import { userManagmentRoutes } from 'modules/users/userManagment.route.js';
+import { AuthSource, OAuthRoutes } from 'modules/oauth2/routes.js';
+import { friendsRoutes } from 'modules/users/friends.route.js';
+import { userRoutes } from 'modules/users/user.route.js';
+import { chatRoutes } from 'modules/chat/chat.route.js';
+import { totpRoutes } from 'modules/2fa/2fa.route.js';
+import { duelRoutes } from 'modules/users/duel.route.js';
 
-import * as core from '@core/core.js';
+import * as core from 'core/core.js';
 
 async function loadConfig(path: string, db: Database)
 {
@@ -21,10 +22,12 @@ async function loadConfig(path: string, db: Database)
 	const json = JSON.parse(data);
 
 	const users = json.default_users;
-	users.forEach(async (user: any) => {
+	for (let i = 0; i < users.length; i++)
+	{
+		const user = users[i];
 		const hash = await hashString(user.passw);
 		await createUser(user.email, hash, user.name, AuthSource.INTERNAL, db);
-	});
+	}
 }
 
 export async function initFastify()
@@ -59,6 +62,7 @@ export async function initFastify()
 	await core.fastify.register(userRoutes, { prefix: '/api/user'});
 	await core.fastify.register(chatRoutes);
 	await core.fastify.register(totpRoutes);
+	await core.fastify.register(duelRoutes, { prefix: '/api/duel' });
 
 	registerCorsProvider(core.fastify);
 

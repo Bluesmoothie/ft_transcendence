@@ -8,10 +8,6 @@
 		"strict": true,
 		"outDir": "./dist",
 		"baseUrl": "./ts",
-		"paths": {
-			"@core/*": ["core/*"],
-			"@modules/*": ["modules/*"]
-		}
 	},
 	"include": ["ts/**/*"],
 	"exclude": ["node_modules"]

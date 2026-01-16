@@ -1,5 +1,6 @@
 import { Database } from 'sqlite';
-import { DbResponse } from '@core/core.js'
+import { DbResponse } from 'core/core.js'
+import { Logger } from 'modules/logger.js';
 
 export async function removeFriend(user1: number, user2: number, db: Database) : Promise<DbResponse>
 {
@@ -12,7 +13,7 @@ export async function removeFriend(user1: number, user2: number, db: Database) :
 		return { code: 200, data: { message: 'Success' }};
 	}
 	catch (err) {
-		console.log(`database error: ${err}`);
+		Logger.log(`database error: ${err}`);
 		return { code: 500, data: { message: 'Database Error' }};
 	}
 }
@@ -28,11 +29,11 @@ export async function addFriend(user_id: number, friend_id: number, db: Database
 
 		sql = 'INSERT INTO friends (user1_id, user2_id, pending, sender_id) VALUES (?, ?, ?, ?)';
 		var result = await db.run(sql, [user_id, friend_id, true, sender_id]);
-		console.log(`Inserted row with id ${result.changes}`);
+		Logger.log(`Inserted row with id ${result.changes}`);
 		return { code: 200, data: { message: 'Success' }};
 	}
 	catch (err) {
-		console.log(`database error: ${err}`);
+		Logger.log(`database error: ${err}`);
 		return { code: 500, data: { message: 'Database Error' }};
 	}
 	
@@ -46,14 +47,14 @@ export async function acceptFriend(user1: number, user2: number, db: Database)
 		[user1, user2] = [user2, user1];
 	var sql = 'UPDATE friends SET pending = 0 WHERE user1_id = ? AND user2_id = ? AND sender_id != ? RETURNING *';
 	try {
-		console.log(user1, user2)
+		Logger.log(user1, user2)
 		const row = await db.get(sql, [user1, user2, request_userId]);
 		if (!row)
 			return { code: 404, data: { message: 'Request not found' }};
 		return { code: 200, data: { message: 'Success' }};
 	}
 	catch (err) {
-		console.log(`database err: ${err}`);
+		Logger.log(`database err: ${err}`);
 		return { code: 500, data: { message: 'Database Error' }};
 	}
 }
@@ -70,7 +71,7 @@ export async function getFriends(request: any, reply: any, db: Database)
 		return reply.code(200).send(rows);
 	}
 	catch (err) {
-		console.error(`database err: ${err}`);
+		Logger.error(`database err: ${err}`);
 		return reply.code(500).send({ message: `database error ${err}` });
 	}
 }

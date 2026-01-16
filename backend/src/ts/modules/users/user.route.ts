@@ -1,9 +1,10 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import * as core from '@core/core.js';
-import * as user from '@modules/users/user.js'
+import * as core from 'core/core.js';
+import * as user from 'modules/users/user.js'
 import { GameRes } from 'modules/users/user.js';
-import { jwtVerif } from '@modules/jwt/jwt.js';
+import { jwtVerif } from 'modules/jwt/jwt.js';
 import * as mgmt from 'modules/users/userManagment.js';
+import { Logger } from 'modules/logger.js';
 
 export async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
 {
@@ -108,7 +109,6 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 			const res = await mgmt.loginSession(token, core.db);
 			if (res.code != 200)
 				return reply.code(res.code).send(res.data);
-			console.log("user is login has:", res.data.name);
 			return reply.code(res.code).send(res.data);
 		})
 
@@ -142,4 +142,23 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		const res = await user.getAllUsers();
 		return reply.code(res.code).send(res.data);
 	});
+
+	fastify.post('/complete_tutorial', {
+		schema: {
+			body: {
+				type: "object",
+				properties: {
+					token: { type: "string" }
+				},
+				required: ["token"]
+			}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { token } = request.body as { token: string };
+			const data: any = await jwtVerif(token, core.sessionKey);
+			if (!data)
+				return reply.code(400).send({ message: "invalid token" });
+			const res = await user.completeTutorial(data.id);
+			return reply.code(res.code).send(res.data);
+		})
 }

@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import * as core from '@core/core.js';
-import { loginOAuth2 } from "@modules/users/userManagment.js";
+import * as core from 'core/core.js';
+import { loginOAuth2 } from "modules/users/userManagment.js";
 
 import { fortyTwoOAuth2Routes } from "./fortyTwo.route.js";
 import { githubOAuth2Routes } from "./github.route.js";
