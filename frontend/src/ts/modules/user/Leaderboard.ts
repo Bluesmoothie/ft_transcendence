@@ -2,6 +2,9 @@ import { User } from "modules/user/User.js";
 import { UserElement, UserElementType } from "modules/user/UserElement.js";
 import { Router } from "modules/router/Router.js";
 
+// TODO: set page size to avoid getting all user at once
+// TODO: make dedicated route to get n best users
+
 export class Leaderboard
 {
 	private m_users: User[] = [];
