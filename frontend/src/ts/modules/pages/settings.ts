@@ -9,8 +9,6 @@ import { ThemeController } from "./Theme.js";
 
 export class SettingsView extends ViewComponent
 {
-	private m_user: MainUser | null = null;
-
 	private usernameInput:		HTMLInputElement | null = null;
 	private emailInput:			HTMLInputElement | null = null;
 	private currPassInput:		HTMLInputElement | null = null;
@@ -36,16 +34,10 @@ export class SettingsView extends ViewComponent
 
 	public async enable()
 	{
-		this.m_user = new MainUser();
-		await this.m_user.loginSession();
-		if (this.m_user.id == -1) // user not login
-		{
-			Router.Instance?.navigateTo("/");
-			return ;
-		}
-		this.m_user.onLogout(() => Router.Instance?.navigateTo("/"));
+		if (!MainUser.Instance)
+			return;
 
-		new HeaderSmall(this.m_user, this, "header-container");
+		new HeaderSmall(MainUser.Instance, this, "header-container");
 
 		this.usernameInput = this.querySelector("#username-input") as HTMLInputElement;
 		this.emailInput = this.querySelector("#email-input") as HTMLInputElement;
@@ -66,23 +58,23 @@ export class SettingsView extends ViewComponent
 
 		this.saveBtn = this.querySelector("#save-btn") as HTMLButtonElement;
 
-		this.usernameInput.placeholder = this.m_user.name;
-		this.emailInput.placeholder = this.m_user.email;
+		this.usernameInput.placeholder = MainUser.Instance.name;
+		this.emailInput.placeholder = MainUser.Instance.email;
 
 		this.addTrackListener(this.request2faBtn, "click", () => { this.new_totp(); setPlaceHolderText("scan qrcode with auth app and confirm code") });
-		this.addTrackListener(this.logoutBtn, "click", () => this.m_user?.logout());
+		this.addTrackListener(this.logoutBtn, "click", () => MainUser.Instance?.logout());
 		this.addTrackListener(this.saveBtn, "click", () => this.confirmChange());
 		this.addTrackListener(this.holderClose, "click", () => this.holderParent?.classList.add("hide"));
 		this.addTrackListener(this.delete2faBtn, "click", () => this.showConfirmPanel(() => {
-			this.m_user?.delTotp();
+			MainUser.Instance?.delTotp();
 			setPlaceHolderText("2fa has been removed")
 			const panel = this.querySelector("#panel-holder");
 			if (panel)
 				panel.innerHTML = "";
 		}));
-		this.addTrackListener(this.deleteBtn, "click", () => this.showConfirmPanel(() => this.m_user?.deleteUser()));
+		this.addTrackListener(this.deleteBtn, "click", () => this.showConfirmPanel(() => MainUser.Instance?.deleteUser()));
 		this.addTrackListener(this.resetBtn, "click", () => this.showConfirmPanel(() => {
-			if (this.m_user?.resetUser())
+			if (MainUser.Instance?.resetUser())
 				setPlaceHolderText("all data has been reset");
 			else
 				setPlaceHolderText("error");
@@ -122,20 +114,14 @@ export class SettingsView extends ViewComponent
 		const container = this.querySelector("#user-container");
 		if (container)
 			container.innerHTML = "";
-		if (this.m_user)
-		{
-			this.m_user.resetCallbacks();
-			this.m_user = null;
-		}
 	}
 
 	private hideForbiddenElement()
 	{
-		if (!this.m_user || !this.delete2faBtn)
+		if (!MainUser.Instance || !this.delete2faBtn)
 			return ;
 
-		console.log(this.m_user.source)
-		if (this.m_user.source !== AuthSource.INTERNAL)
+		if (MainUser.Instance.source !== AuthSource.INTERNAL)
 		{
 			(<HTMLElement>this.querySelector("#email-settings")).style.display = "none";
 			(<HTMLElement>this.querySelector("#passw-settings")).style.display = "none";
@@ -155,7 +141,7 @@ export class SettingsView extends ViewComponent
 	{
 		if (newPassw == "" && oldPass == "")
 			return 0;
-		if (newPassw == "" || oldPass == "" || !this.m_user)
+		if (newPassw == "" || oldPass == "" || !MainUser.Instance)
 		{
 			setPlaceHolderText("error: password field empty");
 			return 1;
@@ -167,7 +153,7 @@ export class SettingsView extends ViewComponent
 				'content-type': 'application/json'
 			},
 			body: JSON.stringify({
-				token: this.m_user.token,
+				token: MainUser.Instance.token,
 				oldPass: await hashString(oldPass),
 				newPass: await hashString(newPassw)
 			})
@@ -183,13 +169,13 @@ export class SettingsView extends ViewComponent
 
 	private async confirmChange()
 	{
-		if (!this.m_user)
+		if (!MainUser.Instance)
 			return ;
 
 		var error: boolean = false;
 
 		if (this.confirm2faInput && this.confirm2faInput.value !== "")
-			this.validate_totp(this.m_user);
+			this.validate_totp(MainUser.Instance);
 
 		if (this.avatarInput && this.avatarInput.files && this.avatarInput.files[0])
 		{
@@ -197,7 +183,7 @@ export class SettingsView extends ViewComponent
 			const file = this.avatarInput.files[0];
 			const formData = new FormData();
 			formData.append('avatar', file);
-			this.m_user.setAvatar(formData);
+			MainUser.Instance.setAvatar(formData);
 		}
 
 		if (this.newPassInput && this.currPassInput)
@@ -216,7 +202,7 @@ export class SettingsView extends ViewComponent
 					'content-type': 'application/json'
 				},
 				body: JSON.stringify({
-					token: this.m_user.token,
+					token: MainUser.Instance.token,
 					name: this.usernameInput.value
 				})
 			});
@@ -237,7 +223,7 @@ export class SettingsView extends ViewComponent
 					'content-type': 'application/json'
 				},
 				body: JSON.stringify({
-					token: this.m_user.token,
+					token: MainUser.Instance.token,
 					email: this.emailInput.value
 				})
 			});
@@ -252,15 +238,15 @@ export class SettingsView extends ViewComponent
 		if (error === false)
 			setPlaceHolderText(`settings saved!`);
 
-		await this.m_user.refreshSelf();
+		await MainUser.Instance.refreshSelf();
 	}
 
 	private async new_totp()
 	{
-		if (!this.m_user)
+		if (!MainUser.Instance)
 			return ;
 
-		const result = await this.m_user.newTotp();
+		const result = await MainUser.Instance.newTotp();
 		if (!result || !this.holderParent || !this.holder)
 			return ;
 

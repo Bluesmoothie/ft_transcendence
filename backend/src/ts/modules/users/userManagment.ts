@@ -76,8 +76,11 @@ export async function login(email: string, passw: string, totp: string) : Promis
 {
 	var sql = 'UPDATE users SET is_login = 1 WHERE email = ? AND passw = ? RETURNING *';
 
+	const hash = await hashString(passw);
+
 	try {
-		const row = await core.db.get(sql, [email, passw]);
+		const row = await core.db.get(sql, [email, hash]);
+		console.log(email, passw, hash);
 		if (!row)
 			return { code: 404, data: { message: "email or password invalid"}};
 		else if (row.totp_enable == 1 && !check_totp(row.totp_seed, totp))
@@ -140,9 +143,11 @@ export async function createUser(email: string, passw: string, username: string,
 		return { code: 409, data: { message: "user is already in database" }};
 	}
 
+	const hash = await hashString(passw)
+
 	try
 	{
-		const result = await db.run(sql, [username, email, passw, source, getSqlDate()]);
+		const result = await db.run(sql, [username, email, hash, source, getSqlDate()]);
 		if (!result.lastID)
 			throw new Error("failed to create user");
 

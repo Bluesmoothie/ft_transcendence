@@ -1,9 +1,7 @@
 import { setCookie, getCookie} from 'modules/utils/utils.js';
-import { hashString } from 'modules/utils/sha256.js'
 import { UserElement, UserElementType } from 'modules/user/UserElement.js';
 import { GameRouter } from 'router';
 import { Router } from 'modules/router/Router.js';
-import { Utils } from 'pages/Utils';
 
 export enum UserStatus {
 	UNKNOW = -2,
@@ -62,7 +60,8 @@ export interface Stats {
 	shortTime:	string;
 }
 
-export class User {
+export class User
+{
 	/* public vars */
 	public name: string = "";
 
@@ -74,11 +73,11 @@ export class User {
 	private m_avatarPath:	string = "";
 	private m_status:		UserStatus = UserStatus.UNKNOW;
 	private m_created_at:	string = "";
-	private m_stats:		Stats;
-	private m_source:		AuthSource;
+	private m_stats:		Stats = { gamePlayed: 0, gameWon: 0, currElo: 0, maxElo: 0, avrTime: "", shortTime: "" };
+	private m_source:		AuthSource = AuthSource.INTERNAL;
 	private m_showTutorial:	number = 0;
 
-	private m_blockUsr:		User[];
+	private m_blockUsr:		User[] = [];
 	private m_friends:		User[] = []; // accepted request
 	private m_pndgFriends = new Map<User, number>(); // pending requests (number == sender)
 
@@ -87,22 +86,13 @@ export class User {
 	constructor(token?: string)
 	{
 		this.m_onStatusChanged = new Array<(status: UserStatus) => void>;
-		this.setUser(
-			-1,
-			"Guest",
-			"",
-			"",
-			UserStatus.UNKNOW
-		);
+		this.reset();
 
 		if (token) // token will be used for request needing permission
 			this.m_token = token;
-		this.m_blockUsr = [];
-		this.m_stats = { gamePlayed: 0, gameWon: 0, currElo: 0, maxElo: 0, avrTime: "", shortTime: "" };
-		this.m_source = AuthSource.GUEST;
 	}
 
-	public newUser()
+	public reset()
 	{
 		this.m_id = -1;
 		this.name = "";
@@ -115,6 +105,7 @@ export class User {
 		this.m_stats.gameWon = 0;
 		this.m_stats.gamePlayed = 0;
 		this.m_showTutorial = 0;
+		this.m_token = "";
 		this.m_friends = [];
 		this.m_blockUsr = [];
 		this.m_pndgFriends = new Map<User, number>();
@@ -337,6 +328,8 @@ function newOption(optionName: string) : HTMLOptionElement
 
 export class MainUser extends User
 {
+	private	static	m_instance: MainUser | null = null;
+
 	private m_userElement: UserElement | null = null;
 	private m_onLoginCb:	Array<(user: MainUser) => void>;
 	private m_onLogoutCb:	Array<(user: MainUser) => void>;
@@ -351,8 +344,16 @@ export class MainUser extends User
 		const token = getCookie("jwt_session");
 		super(token);
 
+		if (MainUser.m_instance === null)
+			MainUser.m_instance = this;
+
 		this.m_onLoginCb = [];
 		this.m_onLogoutCb = [];
+	}
+
+	static get Instance(): MainUser | null
+	{
+		return MainUser.m_instance;
 	}
 
 	public displayTutorial()
@@ -469,7 +470,7 @@ export class MainUser extends User
 			},
 			body: JSON.stringify({
 				email: email,
-				passw: await hashString(passw),
+				passw: passw,
 				totp: totp
 			})
 		});
@@ -487,6 +488,7 @@ export class MainUser extends User
 		this.m_onLogoutCb.forEach(cb => cb(this));
 
 		setCookie("jwt_session", "", 0);
+		this.reset();
 	}
 
 	public async refreshSelf()

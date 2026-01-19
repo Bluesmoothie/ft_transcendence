@@ -12,6 +12,7 @@ import { ProfileView } from "modules/pages/profile.js"
 import { SearchView } from "modules/pages/search.js";
 import { AboutView } from "modules/pages/about.js"
 import { NotFoundView } from "modules/pages/404.js";
+import { MainUser } from "modules/user/User.js";
 
 const routes: Route[] = [
 	{ path: "/",			viewName: "start-view",		templateId: "start-template" },
@@ -34,8 +35,13 @@ customElements.define('search-view', SearchView);
 customElements.define('about-view', AboutView);
 customElements.define('notfound-view', NotFoundView);
 
+const user = new MainUser();
+await user.loginSession();
+
 const router = new Router(routes);
 await router.init();
+
+user.onLogout(() => Router.Instance?.navigateTo("/"));
 
 const state = utils.getCookie("crt_state");
 if (state)
@@ -48,4 +54,3 @@ if (themeCookie)
 
 const themes = await loadTheme();
 new ThemeController(themes, defaultTheme);
-

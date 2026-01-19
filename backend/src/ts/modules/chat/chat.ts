@@ -77,7 +77,8 @@ export async function disconnectClient(ws: WebSocket)
 	const id = connections.get(ws);
 	if (!id)
 		return ;
-	await logoutUser(id, core.db);
+	if (id != -1)
+		await logoutUser(id, core.db);
 	ws.close();
 	connections.delete(ws);
 	clearDuel(id);

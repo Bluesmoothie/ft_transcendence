@@ -15,8 +15,7 @@ import { ViewComponent } from "modules/router/ViewComponent.js";
 
 export class LobbyView extends ViewComponent
 {
-	private m_user:	MainUser | null = null;
-	private m_chat:	Chat | null = null;
+	private m_chat:	Chat;
 	private state:	ListState = ListState.HIDDEN;
 	private	m_gameRouter:	GameRouter | null = null;
 
@@ -25,12 +24,23 @@ export class LobbyView extends ViewComponent
 	constructor()
 	{
 		super();
-		this.m_user = new MainUser();
+		this.m_chat = new Chat();
+	}
+
+	public async init()
+	{
+		const chatInput: HTMLInputElement = this.querySelector("#chat-in") as HTMLInputElement;
+		const chatOutput: HTMLInputElement = this.querySelector("#chat-out") as HTMLInputElement;
+
+		if (!chatInput || !chatOutput || !MainUser.Instance)
+			return ;
+	    
+		this.m_chat.Init(MainUser.Instance, chatOutput, chatInput);
 	}
 
 	public async enable()
 	{
-		if (!this.m_user)
+		if (!MainUser.Instance)
 		{
 			console.warn("no main user");
 			return;
@@ -38,64 +48,51 @@ export class LobbyView extends ViewComponent
 
 		this.m_userContainer = this.querySelector("#user-container");
 
-		await this.m_user.loginSession();
-
-		if (this.m_user.id == -1)
+		if (MainUser.Instance.id == -1)
 		{
 			Router.Instance?.navigateTo("/");
 			return ;
 		}
-		this.m_user.displayTutorial();
-		this.m_user.onLogout(() => Router.Instance?.navigateTo("/"));
 
-		const chatInput: HTMLInputElement = this.querySelector("#chat-in") as HTMLInputElement;
-		const chatOutput: HTMLInputElement = this.querySelector("#chat-out") as HTMLInputElement;
-		if (!chatInput || !chatOutput)
-			return ;
+		MainUser.Instance.displayTutorial();
 
-		if (!this.m_chat || this.m_chat.user?.id != this.m_user.id)
+
+		if (!this.m_chat || this.m_chat.user?.id != MainUser.Instance.id)
 		{
-			this.m_chat = new Chat(this.m_user, chatOutput, chatInput);
 			this.m_chat.onConnRefresh((conns: User[]) => this.fillUserList(conns));
 		}
 
 		if (this.m_gameRouter == null)
 		{
-			this.m_gameRouter = new GameRouter(this.m_user, this.m_chat, this);
+			this.m_gameRouter = new GameRouter(MainUser.Instance, this.m_chat, this);
 			this.m_gameRouter.assignListener();
 			this.m_gameRouter.navigateTo('home', '');
 		}
 
-		this.m_user.gameRouter = this.m_gameRouter;
+		MainUser.Instance.gameRouter = this.m_gameRouter;
 
 		const container = this.querySelector("#user-list-container") as HTMLElement;
 		if (container)
 			container.innerHTML = "";
 
 		this.addTrackListener(this.querySelector("#user-list-btn"), "click", () => {
-			if (!this.m_chat || !this.m_user) return;
-			this.showListContainer(ListState.USER, this.m_chat, this.m_user);
+			if (!this.m_chat || !MainUser.Instance) return;
+			this.showListContainer(ListState.USER, this.m_chat, MainUser.Instance);
 			window.dispatchEvent(new CustomEvent('pageChanged'));
 		});
 		this.addTrackListener(this.querySelector("#friend-list-btn"), "click", () => {
-			if (!this.m_chat || !this.m_user) return;
-			this.showListContainer(ListState.FRIEND, this.m_chat, this.m_user);
+			if (!this.m_chat || !MainUser.Instance) return;
+			this.showListContainer(ListState.FRIEND, this.m_chat, MainUser.Instance);
 			window.dispatchEvent(new CustomEvent('pageChanged'));
 		});
 
-		new HeaderSmall(this.m_user, this, "header-container");
+		new HeaderSmall(MainUser.Instance, this, "header-container");
 	}
 
 
 	public async disable()
 	{
 		this.clearTrackListener();
-
-		if (this.m_user)
-		{
-			this.m_user.resetCallbacks();
-			this.m_user.newUser();
-		}
 
 		if (this.m_gameRouter?.m_gameMenu)
 			this.m_gameRouter.m_gameMenu.destroy();
