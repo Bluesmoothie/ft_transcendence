@@ -85,10 +85,9 @@ export async function addGameToHist(game: GameRes, db: Database) : Promise<DbRes
 			user1Elo = await db.get(sql_elo, [-10, id1]);
 			user2Elo = await db.get(sql_elo, [10, id2]);
 		}
-		Logger.log(user1Elo, user2Elo)
 
 		const response = await db.run(sql, [id1, id2, game.user1_score, game.user2_score, date, user1Elo.elo, user2Elo.elo]);
-		Logger.log(`added game to history. id: ${response.lastID}`);
+		Logger.log(`added game to history. id: ${response.lastID} (${id1} <=> ${id2})`);
 		await updateUserStats(id1, game.user1_score > game.user2_score, db);
 		await updateUserStats(id2, game.user2_score > game.user1_score, db);
 
@@ -128,7 +127,6 @@ export async function getUserHistByName(request: FastifyRequest, reply: FastifyR
 			return reply.code(404).send({ message: 'no games :(' });
 		}
 
-		Logger.log(rows);
 		return reply.code(200).send(rows);
 
 	}

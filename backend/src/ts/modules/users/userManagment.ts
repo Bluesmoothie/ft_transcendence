@@ -210,7 +210,7 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 
 export async function logoutUser(user_id: number, db: Database) : Promise<DbResponse>
 {
-	Logger.log("login out");
+	Logger.log(await getUserName(user_id), "is login out");
 	const res = await getUserById(user_id, db);
 	if (res.code != 200)
 	{

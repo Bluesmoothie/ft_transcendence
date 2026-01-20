@@ -11,6 +11,7 @@ export class SearchView extends ViewComponent
 	private m_container: HTMLElement | null = null;
 	private m_searchBtn: HTMLButtonElement | null = null;
 	private m_query: string = "";
+	private m_pageSize: number = 50;
 
 	constructor()
 	{
@@ -44,7 +45,8 @@ export class SearchView extends ViewComponent
 		const pageSizeInput = this.querySelector("#page-size-input") as HTMLInputElement;
 		if (!pageSizeInput)
 			return 50;
-		return pageSizeInput.value ? Number(pageSizeInput.value) : 50;
+		this.m_pageSize = pageSizeInput.value ? Number(pageSizeInput.value) : 50;
+		return this.m_pageSize;
 	}
 
 	public async enable()
@@ -85,6 +87,10 @@ export class SearchView extends ViewComponent
 		})
 		if (this.m_users.length === 0)
 			this.showNoResult();
+
+		const searchRes = this.querySelector("#search-result") as HTMLElement;
+		if (searchRes)
+			searchRes.innerText = `${this.m_users.length}/${this.m_pageSize}`;
 	}
 
 	private async searchUser(query: string, pageSize: number)
