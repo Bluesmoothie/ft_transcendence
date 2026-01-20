@@ -82,6 +82,7 @@ services:
     command: vault server -config=/vault/conf/vault.hcl
 
   prometheus:
+    restart: always
     image: prom/prometheus:v3.9.1
     container_name: prometheus
     volumes:
@@ -94,6 +95,7 @@ services:
     user: root
 
   grafana:
+    restart: always
     image: grafana/grafana:12.4.0-20836657505
     container_name: grafana
     volumes:
@@ -112,6 +114,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
 
   nginx_prom_export:
+    restart: always
     image: nginx/nginx-prometheus-exporter:1.5.1
     container_name: nginx_prom_export
     networks:
@@ -123,9 +126,9 @@ services:
     command: ["--nginx.scrape-uri=http://modsecurity:801/stub_status"]
 
   elasticsearch_exporter:
+    restart: always
     image: prometheuscommunity/elasticsearch-exporter:v1.10.0
     container_name: elasticsearch_exporter
-    restart: always
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     command:
@@ -140,6 +143,7 @@ services:
       - elasticsearch
 
   elasticsearch:
+    restart: always
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     container_name: elasticsearch
     environment:
@@ -156,6 +160,7 @@ services:
       - elk_net
 
   logstash:
+    restart: always
     image: docker.elastic.co/logstash/logstash:8.12.0
     container_name: logstash
     volumes:
@@ -174,10 +179,12 @@ services:
     environment:
       - ELASTICSEARCH_PASSWORD=${LOGSTASH_WRITER_PASSWORD}
       - ELASTICSEARCH_USERNAME=logstash_writer
+      - LS_JAVA_OPTS=-Xms1g -Xmx4g
     networks:
       - elk_net
 
   kibana:
+    restart: always
     image: docker.elastic.co/kibana/kibana:8.12.0
     container_name: kibana
     volumes:
@@ -203,7 +210,7 @@ services:
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     volumes:
-      - ./elk/kibana/config/export.ndjson:/export.ndjson
+      - ./elk/kibana/init/export.ndjson:/export.ndjson:ro
       - ./elk/kibana/init/script.sh:/script.sh:ro
     command: sh /script.sh
     networks:
@@ -227,6 +234,7 @@ services:
       - elk_net
 
   node_exporter:
+    restart: always
     image: quay.io/prometheus/node-exporter:v1.10.2
     container_name: node_exporter
     command:
@@ -240,9 +248,9 @@ services:
       - prometheus
 
   logstash-exporter:
+    restart: always
     image: ghcr.io/kuskoman/logstash-exporter:v1.9.1
     container_name: logstash-exporter
-    restart: always
     environment:
       - LOGSTASH_URL=http://logstash:9600
     networks:
