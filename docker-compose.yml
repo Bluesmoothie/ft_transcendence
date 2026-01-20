@@ -203,7 +203,7 @@ services:
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     volumes:
-      - ./elk/kibana/config/export.ndjson:/export.ndjson
+      - ./elk/kibana/init/export.ndjson:/export.ndjson:ro
       - ./elk/kibana/init/script.sh:/script.sh:ro
     command: sh /script.sh
     networks:
