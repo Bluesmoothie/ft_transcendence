@@ -171,7 +171,7 @@ export async function getBlockedUsrById(id: number, db: Database) : Promise<DbRe
 		return { code: 200, data: rows };
 	}
 	catch (err) {
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -189,7 +189,7 @@ export async function getUserStatus(id: number): Promise<DbResponse>
 	}
 	catch (err)
 	{
-		Logger.log(`Database Error: ${err}`)
+		Logger.error(`Database Error: ${err}`)
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -208,39 +208,85 @@ export async function getBlockUser(user1: number, user2: number): Promise<DbResp
 	}
 	catch (err)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
 
-export async function getAllUsers(): Promise<DbResponse>
+export async function getAllUsers(pageSize?: number): Promise<DbResponse>
 {
-	const sql = 'SELECT id, name, elo, wins, games_played, created_at, avatar, status FROM users;';
+	if (!pageSize)
+		pageSize = 15;
+
+	const sql = 'SELECT id, name, elo, wins, games_played, created_at, avatar, status FROM users LIMIT ?;';
 	try
 	{
-		const rows = await core.db.all(sql);
+		const rows = await core.db.all(sql, pageSize);
 		if (!rows || rows.length == 0)
 			return { code: 200, data: [] };
 		return { code: 200, data: rows };
 	}
 	catch (err) {
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
 
-export async function getAllUserIds(): Promise<DbResponse>
+export async function getAllUserIds(pageSize?: number): Promise<DbResponse>
 {
-	const sql = 'SELECT id FROM users;';
+	if (!pageSize)
+		pageSize = 15;
+
+	const sql = 'SELECT id FROM users LIMIT ?;';
 	try
 	{
-		const rows = await core.db.all(sql);
+		const rows = await core.db.all(sql, pageSize);
 		if (!rows || rows.length == 0)
 			return { code: 200, data: [] };
 		return { code: 200, data: rows };
 	}
 	catch (err) {
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+}
+
+export async function getHighestEloUsers(pageSize?: number): Promise<DbResponse>
+{
+	if (!pageSize)
+		pageSize = 5;
+
+	const sql = 'SELECT id FROM users ORDER BY elo DESC LIMIT ?;';
+	try
+	{
+		const rows = await core.db.all(sql, pageSize);
+		if (!rows || rows.length == 0)
+			return { code: 200, data: [] };
+		return { code: 200, data: rows };
+	}
+	catch (err)
+	{
+		Logger.error(`Database error: ${err}`);
+		return { code: 500, data: { message: "Database Error" }};
+	}
+}
+
+export async function searchUser(name: string, pageSize?: number): Promise<DbResponse>
+{
+	if (!pageSize)
+		pageSize = 50;
+
+	const sql = "SELECT id FROM users WHERE name LIKE ? LIMIT ?";
+	try
+	{
+		const rows = await core.db.all(sql, [`%${name}%`, pageSize]);
+		if (!rows || rows.length == 0)
+			return { code: 200, data: [] };
+		return { code: 200, data: rows };
+	}
+	catch (err)
+	{
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -256,8 +302,7 @@ export async function completeTutorial(id: number): Promise<DbResponse>
 	}
 	catch (err)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
-
 }

@@ -220,13 +220,6 @@ export class ProfileView extends ViewComponent
 				return;
 			const clone = template.content.cloneNode(true) as HTMLElement;
 			histContainer.append(clone);
-
-			// const text = document.createElement("p");
-
-			// text.innerText = "no recorded history";
-			// text.setAttribute("data-i18n", "no_history");
-			// histContainer.append(text);
-
 			window.dispatchEvent(new CustomEvent('pageChanged'));
 			return ;
 		}

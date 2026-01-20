@@ -22,7 +22,7 @@ export async function runTests()
 		headers: { 'content-type': 'application/json' },
 		body: ""
 	};
-	const r1 = new Routine("createUser", "/api/user/create", req, 25);
+	const r1 = new Routine("createUser", "/api/user/create", req, 250);
 	await r1.run(200, randomLogin);
 	r1.result();
 

@@ -177,7 +177,7 @@ export async function resetUser(user_id: number)
 	}
 	catch (err)
 	{
-		Logger.log(`Database Error: ${err}`);
+		Logger.error(`Database Error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -203,7 +203,7 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 	}
 	catch (err)
 	{
-		Logger.log(`Database Error: ${err}`);
+		Logger.error(`Database Error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -299,7 +299,7 @@ export async function blockUser(userId: number, target: number, db: Database) : 
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "user already blocked" }};
 
@@ -319,7 +319,7 @@ export async function unBlockUser(userId: number, target: number, db: Database) 
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -336,7 +336,7 @@ export async function updatePassw(user_id: number, oldPass: string, newPass: str
 	}
 	catch (err)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -351,7 +351,7 @@ export async function updateName(user_id: number, name: string): Promise<DbRespo
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "username already taken" }};
 		return { code: 500, data: { message: "Database Error" }};
@@ -368,7 +368,7 @@ export async function updateEmail(user_id: number, email: string): Promise<DbRes
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "email already taken" }};
 		return { code: 500, data: { message: "Database Error" }};

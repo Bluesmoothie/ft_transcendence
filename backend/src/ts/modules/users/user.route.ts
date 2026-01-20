@@ -132,19 +132,71 @@ export async function userRoutes(fastify: FastifyInstance)
 			}
 		)
 
-	fastify.get('/get_all', async (request: FastifyRequest, reply: FastifyReply) => {
-		void request; 
+	fastify.get('/get_all', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						page_size: { type: 'number' }
+					}
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { page_size } = request.query as { page_size: number };
 
-		const res = await user.getAllUsers();
-		return reply.code(res.code).send(res.data);
-	});
+			const res = await user.getAllUsers(page_size);
+			return reply.code(res.code).send(res.data);
+		});
 
-	fastify.get('/get_all_id', async (request: FastifyRequest, reply: FastifyReply) => {
-		void request;
+	fastify.get('/get_all_id', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						page_size: { type: 'number' }
+					}
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { page_size } = request.query as { page_size: number };
 
-		const res = await user.getAllUsers();
-		return reply.code(res.code).send(res.data);
-	});
+			const res = await user.getAllUsers(page_size);
+			return reply.code(res.code).send(res.data);
+		});
+
+	fastify.get('/search', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						name: { type: 'string' },
+						page_size: { type: 'number' }
+					},
+					required: ["name"]
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { name, page_size } = request.query as { name: string, page_size: number };
+
+			const res = await user.searchUser(name, page_size);
+			return reply.code(res.code).send(res.data);
+		});
+
+	fastify.get('/get_best_elo', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						page_size: { type: 'number' }
+					}
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { page_size } = request.query as { page_size: number };
+
+			const res = await user.getHighestEloUsers(page_size);
+			return reply.code(res.code).send(res.data);
+		});
 
 	fastify.post('/complete_tutorial', {
 		schema: {

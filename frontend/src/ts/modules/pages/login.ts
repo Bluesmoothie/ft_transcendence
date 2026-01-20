@@ -58,6 +58,7 @@ export class LoginView extends ViewComponent
 		if (status == 200)
 		{
 			setCookie("jwt_session", data.token, 10);
+			await MainUser.Instance.loginSession();
 			Router.Instance?.navigateTo("/lobby");
 			return ;
 		}
