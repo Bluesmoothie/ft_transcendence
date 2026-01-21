@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify'
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import * as core from 'core/core.js';
 import * as mgmt from 'modules/users/userManagment.js';
 import * as jwt from 'modules/jwt/jwt.js';
@@ -7,13 +7,13 @@ import { Logger } from 'modules/logger.js';
 //
 // User managment
 //
-export async function userManagmentRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
+export async function userManagmentRoutes(fastify: FastifyInstance)
 {
 	fastify.get('/get_session', async (request: FastifyRequest, reply) => {
 		const token = request.cookies.jwt_session;
 		if (token)
 		{
-			const res = await mgmt.loginSession(token, core.db);
+			const res = await mgmt.loginSession(token);
 			if (res.code != 200)
 				return reply.code(res.code).send(res.data);
 			return reply.code(res.code).send(res.data);
@@ -25,6 +25,8 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 	})
 
 	fastify.post('/create_guest', async (request: any, reply: FastifyReply) => {
+		void request;
+
 		const res = await mgmt.createGuest();
 		if (res.code == 200)
 		{
@@ -33,14 +35,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		}
 
 		return reply.code(res.code).send(res.data);
-	})
-
-	/**
-	 * @deprecated
-	 */
-	fastify.post('/guest_cli', async (request: any, reply: FastifyReply) => {
-		const res = await mgmt.createGuest();
-		return reply.code(res.code).send(res);
 	})
 
 	fastify.post('/create', {
@@ -83,7 +77,7 @@ export async function userManagmentRoutes(fastify: FastifyInstance, options: Fas
 		}
 	}, async (request: any, reply: FastifyReply) => {
 		const { email, passw, totp } = request.body as { email: string, passw: string, totp: string };
-		const res = await mgmt.login(email, passw, totp, core.db);
+		const res = await mgmt.login(email, passw, totp);
 		if (res.code == 200)
 		{
 			const token = await jwt.jwtCreate({ id: res.data.id }, core.sessionKey);

@@ -76,6 +76,7 @@
 	"busy": "occupé",
 	"in_game": "en jeu",
 	"no_data": "pas de données",
+	"usr_not_found": "utilisateur non trouvé :(",
 
 	"about_page": {
 		"web": "Web",

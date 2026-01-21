@@ -3,7 +3,7 @@ import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } f
 import { jwtVerif } from 'modules/jwt/jwt.js';
 import * as core from 'core/core.js'
 
-export async function totpRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
+export async function totpRoutes(fastify: FastifyInstance)
 {
 	fastify.post('/api/totp/reset', {
 		schema: {

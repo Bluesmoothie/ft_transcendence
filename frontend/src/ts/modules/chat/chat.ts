@@ -91,29 +91,33 @@ export class Chat
 
 	get chatCmd():	ChatCommand { return this.m_chatCmd; }
 
-	constructor(user: MainUser, chatbox: HTMLElement, chatInput: HTMLInputElement)
+	constructor()
 	{
 		this.m_onStartGame = [];
 		this.m_onConnRefresh = [];
+	}
 
-		if (!chatbox || !chatInput || !user)
-		{
-			console.error("chatbox, user or chatInput invalid");
-			return ;
-		}
+	public Init(user: MainUser, chatbox: HTMLElement, chatInput: HTMLInputElement)
+	{
 		this.m_chatbox = chatbox;
 		this.m_chatInput = chatInput;
 		this.m_user = user;
 		this.m_user.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
 
-		user.onLogout((user: MainUser) => this.disconnect());
-		user.onLogin((user: MainUser) => this.resetChat(user));
+		user.onLogout(() => this.disconnect());
+		user.onLogin(() => this.resetChat());
 
-		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${user.id}`);
-
-		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
-		chatInput.addEventListener("keypress", (e) => this.sendMsgFromInput(e));
+		this.m_chatInput.addEventListener("keypress", (e) => this.sendMsgFromInput(e));
 		registerCmds(this);
+	}
+
+	public connect()
+	{
+		if (!this.m_chatInput || !this.m_user || this.m_user.id == -1)
+			return;
+
+		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${this.m_user.id}`);
+		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
 	}
 
 	public onGameCreated(cb: ((json: any) => void)) { this.m_onStartGame.push(cb); }
@@ -124,7 +128,7 @@ export class Chat
 	get ws(): WebSocket | null			{ return this.m_ws; }
 	get conns(): User[] | null			{ return this.m_connections; }
 
-	public resetChat(user: MainUser) : void
+	public resetChat() : void
 	{
 		this.m_ws?.close();
 		if (this.m_user)
@@ -133,9 +137,8 @@ export class Chat
 				this.m_chatbox.innerHTML = "";
 			
 			this.m_user.removeFromQueue();
+			this.connect();
 
-			this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${this.m_user.id}`);
-			this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
 		}
 	}
 
@@ -147,8 +150,8 @@ export class Chat
 
 	public disconnect()
 	{
+		console.log("disconnecting");
 		this.m_user?.removeFromQueue();
-		this.m_user = null;
 		this.m_ws?.close();
 		if (this.m_chatbox)
 			this.m_chatbox.innerHTML = "";

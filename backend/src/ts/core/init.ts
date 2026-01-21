@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs'
-import { createUser, updateAvatarPath } from 'modules/users/userManagment.js';
+import { createUser } from 'modules/users/userManagment.js';
 import { Database } from 'sqlite';
 import { hashString } from 'modules/sha256.js';
 import fastifyStatic from '@fastify/static';

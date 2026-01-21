@@ -9,6 +9,7 @@ services:
       - sqlite:/var/lib/sqlite
       - avatars:/var/www/server/public/avatars
       - vault_key:/vault/config
+      - backend-logs:/var/log/backend/ft_transcendence.log
     networks:
       - backend_net
       - vault_net
@@ -35,6 +36,20 @@ services:
         - path: ./frontend/src
           action: rebuild
           target: /var/www/html
+
+  benchmark:
+    build: ./benchmark/
+    container_name: benchmark
+    env_file: ./.env
+    depends_on:
+      - backend
+    networks:
+      - backend_net
+    develop:
+      watch:
+        - path: ./benchmark/src
+          action: rebuild
+          target: /var/www/app
 
   modsecurity:
     restart: always
@@ -294,3 +309,4 @@ volumes:
   kibana-logs:
   prometheus-logs:
   vault-logs:
+  backend-logs:

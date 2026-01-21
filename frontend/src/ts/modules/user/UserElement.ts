@@ -46,7 +46,9 @@ export class UserElement
 			console.warn("no btn username txt found");
 
 		if (user && clickRedirect)
+		{
 			this.getElement("#profile")?.addEventListener("click", () => { Router.Instance?.navigateTo(`/profile?username=${user.name}`) });
+		}
 
 		parent.prepend(this.m_clone);
 		this.m_clone = parent.firstElementChild as HTMLElement;

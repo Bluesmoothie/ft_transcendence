@@ -11,6 +11,8 @@ export function fortyTwoOAuth2Routes (
 	done: () => void,
 )
 {
+	void options;
+
 	fastify.get('/forty_two/callback', function(request: any, reply) {
 
 		fastify.FortyTwoOAuth2.getAccessTokenFromAuthorizationCodeFlow(request, async (err, result) => {

@@ -2,11 +2,11 @@ import { Database } from "sqlite";
 import { pipeline } from 'stream/promises';
 import { createWriteStream } from 'fs';
 import path from 'path';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyRequest } from 'fastify';
 import { randomBytes } from "crypto";
 
 import * as core from 'core/core.js';
-import { DbResponse, uploadDir } from "core/core.js";
+import { DbResponse } from "core/core.js";
 import { getUserById, getUserByName } from "./user.js";
 import { hashString } from "modules/sha256.js";
 import { check_totp } from "modules/2fa/totp.js";
@@ -15,6 +15,7 @@ import { getSqlDate } from "utils.js";
 import { jwtVerif } from "modules/jwt/jwt.js";
 import { Logger } from "modules/logger.js";
 import { getUserName } from "./user.js";
+import { disconnectClientById } from "modules/chat/chat.js";
 
 
 function validate_email(email:string)
@@ -31,7 +32,6 @@ export async function createGuest(): Promise<DbResponse>
 	const sql = "INSERT INTO users (name, source, created_at) VALUES (?, ?, ?) RETURNING id";
 	try
 	{
-
 		const date = getSqlDate();
 		const highest = await core.db.get("SELECT MAX(id) FROM users;");
 		const rBytes = randomBytes(8).toString('hex');
@@ -48,7 +48,7 @@ export async function createGuest(): Promise<DbResponse>
 
 }
 
-export async function loginSession(token: string, db: Database) : Promise<DbResponse>
+export async function loginSession(token: string) : Promise<DbResponse>
 {
 	const data: any = await jwtVerif(token, core.sessionKey);
 	if (!data)
@@ -72,12 +72,14 @@ export async function loginSession(token: string, db: Database) : Promise<DbResp
 	}
 }
 
-export async function login(email: string, passw: string, totp: string, db: Database) : Promise<DbResponse>
+export async function login(email: string, passw: string, totp: string) : Promise<DbResponse>
 {
 	var sql = 'UPDATE users SET is_login = 1 WHERE email = ? AND passw = ? RETURNING *';
 
+	const hash = await hashString(passw);
+
 	try {
-		const row = await core.db.get(sql, [email, passw]);
+		const row = await core.db.get(sql, [email, hash]);
 		if (!row)
 			return { code: 404, data: { message: "email or password invalid"}};
 		else if (row.totp_enable == 1 && !check_totp(row.totp_seed, totp))
@@ -110,6 +112,9 @@ export async function loginOAuth2(id: string, source: number, db: Database) : Pr
 
 export async function createUserOAuth2(email: string, name: string, id: string, source: number, avatar: string, db: Database) : Promise<DbResponse>
 {
+	const res = await loginOAuth2(id, source, db);
+	if (res.code == 200)
+		return { code: 200, data: { message: "User already in db" }};
 	const sql = 'INSERT INTO users (name, email, oauth_id, source, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)';
 
 	try {
@@ -123,15 +128,9 @@ export async function createUserOAuth2(email: string, name: string, id: string, 
 	}
 }
 
-export async function updateUserRank(userId: number, newRank: number, login: string) : Promise<DbResponse>
-{
-	return { code: 200, data: { message: "route is deprecated"}}
-}
-
 export async function createUser(email: string, passw: string, username: string, source: AuthSource, db: Database) : Promise<DbResponse>
 {
 	const sql = 'INSERT INTO users (name, email, passw, source, created_at) VALUES (?, ?, ?, ?, ?)';
-	Logger.log(`creating ${username}`);
 
 	if (!validate_email(email) && source == AuthSource.INTERNAL)
 		return { code: 403, data: { message: "error: email not valid" }};
@@ -142,9 +141,11 @@ export async function createUser(email: string, passw: string, username: string,
 		return { code: 409, data: { message: "user is already in database" }};
 	}
 
+	const hash = await hashString(passw)
+
 	try
 	{
-		const result = await db.run(sql, [username, email, passw, source, getSqlDate()]);
+		const result = await db.run(sql, [username, email, hash, source, getSqlDate()]);
 		if (!result.lastID)
 			throw new Error("failed to create user");
 
@@ -175,7 +176,7 @@ export async function resetUser(user_id: number)
 	}
 	catch (err)
 	{
-		Logger.log(`Database Error: ${err}`);
+		Logger.error(`Database Error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -201,14 +202,14 @@ export async function deleteUser(user_id: number, db: Database) : Promise<DbResp
 	}
 	catch (err)
 	{
-		Logger.log(`Database Error: ${err}`);
+		Logger.error(`Database Error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
 
 export async function logoutUser(user_id: number, db: Database) : Promise<DbResponse>
 {
-	Logger.log("login out");
+	Logger.log(await getUserName(user_id), "is login out");
 	const res = await getUserById(user_id, db);
 	if (res.code != 200)
 	{
@@ -217,6 +218,7 @@ export async function logoutUser(user_id: number, db: Database) : Promise<DbResp
 	}
 
 	const sql = "UPDATE users SET is_login = 0 WHERE id = ?";
+	disconnectClientById(user_id);
 
 	try {
 		await db.run(sql, [user_id]);
@@ -232,7 +234,7 @@ export async function setUserStatus(user_id: number, newStatus: number, db: Data
 {
 	const sql = "UPDATE users SET status = ? WHERE id = ?;";
 	try {
-		const result = await db.run(sql, [newStatus, user_id]);
+		await db.run(sql, [newStatus, user_id]);
 		return { code: 200, data: { message: "Success" }};
 	}
 	catch (err) {
@@ -296,7 +298,7 @@ export async function blockUser(userId: number, target: number, db: Database) : 
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "user already blocked" }};
 
@@ -316,7 +318,7 @@ export async function unBlockUser(userId: number, target: number, db: Database) 
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -333,7 +335,7 @@ export async function updatePassw(user_id: number, oldPass: string, newPass: str
 	}
 	catch (err)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		return { code: 500, data: { message: "Database Error" }};
 	}
 }
@@ -348,7 +350,7 @@ export async function updateName(user_id: number, name: string): Promise<DbRespo
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "username already taken" }};
 		return { code: 500, data: { message: "Database Error" }};
@@ -365,7 +367,7 @@ export async function updateEmail(user_id: number, email: string): Promise<DbRes
 	}
 	catch (err: any)
 	{
-		Logger.log(`Database error: ${err}`);
+		Logger.error(`Database error: ${err}`);
 		if (err.code === "SQLITE_CONSTRAINT")
 			return { code: 500, data: { message: "email already taken" }};
 		return { code: 500, data: { message: "Database Error" }};

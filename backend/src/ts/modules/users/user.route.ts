@@ -1,12 +1,11 @@
-import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as core from 'core/core.js';
 import * as user from 'modules/users/user.js'
 import { GameRes } from 'modules/users/user.js';
 import { jwtVerif } from 'modules/jwt/jwt.js';
 import * as mgmt from 'modules/users/userManagment.js';
-import { Logger } from 'modules/logger.js';
 
-export async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOptions)
+export async function userRoutes(fastify: FastifyInstance)
 {
 	fastify.get('/get_history_name/:username', async (request: FastifyRequest, reply: FastifyReply) => {
 		return await user.getUserHistByName(request, reply, core.db);
@@ -32,43 +31,29 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 			return reply.code(res.code).send(res.data);
 		})
 
-	fastify.post('/add_game_history', {
+	fastify.post('/add_game', {
 		schema: {
 			body: {
 				type: "object",
 				properties: {
-					user1_name: { type: "string" },
-					user2_name: { type: "string" },
+					user1_id: { type: "number" },
+					user2_id: { type: "number" },
 					user1_score: { type: "number" },
 					user2_score: { type: "number" },
 				},
-				required: ["user1_name", "user2_name", "user1_score", "user2_score"]
+				required: ["user1_id", "user2_id", "user1_score", "user2_score"]
 			}
 		}
 	}, async (request: FastifyRequest, reply: FastifyReply) => {
-			const { user1_name, user2_name, user1_score, user2_score } = request.body as {
-				user1_name:		string,
-				user2_name:		string,
+			const { user1_id, user2_id, user1_score, user2_score } = request.body as {
+				user1_id:		number,
+				user2_id:		number,
 				user1_score:	number,
 				user2_score:	number,
 			};
-			var user1_id: number, user2_id: number = -1;
-
-			var res = await user.getUserByName(user1_name, core.db);
-			if (res.code == 200)
-				user1_id = res.data.id;
-				else
-				return reply.code(500).send({ message: "could not get user" });
-
-			var res = await user.getUserByName(user2_name, core.db);
-			if (res.code == 200)
-				user2_id = res.data.id;
-				else
-				return reply.code(500).send({ message: "could not get user" });
 
 			var game: GameRes = { user1_id, user2_id, user1_score, user2_score };
-
-			res = await user.addGameToHist(game, core.db);
+			const res = await user.addGameToHist(game, core.db);
 			return reply.code(res.code).send(res.data);
 		})
 
@@ -106,7 +91,7 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 		}, async (request: FastifyRequest, reply: FastifyReply) => {
 			const { token } = request.body as { token: string};
 
-			const res = await mgmt.loginSession(token, core.db);
+			const res = await mgmt.loginSession(token);
 			if (res.code != 200)
 				return reply.code(res.code).send(res.data);
 			return reply.code(res.code).send(res.data);
@@ -133,15 +118,71 @@ export async function userRoutes(fastify: FastifyInstance, options: FastifyPlugi
 			}
 		)
 
-	fastify.get('/get_all', async (request: FastifyRequest, reply: FastifyReply) => {
-		const res = await user.getAllUsers();
-		return reply.code(res.code).send(res.data);
-	});
+	fastify.get('/get_all', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						page_size: { type: 'number' }
+					}
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { page_size } = request.query as { page_size: number };
 
-	fastify.get('/get_all_id', async (request: FastifyRequest, reply: FastifyReply) => {
-		const res = await user.getAllUsers();
-		return reply.code(res.code).send(res.data);
-	});
+			const res = await user.getAllUsers(page_size);
+			return reply.code(res.code).send(res.data);
+		});
+
+	fastify.get('/get_all_id', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						page_size: { type: 'number' }
+					}
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { page_size } = request.query as { page_size: number };
+
+			const res = await user.getAllUsers(page_size);
+			return reply.code(res.code).send(res.data);
+		});
+
+	fastify.get('/search', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						name: { type: 'string' },
+						page_size: { type: 'number' }
+					},
+					required: ["name"]
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { name, page_size } = request.query as { name: string, page_size: number };
+
+			const res = await user.searchUser(name, page_size);
+			return reply.code(res.code).send(res.data);
+		});
+
+	fastify.get('/get_best_elo', {
+			schema: {
+				querystring: {
+					type: 'object',
+					properties: {
+						page_size: { type: 'number' }
+					}
+				}
+		}
+	}, async (request: FastifyRequest, reply: FastifyReply) => {
+			const { page_size } = request.query as { page_size: number };
+
+			const res = await user.getHighestEloUsers(page_size);
+			return reply.code(res.code).send(res.data);
+		});
 
 	fastify.post('/complete_tutorial', {
 		schema: {
