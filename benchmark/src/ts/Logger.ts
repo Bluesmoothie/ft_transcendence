@@ -17,10 +17,6 @@ export class Logger
 		return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Paris"})).toISOString().slice(0, 19).replace('T', ' ').slice(11);
 	}
 
-	public static log(...args: any)
-	{
-		console.log(`${Logger.getTime()} ${colors.gray}[LOG]    ${colors.reset}`, ...args);
-	}
 
 	public static success(...args: any)
 	{
@@ -42,4 +38,8 @@ export class Logger
 		console.log(`${Logger.getTime()} ${colors.blue}[DEBUG]  ${colors.reset}`, ...args);
 	}
 
+	public static log(...args: any)
+	{
+		console.log(`${Logger.getTime()} ${colors.gray}[LOG]    ${colors.reset}`, ...args);
+	}
 }

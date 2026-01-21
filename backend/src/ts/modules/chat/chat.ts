@@ -170,13 +170,13 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 		if (res.code === 200)
 			login = res.data.name;
 
-		if (connections.size == 0)
+		connections.set(ws, id);
+		if (connections.size == 1)
 		{
 			Logger.log("starting health checker");
 			const timer: number = process.env.HEALTH_CHECK_TIMER ? Number(process.env.HEALTH_CHECK_TIMER) : 60; // if env var missing then 60s
 			timerId = setInterval(() => checkHealth(), timer * 1000);
 		}
-		connections.set(ws, id);
 		ws.on('message', async (message: any) => onMessage(message, ws));
 
 		ws.on('error', (error: any) => {
