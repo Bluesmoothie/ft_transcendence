@@ -70,8 +70,6 @@ services:
     depends_on:
       - frontend
       - backend
-      - kibana
-      - grafana
     develop:
       watch:
         - path: ./frontend/srcs
@@ -99,10 +97,12 @@ services:
     command: vault server -config=/vault/conf/vault.hcl
 
   prometheus:
+    restart: always
     image: prom/prometheus:v3.9.1
     container_name: prometheus
     volumes:
-      - ./monitoring/conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/conf/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
       - prometheus-logs:/prometheus/logs:rw
     networks:
       - monitoring_net
@@ -110,6 +110,7 @@ services:
     user: root
 
   grafana:
+    restart: always
     image: grafana/grafana:12.4.0-20836657505
     container_name: grafana
     volumes:
@@ -118,8 +119,9 @@ services:
       - grafana:/var/lib/grafana
       - grafana-logs:/var/log/grafana:rw
     networks:
-      - monitoring_net
-      - redirect_net
+      monitoring_net: {}
+      redirect_net:
+          ipv4_address: 172.220.0.10
     depends_on:
       - prometheus
     environment:
@@ -127,6 +129,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
 
   nginx_prom_export:
+    restart: always
     image: nginx/nginx-prometheus-exporter:1.5.1
     container_name: nginx_prom_export
     networks:
@@ -138,9 +141,9 @@ services:
     command: ["--nginx.scrape-uri=http://modsecurity:801/stub_status"]
 
   elasticsearch_exporter:
+    restart: always
     image: prometheuscommunity/elasticsearch-exporter:v1.10.0
     container_name: elasticsearch_exporter
-    restart: always
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     command:
@@ -155,6 +158,7 @@ services:
       - elasticsearch
 
   elasticsearch:
+    restart: always
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     container_name: elasticsearch
     environment:
@@ -171,6 +175,7 @@ services:
       - elk_net
 
   logstash:
+    restart: always
     image: docker.elastic.co/logstash/logstash:8.12.0
     container_name: logstash
     volumes:
@@ -189,10 +194,12 @@ services:
     environment:
       - ELASTICSEARCH_PASSWORD=${LOGSTASH_WRITER_PASSWORD}
       - ELASTICSEARCH_USERNAME=logstash_writer
+      - LS_JAVA_OPTS=-Xms1g -Xmx4g
     networks:
       - elk_net
 
   kibana:
+    restart: always
     image: docker.elastic.co/kibana/kibana:8.12.0
     container_name: kibana
     volumes:
@@ -202,8 +209,9 @@ services:
       elastic-init:
         condition: service_completed_successfully
     networks:
-      - elk_net
-      - redirect_net
+      elk_net: {}
+      redirect_net:
+        ipv4_address: 172.220.0.20
     environment:
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
       - ELASTICSEARCH_USERNAME=kibana_system
@@ -211,25 +219,22 @@ services:
   kibana-init:
     container_name: kibana-init
     image: curlimages/curl:8.18.0
+    user: root
     depends_on:
       - kibana
+    environment:
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     volumes:
-      - ./elk/kibana/config/export.ndjson:/export.ndjson
-    command: >
-      sh -c "echo 'Waiting for Kibana to be fully ready...';
-             until curl -s -u elastic:${ELASTIC_PASSWORD} http://kibana:5601/admin/kibana/api/status | grep -q '\"level\":\"available\"'; do
-               echo 'Still waiting for Kibana...';
-               sleep 5;
-             done;
-             echo 'Kibana is ready! Importing dashboard and Data View...';
-             curl -X POST http://kibana:5601/admin/kibana/api/saved_objects/_import?overwrite=true -u elastic:${ELASTIC_PASSWORD} -H 'kbn-xsrf: true' --form file=@/export.ndjson;
-             echo 'Import completed successfully!';"
+      - ./elk/kibana/init/export.ndjson:/export.ndjson:ro
+      - ./elk/kibana/init/script.sh:/script.sh:ro
+    command: sh /script.sh
     networks:
       - elk_net
 
   elastic-init:
     container_name: elastic-init
     image: curlimages/curl:8.18.0
+    user: root
     depends_on:
       - elasticsearch
     environment:
@@ -237,42 +242,14 @@ services:
       - KIBANA_PASSWORD=${KIBANA_PASSWORD}
       - LOGSTASH_PASSWORD=${LOGSTASH_PASSWORD}
       - LOGSTASH_WRITER_PASSWORD=${LOGSTASH_WRITER_PASSWORD}
-    command: >
-      sh -c '
-        echo "Waiting for Elasticsearch to be ready..."
-        until curl -s -u elastic:${ELASTIC_PASSWORD} http://elasticsearch:9200 > /dev/null; do
-          echo "Elasticsearch not ready yet... waiting 5 seconds"
-          sleep 5
-        done
-
-        echo "Elasticsearch is ready!"
-
-        echo "Setting kibana_system password..."
-        curl -s -u elastic:${ELASTIC_PASSWORD} -X POST "http://elasticsearch:9200/_security/user/kibana_system/_password" \
-          -H "Content-Type: application/json" \
-          -d "{\"password\":\"${KIBANA_PASSWORD}\"}"
-
-        echo "Setting logstash_system password..."
-        curl -s -u elastic:${ELASTIC_PASSWORD} -X POST "http://elasticsearch:9200/_security/user/logstash_system/_password" \
-          -H "Content-Type: application/json" \
-          -d "{\"password\":\"${LOGSTASH_PASSWORD}\"}"
-
-        echo "Creating role logstash_writer..."
-        curl -s -u elastic:${ELASTIC_PASSWORD} -X PUT "http://elasticsearch:9200/_security/role/logstash_writer" \
-          -H "Content-Type: application/json" \
-          -d "{\"cluster\":[\"manage_index_templates\",\"monitor\"],\"indices\":[{\"names\":[\"*\"],\"privileges\":[\"auto_configure\",\"create_index\",\"create_doc\",\"index\",\"delete\",\"manage\"]}]}"
-
-        echo "Creating user logstash_writer..."
-        curl -s -u elastic:${ELASTIC_PASSWORD} -X POST "http://elasticsearch:9200/_security/user/logstash_writer" \
-          -H "Content-Type: application/json" \
-          -d "{\"password\":\"${LOGSTASH_WRITER_PASSWORD}\",\"roles\":[\"logstash_writer\"],\"full_name\":\"Logstash Writer for data ingestion\",\"email\":null}"
-
-        echo "Setup completed successfully!"
-      '
+    volumes:
+      - ./elk/elasticsearch/init/script.sh:/script.sh:ro
+    command: sh /script.sh
     networks:
       - elk_net
 
   node_exporter:
+    restart: always
     image: quay.io/prometheus/node-exporter:v1.10.2
     container_name: node_exporter
     command:
@@ -282,11 +259,13 @@ services:
       - '/:/host:ro,rslave'
     networks:
       - monitoring_net
+    depends_on:
+      - prometheus
 
   logstash-exporter:
+    restart: always
     image: ghcr.io/kuskoman/logstash-exporter:v1.9.1
     container_name: logstash-exporter
-    restart: always
     environment:
       - LOGSTASH_URL=http://logstash:9600
     networks:
@@ -300,6 +279,10 @@ networks:
     ipam:
       config:
         - subnet: 172.200.0.0/24
+  redirect_net:
+    ipam:
+      config:
+        - subnet: 172.220.0.0/24
   entrypoint_net:
     driver: bridge
   backend_net:
@@ -307,7 +290,6 @@ networks:
   vault_net:
   monitoring_net:
   elk_net:
-  redirect_net:
 
 volumes:
   sqlite:
