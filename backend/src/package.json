@@ -57,6 +57,7 @@
 		"npmlog": "^7.0.1",
 		"are-we-there-yet": "^5.0.0",
 		"@npmcli/move-file": "npm:@npmcli/fs@^3.0.0",
-		"glob": "^11.0.4"
+		"glob": "^11.0.4",
+		"tar": "^7.5.3"
 	}
 }
