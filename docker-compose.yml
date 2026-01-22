@@ -189,13 +189,14 @@ services:
       - prometheus-logs:/var/log/prometheus:ro
       - vault-logs:/var/log/vault:ro
       - backend-logs:/var/log/backend:ro
+    mem_limit: 6g
     depends_on:
       elastic-init:
         condition: service_completed_successfully
     environment:
       - ELASTICSEARCH_PASSWORD=${LOGSTASH_WRITER_PASSWORD}
       - ELASTICSEARCH_USERNAME=logstash_writer
-      - LS_JAVA_OPTS=-Xms1g -Xmx4g
+      - LS_JAVA_OPTS=-Xms4g -Xmx4g
     networks:
       - elk_net
 
