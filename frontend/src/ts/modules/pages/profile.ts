@@ -23,6 +23,11 @@ export class ProfileView extends ViewComponent
 		if (!MainUser.Instance)
 			return;
 
+		await MainUser.Instance.updateFriendList();
+		await MainUser.Instance.updateBlockList();
+
+		console.log(MainUser.Instance.friends, MainUser.Instance.pndgFriends);
+
 		new HeaderSmall(MainUser.Instance, this, "header-container");
 
 		this.m_user = MainUser.Instance;

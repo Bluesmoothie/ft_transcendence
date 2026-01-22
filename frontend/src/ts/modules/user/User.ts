@@ -46,8 +46,7 @@ export async function getUserFromId(id: number): Promise<User | null> {
 
 	const data = await response.json();
 	var user = new User();
-	var status = data.is_login ? data.status : UserStatus.UNAVAILABLE;
-	user.setUser(data.id, data.name, "", data.avatar, status);
+	user.setUserJson(data);
 	return user;
 }
 
@@ -75,7 +74,7 @@ export class User
 	private m_created_at:	string = "";
 	private m_stats:		Stats = { gamePlayed: 0, gameWon: 0, currElo: 0, maxElo: 0, avrTime: "", shortTime: "" };
 	private m_source:		AuthSource = AuthSource.INTERNAL;
-	private m_showTutorial:	number = 0;
+	private m_finishedTutorial:	boolean = false;
 
 	private m_blockUsr:		User[] = [];
 	private m_friends:		User[] = []; // accepted request
@@ -104,7 +103,7 @@ export class User
 		this.m_stats.currElo = 0;
 		this.m_stats.gameWon = 0;
 		this.m_stats.gamePlayed = 0;
-		this.m_showTutorial = 0;
+		this.m_finishedTutorial = false;
 		this.m_token = "";
 		this.m_friends = [];
 		this.m_blockUsr = [];
@@ -123,7 +122,7 @@ export class User
 		this.m_stats.currElo = json.elo;
 		this.m_stats.gameWon = json.wins;
 		this.m_stats.gamePlayed = json.games_played;
-		this.m_showTutorial = json.show_tutorial;
+		this.m_finishedTutorial = json.show_tutorial ? true : false;
 		this.m_friends = [];
 		this.m_blockUsr = [];
 		this.m_pndgFriends = new Map<User, number>();
@@ -152,8 +151,9 @@ export class User
 	get gamePlayed(): number				{ return this.m_stats.gamePlayed; }
 	get	stats(): Stats						{ return this.m_stats; }
 	get	source(): AuthSource				{ return this.m_source; }
-	get showTutorial(): number				{ return this.m_showTutorial; }
+	get finishedTutorial(): boolean			{ return this.m_finishedTutorial; }
 	get token(): string						{ return this.m_token; }
+	set finishedTutorial(value: boolean)	{ this.m_finishedTutorial = value; }
 	set token(token: string)				{ this.m_token = token; }
 
 	get winrate(): number
@@ -365,7 +365,7 @@ export class MainUser extends User
 			return;
 		}
 
-		if (!this.showTutorial)
+		if (!this.finishedTutorial)
 		{
 			tutorial.style.display = "none";
 			return ;
@@ -390,7 +390,8 @@ export class MainUser extends User
 				body: JSON.stringify({
 					token: this.token
 				})
-			})
+			});
+			this.finishedTutorial = false;
 		});
 
 	}

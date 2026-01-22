@@ -121,7 +121,6 @@ export async function notifyMatch(id: number, opponentId: number, gameId: string
 export async function removePlayerFromQueue(playerId: number)
 {
 	matchQueue = matchQueue.filter(num => num != Number(playerId));
-	Logger.log(`${await getUserName(playerId)} has been removed from matchQueue`);
 }
 
 export async function addPlayerToQueue(playerId: number, server: GameServer): Promise<string | null>
@@ -133,12 +132,15 @@ export async function addPlayerToQueue(playerId: number, server: GameServer): Pr
 		if (!player2)
 			return null;
 
-		Logger.log(`${await getUserName(player1)} will play against ${await getUserName(player2)}`);
 		const gameId = crypto.randomUUID();
+
 		await notifyMatch(player1, player2, gameId, 1);
 		await notifyMatch(player2, player1, gameId, 2);
 
 		server.activeGames.set(gameId, new GameInstance('online', player1, player2));
+
+
+		Logger.log(`${await getUserName(player1)} will play against ${await getUserName(player2)}`);
 		return gameId;
 	}
 
@@ -162,6 +164,7 @@ async function onMessage(message: any, connection: WebSocket)
 export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 {
 	try {
+		Logger.log('hello')
 		ws.send(serverMsg("welcome to room chat!"));
 
 		const id = utils.getUrlVar(request.url)["userid"];
@@ -170,7 +173,9 @@ export async function chatSocket(ws: WebSocket, request: FastifyRequest)
 		if (res.code === 200)
 			login = res.data.name;
 
+		Logger.log(`${login} as connected to lobby`);
 		connections.set(ws, id);
+
 		if (connections.size == 1)
 		{
 			Logger.log("starting health checker");

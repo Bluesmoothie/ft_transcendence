@@ -43,9 +43,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/create', {
-		config: { 
-			rateLimit: core.rateLimitMed
-		},
 		schema: {
 			body: {
 				type: "object",
@@ -73,9 +70,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/login', {
-		config: { 
-			rateLimit: core.rateLimitMed
-		},
 		schema: {
 			body: {
 				type: "object",
@@ -99,9 +93,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/logout', {
-		config: { 
-			rateLimit: core.rateLimitMed
-		},
 		schema: {
 			body: {
 				type: "object",

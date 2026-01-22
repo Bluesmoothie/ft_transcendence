@@ -60,12 +60,17 @@ export class GameServer
 	*/
 	public async startDuel(player1: number, player2: number): Promise<string>
 	{
-		Logger.log(`starting duel between: ${await getUserName(player1)} and ${await getUserName(player2)}`);
+		const name1 = await getUserName(player1);
+		const name2 = await getUserName(player2);
+
 		const gameId = crypto.randomUUID();
+
 		await notifyMatch(player1, player2, gameId, 1);
 		await notifyMatch(player2, player1, gameId, 2);
 
 		this.activeGames.set(gameId, new GameInstance('online', player1, player2));
+
+		Logger.log(`starting duel between: ${name1} and ${name2}`);
 		return gameId;
 	}
 
@@ -85,6 +90,7 @@ export class GameServer
 					const opponentId = 0;
 					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
+					Logger.log(`starting local game for: ${await getUserName(body.playerName)}`);
 					reply.status(201).send({ gameId, opponentId: opponentId, playerSide: '1' });
 				}
 				else if (mode === 'online')
@@ -101,6 +107,7 @@ export class GameServer
 					const opponentId = data.data.id;
 					const game = new GameInstance(mode, name, opponentId);
 					this.activeGames.set(gameId, game);
+					Logger.log(`starting bot game for: ${await getUserName(body.playerName)}`);
 					reply.status(201).send({ gameId, opponentId: opponentId, playerSide: '1' });
 				}
 				else
