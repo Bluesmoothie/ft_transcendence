@@ -16,15 +16,10 @@ export async function userRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/blocked_users', {
-		schema: {
-			body: {
-				type: 'object',
-				required: ['token'],
-				properties: {
-					token: { type: 'string' },
-				}
-			}
-		}
+		config: {
+			rateLimit: core.rateLimitMed,
+		},
+		schema: core.tokenSchema
 	}, async (request: FastifyRequest, reply: FastifyReply) => {
 			const { token } = request.body as { token: string };
 			const data: any = await jwtVerif(token, core.sessionKey);
@@ -36,6 +31,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.post('/add_game', {
+		config: {
+			rateLimit: core.rateLimitMed,
+		},
 		schema: {
 			body: {
 				type: "object",
@@ -65,6 +63,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		(
 			'/get_profile_id',
 			{
+				config: {
+					rateLimit: core.rateLimitMed,
+				},
 				schema: {
 					querystring: {
 						type: 'object',
@@ -86,15 +87,7 @@ export async function userRoutes(fastify: FastifyInstance)
 			config: { 
 				rateLimit: core.rateLimitMed
 			},
-			schema: {
-				body: {
-					type: 'object',
-					required: ['token'],
-					properties: {
-						token: { type: 'string' },
-					}
-				}
-			}
+			schema: core.tokenSchema
 		}, async (request: FastifyRequest, reply: FastifyReply) => {
 			const { token } = request.body as { token: string};
 
@@ -108,6 +101,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		(
 			'/get_profile_name',
 			{
+				config: { 
+					rateLimit: core.rateLimitMed
+				},
 				schema: {
 					querystring: {
 						type: 'object',
@@ -126,6 +122,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		)
 
 	fastify.get('/get_all', {
+			config: { 
+				rateLimit: core.rateLimitMed
+			},
 			schema: {
 				querystring: {
 					type: 'object',
@@ -142,6 +141,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		});
 
 	fastify.get('/get_all_id', {
+			config: { 
+				rateLimit: core.rateLimitMed
+			},
 			schema: {
 				querystring: {
 					type: 'object',
@@ -158,6 +160,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		});
 
 	fastify.get('/search', {
+			config: { 
+				rateLimit: core.rateLimitMed
+			},
 			schema: {
 				querystring: {
 					type: 'object',
@@ -176,6 +181,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		});
 
 	fastify.get('/get_best_elo', {
+			config: { 
+				rateLimit: core.rateLimitMed
+			},
 			schema: {
 				querystring: {
 					type: 'object',
@@ -192,6 +200,9 @@ export async function userRoutes(fastify: FastifyInstance)
 		});
 
 	fastify.post('/complete_tutorial', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: "object",

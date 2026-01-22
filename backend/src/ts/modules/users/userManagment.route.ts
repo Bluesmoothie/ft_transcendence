@@ -24,7 +24,12 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		}
 	})
 
-	fastify.post('/create_guest', async (request: any, reply: FastifyReply) => {
+	fastify.post('/create_guest', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
+	},
+	async (request: any, reply: FastifyReply) => {
 		void request;
 
 		const res = await mgmt.createGuest();
@@ -38,11 +43,8 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/create', {
-		config: {
-			rateLimit: {
-				max: 500,
-				timeWindow: '1 minute'
-			}
+		config: { 
+			rateLimit: core.rateLimitMed
 		},
 		schema: {
 			body: {
@@ -71,6 +73,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/login', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: "object",
@@ -94,6 +99,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/logout', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: "object",
@@ -114,6 +122,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.delete('/reset', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: { 
 			body: {
 				type: 'object',
@@ -135,6 +146,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.delete('/delete', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: 'object',
@@ -156,6 +170,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.post('/set_status', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: "object",
@@ -197,6 +214,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.post('/update/passw', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: 'object',
@@ -219,6 +239,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.post('/update/name', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: 'object',
@@ -240,6 +263,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.post('/update/email', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: 'object',
@@ -261,6 +287,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.post('/block', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: 'object',
@@ -282,6 +311,9 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 		})
 
 	fastify.post('/unblock', {
+		config: { 
+			rateLimit: core.rateLimitMed
+		},
 		schema: {
 			body: {
 				type: 'object',

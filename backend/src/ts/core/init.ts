@@ -31,6 +31,10 @@ async function loadConfig(path: string, db: Database)
 		await createUser(user.email, hash, user.name, AuthSource.INTERNAL, db);
 	}
 }
+function onExceeding(req: FastifyRequest, key: string)
+{
+	Logger.warn("client is exceeding request!", key);
+}
 
 function onExceeded(req: FastifyRequest, key: string)
 {
@@ -50,19 +54,11 @@ export async function initFastify()
 	await core.fastify.register(import('@fastify/websocket'));
 	await core.fastify.register(import('@fastify/cookie'));
 	await core.fastify.register(import('@fastify/rate-limit'), {
-		max: 3000,
+		global: true,
+		max: 1000,
+		timeWindow: 60 * 1000, // 1 minute
 		onExceeded: onExceeded,
-	});
-
-	// register session
-	await core.fastify.register(import('@fastify/session'), {
-		secret: core.sessionKey,
-		cookieName: "sessionId",
-		cookie: {
-			secure: false,
-			maxAge: 24 * 60 * 60 * 1000 // 1 day
-		},
-		saveUninitialized: false
+		onExceeding: onExceeding,
 	});
 
 	await registerOAuth2Providers(core.fastify); // oauth2 for google
