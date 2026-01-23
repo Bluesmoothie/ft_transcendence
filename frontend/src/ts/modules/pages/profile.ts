@@ -60,6 +60,8 @@ export class ProfileView extends ViewComponent
 		(<HTMLElement>this.querySelector("#game-won")).innerText		= `${stats.gameWon}`;
 		(<HTMLElement>this.querySelector("#winrate")).innerText			= `${stats.gamePlayed > 0 ? this.m_user.winrate + "%" : "n/a" }`;
 		(<HTMLElement>this.querySelector("#curr-elo")).innerText		= `${stats.currElo}p`;
+
+		window.dispatchEvent(new CustomEvent('pageChanged'));
 	}
 
 	public async disable()
@@ -225,7 +227,6 @@ export class ProfileView extends ViewComponent
 				return;
 			const clone = template.content.cloneNode(true) as HTMLElement;
 			histContainer.append(clone);
-			window.dispatchEvent(new CustomEvent('pageChanged'));
 			return ;
 		}
 

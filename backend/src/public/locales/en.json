@@ -78,6 +78,8 @@
 	"in_game": "in_game",
 	"no_data": "no data",
 	"usr_not_found": "user not found :(",
+	"profile_friend_btn": "add friend",
+	"profile_block_btn": "block",
 
 	"tut": {
 		"chat": "use the chatbox to talk to other people",
