@@ -46,7 +46,6 @@ export class LobbyView extends ViewComponent
 			return;
 		}
 
-
 		this.m_userContainer = this.querySelector("#user-container");
 
 		if (MainUser.Instance.id == -1)

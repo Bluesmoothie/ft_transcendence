@@ -37,6 +37,12 @@ export class SettingsView extends ViewComponent
 		if (!MainUser.Instance)
 			return;
 
+		if (MainUser.Instance.id == -1)
+		{
+			Router.Instance?.navigateTo("/");
+			return ;
+		}
+
 		new HeaderSmall(MainUser.Instance, this, "header-container");
 
 		this.usernameInput = this.querySelector("#username-input") as HTMLInputElement;

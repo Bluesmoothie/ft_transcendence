@@ -220,9 +220,10 @@ export class Chat
 			return ;
 		}
 
-		if (message == "START")
+		if (message == "START" && json.gameId)
 		{
 			this.startGameCb(json);
+			return ;
 		}
 		const user = new User();
 		user.setUser(-1, username, "", "", UserStatus.UNKNOW);

@@ -271,15 +271,7 @@ export class User
 			return response.status;
 
 		var data = await response.json();
-		this.name = data.name;
-		this.m_avatarPath = data.avatar;
-		this.m_status = data.is_login ? data.status : UserStatus.UNAVAILABLE;
-		this.m_created_at = data.created_at;
-		this.m_source = data.source;
-
-		this.m_stats.gamePlayed = data.games_played;
-		this.m_stats.gameWon = data.wins;
-		this.m_stats.currElo = data.elo;
+		this.setUserJson(data);
 
 		await this.updateFriendList();
 		await this.updateBlockList();

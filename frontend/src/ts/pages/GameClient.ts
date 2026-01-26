@@ -295,7 +295,7 @@ export class GameClient extends Utils
 
 		if (event.key === Keys.PLAY_AGAIN && this.end)
 		{
-			this.m_router.navigateTo("game", this.mode);
+			this.m_router.navigateTo("home", "")
 		}
 	}
 
@@ -430,6 +430,11 @@ export class GameClient extends Utils
 		this.setColor('winner-msg', Params.COLOR, undefined, true);
 		this.setContent('play-again-msg', Msgs.PLAY_AGAIN);
 		this.setColor('play-again-msg', Params.COLOR, undefined, true);
+
+		await this.m_user?.updateSelf();
+		await this.m_user2?.updateSelf();
+
+		this.createPlayerHtml();
 	}
 
 	private async removeQueue(): Promise<void>
