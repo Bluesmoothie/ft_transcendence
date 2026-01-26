@@ -81,10 +81,10 @@ export class Chat
 {
 	private m_chatbox:		HTMLElement | null = null;
 	private m_chatInput:	HTMLInputElement | null = null;
-	private m_user:			MainUser | null = null;
 	private	m_ws:			WebSocket | null = null;
 	private m_connections:	User[] = [];
 	private m_chatCmd:		ChatCommand = new ChatCommand(this);
+	private m_isConnected:	boolean = false;
 
 	private m_onStartGame:		Array<(json: any) => void>;
 	private m_onConnRefresh:	Array<(conns: User[]) => void>;
@@ -97,15 +97,17 @@ export class Chat
 		this.m_onConnRefresh = [];
 	}
 
-	public Init(user: MainUser, chatbox: HTMLElement, chatInput: HTMLInputElement)
+	public Init(chatbox: HTMLElement, chatInput: HTMLInputElement)
 	{
+		if (!MainUser.Instance)
+			return;
+
 		this.m_chatbox = chatbox;
 		this.m_chatInput = chatInput;
-		this.m_user = user;
-		this.m_user.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
+		MainUser.Instance.onStatusChanged((status: UserStatus) => this.onUserStatusChanged(status));
 
-		user.onLogout(() => this.disconnect());
-		user.onLogin(() => this.resetChat());
+		MainUser.Instance.onLogout(() => this.disconnect());
+		MainUser.Instance.onLogin(() => this.resetChat());
 
 		this.m_chatInput.addEventListener("keypress", (e) => this.sendMsgFromInput(e));
 		registerCmds(this);
@@ -113,32 +115,33 @@ export class Chat
 
 	public connect()
 	{
-		if (!this.m_chatInput || !this.m_user || this.m_user.id == -1)
+		if (!this.m_chatInput || !MainUser.Instance || MainUser.Instance.id == -1)
 			return;
 
-		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${this.m_user.id}`);
+		this.m_ws = new WebSocket(`wss://${window.location.host}/api/chat?userid=${MainUser.Instance.id}`);
 		this.m_ws.onmessage = (event:any) => this.receiveMessage(event);
+		this.m_isConnected = true;
 	}
 
 	public onGameCreated(cb: ((json: any) => void)) { this.m_onStartGame.push(cb); }
 	public onConnRefresh(cb: ((conns: User[]) => void)) { this.m_onConnRefresh.push(cb); }
 
 	get chatbox(): HTMLElement | null 	{ return this.m_chatbox; }
-	get user(): MainUser | null			{ return this.m_user; }
+	get user(): MainUser | null			{ return MainUser.Instance; }
 	get ws(): WebSocket | null			{ return this.m_ws; }
 	get conns(): User[] | null			{ return this.m_connections; }
+	get isConnected(): boolean			{ return this.m_isConnected; }
 
 	public resetChat() : void
 	{
 		this.m_ws?.close();
-		if (this.m_user)
+		if (MainUser.Instance)
 		{
 			if (this.m_chatbox)
 				this.m_chatbox.innerHTML = "";
 			
-			this.m_user.removeFromQueue();
+			MainUser.Instance.removeFromQueue();
 			this.connect();
-
 		}
 	}
 
@@ -151,20 +154,21 @@ export class Chat
 	public disconnect()
 	{
 		console.log("disconnecting");
-		this.m_user?.removeFromQueue();
+		MainUser.Instance?.removeFromQueue();
 		this.m_ws?.close();
+		this.m_isConnected = false;
 		if (this.m_chatbox)
 			this.m_chatbox.innerHTML = "";
 	}
 
 	private sendMsgFromInput(event: any)
 	{
-		if (!this.m_user)
+		if (!MainUser.Instance)
 			return ;
 
 		if (event.key == 'Enter' && this.m_chatInput && this.m_chatInput.value != "")
 		{
-			this.sendMsg(this.m_user, this.m_chatInput.value);
+			this.sendMsg(MainUser.Instance, this.m_chatInput.value);
 			this.m_chatInput.value = "";
 		}
 	}
@@ -172,13 +176,13 @@ export class Chat
 	private async populateConnections(connectionsId: number[])
 	{
 		this.m_connections = [];
-		if (!this.m_user)
+		if (!MainUser.Instance)
 			return ;
 
 		for (let i = 0; i < connectionsId.length; i++)
 		{
 			const id = connectionsId[i];
-			if (id == this.m_user.id || id == -1)
+			if (id == MainUser.Instance.id || id == -1)
 				continue;
 
 			const tmp: User | null = await getUserFromId(id);
@@ -210,15 +214,16 @@ export class Chat
 				method: "POST",
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
-					token: this.m_user?.token
+					token: MainUser.Instance?.token
 				})
 			});
 			return ;
 		}
 
-		if (message == "START")
+		if (message == "START" && json.gameId)
 		{
 			this.startGameCb(json);
+			return ;
 		}
 		const user = new User();
 		user.setUser(-1, username, "", "", UserStatus.UNKNOW);

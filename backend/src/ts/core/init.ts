@@ -31,10 +31,6 @@ async function loadConfig(path: string, db: Database)
 		await createUser(user.email, hash, user.name, AuthSource.INTERNAL, db);
 	}
 }
-function onExceeding(req: FastifyRequest, key: string)
-{
-	Logger.warn("client is exceeding request!", key);
-}
 
 function onExceeded(req: FastifyRequest, key: string)
 {
@@ -55,8 +51,8 @@ export async function initFastify()
 	await core.fastify.register(import('@fastify/cookie'));
 	await core.fastify.register(import('@fastify/rate-limit'), {
 		global: true,
-		max: 1000,
-		timeWindow: 60 * 1000, // 1 minute
+		max: 100,
+		timeWindow: 1 * 100, // max 100 req / sec
 		onExceeded: onExceeded,
 	});
 

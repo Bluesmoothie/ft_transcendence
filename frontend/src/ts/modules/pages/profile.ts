@@ -23,6 +23,9 @@ export class ProfileView extends ViewComponent
 		if (!MainUser.Instance)
 			return;
 
+		await MainUser.Instance.updateFriendList();
+		await MainUser.Instance.updateBlockList();
+
 		new HeaderSmall(MainUser.Instance, this, "header-container");
 
 		this.m_user = MainUser.Instance;
@@ -55,6 +58,8 @@ export class ProfileView extends ViewComponent
 		(<HTMLElement>this.querySelector("#game-won")).innerText		= `${stats.gameWon}`;
 		(<HTMLElement>this.querySelector("#winrate")).innerText			= `${stats.gamePlayed > 0 ? this.m_user.winrate + "%" : "n/a" }`;
 		(<HTMLElement>this.querySelector("#curr-elo")).innerText		= `${stats.currElo}p`;
+
+		window.dispatchEvent(new CustomEvent('pageChanged'));
 	}
 
 	public async disable()
@@ -246,7 +251,7 @@ export class ProfileView extends ViewComponent
 		const max = Math.max(...eloValues);
 
 		new Chart(ctx, {
-			type: 'line',                                   // chart type
+			type: 'line',
 			data: {
 				labels: Array.from(eloData.keys()),
 				datasets: [{
@@ -254,7 +259,6 @@ export class ProfileView extends ViewComponent
 					data: eloValues,
 					borderColor: 'rgba(75, 192, 192, 1)',
 					backgroundColor: 'rgba(75, 192, 192, 0.2)',
-					// stepped: true,
 					tension: 0.0
 				}]
 			},

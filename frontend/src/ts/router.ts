@@ -21,6 +21,8 @@ export class GameRouter
 	private static readonly TOURNAMENT_CREATE_KEY: string = 'c';
 	private static readonly TOURNAMENT_JOIN_KEY: string = 'j';
 
+	private m_playerContainer:	HTMLElement | null = null;
+
 	currentPage: string = 'home';
 	currentClass: any = null;
 	pages: Map<string, HTMLDivElement> = new Map();
@@ -43,6 +45,14 @@ export class GameRouter
 		this.setUpWindowEventListeners();
 		this.showPage(this.currentPage, null);
 
+		if (view)
+			this.m_playerContainer = view.querySelector("#player-container");
+	}
+
+	private cleanupPlayerContainer()
+	{
+		if (this.m_playerContainer)
+			this.m_playerContainer.innerHTML = "";
 	}
 
 	public assignListener()
@@ -160,7 +170,7 @@ export class GameRouter
 
 	public navigateTo(page: string, mode: string): void
 	{
-		// history.pushState({page: page}, '', `#${page}`);
+		this.cleanupPlayerContainer();
 		this.showPage(page, mode);
 	}
 

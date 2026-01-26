@@ -45,6 +45,7 @@ services:
       - backend
     networks:
       - backend_net
+    profiles: [benchmark]
     develop:
       watch:
         - path: ./benchmark/src

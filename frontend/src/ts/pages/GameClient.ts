@@ -106,13 +106,27 @@ export class GameClient extends Utils
 		}
 	}
 
-	private createPlayerHtml()
+	private initPlayerHtml(player: User): UserElement | null
 	{
 		if (!this.m_playerContainer)
+			return null;
+		const elt = new UserElement(player, this.m_playerContainer, UserElementType.STANDARD, "user-game-template");
+		const winrate = elt.getElement("#winrate");
+		if (winrate)
+			winrate.innerText = `${player.stats.gamePlayed > 0 ? player.winrate + "%" : "n/a" }`;
+		const elo = elt.getElement("#elo");
+		if (elo)
+			elo.innerText = `${player.elo}p`;
+		return elt;
+	}
+
+	private createPlayerHtml()
+	{
+		if (!this.m_playerContainer || !this.m_user || !this.m_user2)
 			return ;
 		this.m_playerContainer.innerHTML = "";
-		this.m_player1 = new UserElement(this.m_user, this.m_playerContainer, UserElementType.STANDARD, "user-game-template");
-		this.m_player2 = new UserElement(this.m_user2, this.m_playerContainer, UserElementType.STANDARD, "user-game-template");
+		this.m_player1 = this.initPlayerHtml(this.m_user);
+		this.m_player2 = this.initPlayerHtml(this.m_user2);
 	}
 
 	private isModeValid(): boolean
@@ -139,7 +153,6 @@ export class GameClient extends Utils
 
 	private async createGameFeedback(json: any)
 	{
-		console.error("init", this);
 		this.gameId = json.gameId.toString();
 		this.m_user2 = await getUserFromId(json.opponentId.toString());
 		this.playerSide = json.playerSide;
@@ -168,7 +181,6 @@ export class GameClient extends Utils
 				return ;
 
 			const data = await response.json();
-			console.log(data);
 			this.gameId = data.gameId;
 			this.playerSide = data.playerSide;
 
@@ -231,7 +243,6 @@ export class GameClient extends Utils
 		if (!gameId)
 		{
 
-			console.log(this.playerSide);
 			const response = await fetch(`https://${window.location.host}/api/start-game/${this.gameId}`,
 			{
 				method: 'POST',
@@ -284,7 +295,7 @@ export class GameClient extends Utils
 
 		if (event.key === Keys.PLAY_AGAIN && this.end)
 		{
-			this.m_router.navigateTo("game", this.mode);
+			this.m_router.navigateTo("home", "")
 		}
 	}
 
@@ -419,6 +430,11 @@ export class GameClient extends Utils
 		this.setColor('winner-msg', Params.COLOR, undefined, true);
 		this.setContent('play-again-msg', Msgs.PLAY_AGAIN);
 		this.setColor('play-again-msg', Params.COLOR, undefined, true);
+
+		await this.m_user?.updateSelf();
+		await this.m_user2?.updateSelf();
+
+		this.createPlayerHtml();
 	}
 
 	private async removeQueue(): Promise<void>

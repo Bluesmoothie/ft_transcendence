@@ -43,9 +43,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/create', {
-		config: { 
-			rateLimit: core.rateLimitMed
-		},
 		schema: {
 			body: {
 				type: "object",
@@ -73,9 +70,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/login', {
-		config: { 
-			rateLimit: core.rateLimitMed
-		},
 		schema: {
 			body: {
 				type: "object",
@@ -99,9 +93,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 	})
 
 	fastify.post('/logout', {
-		config: { 
-			rateLimit: core.rateLimitMed
-		},
 		schema: {
 			body: {
 				type: "object",
@@ -140,7 +131,6 @@ export async function userManagmentRoutes(fastify: FastifyInstance)
 			const data: any = await jwt.jwtVerif(token, core.sessionKey);
 			if (!data)
 				return reply.code(400).send({ message: "token is invalid" });
-			Logger.debug("hello?");
 			const res = await mgmt.resetUser(data.id);
 			return reply.code(res.code).send(res.data);
 		})

@@ -35,7 +35,7 @@ export class LobbyView extends ViewComponent
 		if (!chatInput || !chatOutput || !MainUser.Instance)
 			return ;
 	    
-		this.m_chat.Init(MainUser.Instance, chatOutput, chatInput);
+		this.m_chat.Init(chatOutput, chatInput);
 	}
 
 	public async enable()
@@ -56,9 +56,9 @@ export class LobbyView extends ViewComponent
 
 		MainUser.Instance.displayTutorial();
 
-
-		if (!this.m_chat || this.m_chat.user?.id != MainUser.Instance.id)
+		if (this.m_chat && !this.m_chat.isConnected)
 		{
+			this.m_chat.connect();
 			this.m_chat.onConnRefresh((conns: User[]) => this.fillUserList(conns));
 		}
 
