@@ -19,6 +19,7 @@ export class TournamentLobby
 	private matchListener: ((json: any) => void) | null = null;
 	private matchStarted: boolean = false;
 	private wss: WebSocket | null = null;
+	private isLeaving: boolean = false;
 
 	get id(): string | null { return this.tournamentId; }
 
@@ -72,27 +73,22 @@ export class TournamentLobby
 
 	private async init()
 	{
-		if (!this.tournamentId)
+		if (!MainUser.Instance)
 		{
+			console.error('[TournamentLobby] No user found');
 			this.router.navigateTo('tournament-menu', '');
 			return ;
 		}
 
-		const token = MainUser.Instance?.token;
-		if (!token)
+		if (!this.tournamentId || this.tournamentId === "")
 		{
-			console.error('[TournamentLobby] No token found for main user');
-			this.router.navigateTo('tournament-menu', '');
-			return ;
-		}
-
-		if (this.tournamentId != "")
-		{
-			this.wss = new WebSocket(`wss://${location.host}/api/tournament/create?token=${encodeURIComponent(token)}`);
+			console.log('[TournamentLobby] Creating new tournament');
+			this.wss = new WebSocket(`wss://${location.host}/api/tournament/create`);
 		}
 		else
 		{
-			this.wss = new WebSocket(`wss://${location.host}/api/tournament/join?token=${encodeURIComponent(token)}&lobbyId=${encodeURIComponent(this.tournamentId)}`);
+			console.log('[TournamentLobby] Joining tournament:', this.tournamentId);
+			this.wss = new WebSocket(`wss://${location.host}/api/tournament/join?lobbyId=${encodeURIComponent(this.tournamentId)}`);
 		}
 
 		this.wss.onopen = () =>
@@ -110,9 +106,23 @@ export class TournamentLobby
 				{
 					console.error('[TournamentLobby] Error from server:', data.error);
 					alert(`Error: ${data.error}`);
+					this.isLeaving = true;
 					this.router.navigateTo('tournament-menu', '');
 				}
-				else
+				else if (data.message === "LOBBY_CLOSED")
+				{
+					console.log('[TournamentLobby] Lobby closed:', data.reason);
+					alert(`Lobby closed: ${data.reason || 'Owner left'}`);
+					this.isLeaving = true;
+					this.router.navigateTo('tournament-menu', '');
+				}
+				else if (data.message === "created" && data.lobbyId)
+				{
+					console.log('[TournamentLobby] Tournament created with ID:', data.lobbyId);
+					this.tournamentId = data.lobbyId;
+					await this.render(data);
+				}
+				else if (data.message === "UPDATE")
 				{
 					await this.render(data);
 				}
@@ -126,13 +136,14 @@ export class TournamentLobby
 		this.wss.onerror = (event: Event) =>
 		{
 			console.error('[TournamentLobby] WebSocket error:', event);
+			this.isLeaving = true;
 			this.router.navigateTo('tournament-menu', '');
 		};
 
 		this.wss.onclose = (event: CloseEvent) =>
 		{
 			console.log('[TournamentLobby] WebSocket connection closed:', event);
-			if (!this.matchStarted)
+			if (!this.matchStarted && !this.isLeaving)
 			{
 				this.router.navigateTo('tournament-menu', '');
 			}
@@ -141,6 +152,12 @@ export class TournamentLobby
 
 	private async render(data: any)
 	{
+		if (!data || !data.players || !data.ownerId || !data.ownerName)
+		{
+			console.error('[TournamentLobby] Invalid render data:', data);
+			return;
+		}
+
 		this.isOwner = data.ownerId === this.user.id;
 
 		if (this.lobbyTitle)
@@ -250,23 +267,36 @@ export class TournamentLobby
 
 	private leaveTournament = async (): Promise<void> =>
 	{
-		if (!this.tournamentId)
+		if (!this.tournamentId || this.tournamentId === "" || this.isLeaving)
 		{
 			return;
 		}
 
+		this.isLeaving = true;
+
 		try
 		{
-			await fetch('/api/tournament/leave',
+			const res = await fetch('/api/tournament/leave',
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MainUser.Instance?.token}` },
 				body: JSON.stringify ({ lobbyId: this.tournamentId })
 			});
+
+			if (res.ok)
+			{
+				this.router.navigateTo('tournament-menu', '');
+			}
+			else
+			{
+				console.error('Failed to leave tournament:', await res.text());
+				this.router.navigateTo('tournament-menu', '');
+			}
 		}
 		catch (e)
 		{
 			console.error('Error leaving tournament:', e);
+			this.router.navigateTo('tournament-menu', '');
 		}
 	}
 
@@ -288,9 +318,14 @@ export class TournamentLobby
 			this.leaveBtn.removeEventListener( 'click', this.leaveTournament);
 		}
 
-		if (this.router.currentPage !== 'tournament-menu')
+		if (!this.isLeaving && !this.matchStarted && this.tournamentId && this.tournamentId !== "")
 		{
 			await this.leaveTournament();
+		}
+
+		if (this.wss && this.wss.readyState === WebSocket.OPEN)
+		{
+			this.wss.close();
 		}
 	}
 }

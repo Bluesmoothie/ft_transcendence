@@ -11,26 +11,14 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 		fastify.get('/create',
 		{
 			websocket: true,
-			schema:
-			{
-				headers:
-				{
-					type: "object",
-					properties:
-					{
-						authorization: { type: "string" }
-					},
-					required: ["authorization"]
-				},
-			},
 			config:
 			{
-				rateLimit: rateLimitHard
+				rateLimit: rateLimitMed // Need to change to hard
 			}
 		},
 		async (socket: WebSocket, request: FastifyRequest) =>
 		{
-			const { token } = request.headers as { token: string };
+			const token = request.cookies.jwt_session;
 			if (!token)
 			{
 				socket.send(JSON.stringify({ error: 'missing token param' }));
@@ -59,15 +47,6 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 			websocket: true,
 			schema:
 			{
-				headers:
-				{
-					type: "object",
-					properties:
-					{
-						authorization: { type: "string" }
-					},
-					required: ["authorization"]
-				},
 				querystring:
 				{
 					type: "object",
@@ -85,7 +64,7 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 		},
 		async (socket: WebSocket, request: FastifyRequest) =>
 		{
-			const { token } = request.headers as { token: string };
+			const token = request.cookies.jwt_session;
 			if (!token)
 			{
 				socket.send(JSON.stringify({ error: 'missing token param' }));
@@ -141,14 +120,15 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 		},
 		async (request: FastifyRequest, reply: FastifyReply) =>
 		{
-			const { token } = request.headers as { token: string };
-			if (!token)
+			const authorization = request.headers.authorization as string | undefined;
+			if (!authorization || !authorization.startsWith('Bearer '))
 			{
-				reply.status(400).send({ error: 'missing token param' });
-				Logger.error("missing token");
+				reply.status(400).send({ error: 'missing authorization header' });
+				Logger.error("missing authorization header");
 				return ;
 			}
 
+			const token = authorization.replace('Bearer ', '');
 			const data = await jwtVerif(token, core.sessionKey);
 			if (!data)
 			{
@@ -185,7 +165,11 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 				}
 			},
 	}, async (request: FastifyRequest, reply: FastifyReply) => {
-		const { token } = request.headers as { token: string };
+		const authorization = request.headers.authorization as string | undefined;
+		if (!authorization || !authorization.startsWith('Bearer '))
+			return reply.code(400).send({ message: "missing authorization header" });
+		
+		const token = authorization.replace('Bearer ', '');
 		const { lobbyId } = request.body as { lobbyId: string };
 		const data = await jwtVerif(token, core.sessionKey);
 		if (!data)
@@ -193,5 +177,18 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 
 		const res = await tournamentManager.leaveLobby(data.id, lobbyId);
 		return reply.code(res.code).send(res.data);
+	});
+
+	fastify.get('/list',
+	{
+		config:
+		{
+			rateLimit: rateLimitMed
+		}
+	},
+	async (request: FastifyRequest, reply: FastifyReply) =>
+	{
+		const res = tournamentManager.getActiveTournaments();
+		return (reply.code(res.code).send(res.data));
 	});
 }

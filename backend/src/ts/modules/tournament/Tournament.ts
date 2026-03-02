@@ -58,6 +58,12 @@ export class TournamentManager
 	*/
 	public async createLobby(ownerId: number, ownerWs: WebSocket): Promise<DbResponse>
 	{
+		Logger.debug("Creating lobby for user id:", ownerId);
+		if (this.findPlayerInLobbies(ownerId))
+		{
+			return { code: 409, data: { message: "you can't create a lobby while in another one" }};
+		}
+
 		if (ownerWs.readyState != ownerWs.OPEN)
 			return { code: 400, data: { message: "invalid websocket" }};
 
@@ -66,17 +72,49 @@ export class TournamentManager
 		await lobby.init(ownerId);
 		this.m_lobbies.push(lobby);
 
-		ownerWs.send(JSON.stringify({ message: "created", lobbyId: id}));
+		const initialState = lobby.getLobbyState();
+		ownerWs.send(JSON.stringify({ ...initialState, message: "created", lobbyId: id}));
 		Logger.success(lobby.owner.name, "created tournament, id:", lobby.id);
 		return { code: 200, data: { message: "lobby created", id: id }};
+	}
+
+	private findPlayerInLobbies(id: number): boolean
+	{
+		for (const lobby of this.m_lobbies)
+		{
+			for (const player of lobby.players)
+			{
+				if (player.id === id)
+				{
+					return (true);
+				}
+			}
+		}
+
+		return (false);
 	}
 
 	public async leaveLobby(userId: number, lobbyId: string): Promise<DbResponse>
 	{
 		for (let i = 0; i < this.m_lobbies.length; i++)
 		{
-			if (this.m_lobbies[i].id == lobbyId)
-				return this.m_lobbies[i].leave(userId); //! COULD NEED AWAIT HERE
+			const lobby = this.m_lobbies[i];
+			if (lobby.id == lobbyId)
+			{
+				const result = await this.m_lobbies[i].leave(userId);
+
+				if (lobby.players.size == 0)
+				{
+					this.m_lobbies.splice(i, 1);
+				}
+				else if (userId == lobby.owner.id)
+				{
+					const player = Array.from(lobby.players)[0];
+					this.m_lobbies[i].owner = player;
+				}
+
+				return (result);
+			}
 		}
 
 		return { code: 404, data: { message: "lobby not found" }};
@@ -93,8 +131,37 @@ export class TournamentManager
 		return { code: 200, data: { message: "Success", ids: ids }};
 	}
 
+	public getActiveTournaments()
+	{
+		const tournaments = [];
+
+		for (let i = 0; i < this.m_lobbies.length; i++)
+		{
+			const lobby = this.m_lobbies[i];
+			if (lobby.id === "0" || lobby.id === "" || lobby.state !== 0)
+			{
+				continue ;
+			}
+
+			tournaments.push
+			({
+				id: lobby.id,
+				ownerName: lobby.owner.name,
+				playerCount: lobby.players.size,
+				type: "tournament"
+			});
+		}
+
+		return { code: 200, data: tournaments };
+	}
+
 	public async addPlayerToLobby(id: number, ws: WebSocket | null, lobbyId: string): Promise<DbResponse>
 	{
+		if (this.findPlayerInLobbies(id))
+		{
+			return { code: 409, data: { message: "you are already in a lobby" }};
+		}
+
 		for (let i = 0; i < this.m_lobbies.length; i++)
 		{
 			if (this.m_lobbies[i].id == lobbyId)
@@ -158,6 +225,8 @@ export class Lobby
 	get players(): Set<Player>	{ return this.m_players; }
 	get state(): LobbyState		{ return this.m_state; }
 
+	set owner(value: Player) { this.m_owner = value; }
+
 	constructor(id: string, ownerWs: WebSocket | null)
 	{
 		this.m_id = id;
@@ -167,8 +236,9 @@ export class Lobby
 
 	public async init(ownerId: number)
 	{
-		await this.m_owner.init(ownerId)
-		await this.addPlayer(this.m_owner.id, this.m_owner.ws);
+		await this.m_owner.init(ownerId);
+		this.registerWs(this.m_owner);
+		this.m_players.add(this.m_owner);
 	}
 
 	public async addPlayer(id: number, ws: WebSocket | null): Promise<DbResponse>
@@ -184,8 +254,7 @@ export class Lobby
 		this.m_players.add(player);
 		Logger.success(player.name, "was added to", this.m_owner.name, "lobby");
 
-		const ids = this.getAllPlayerIds();
-		this.broadcast({ message: "UPDATE", ids: ids });
+		this.broadcast(this.getLobbyState());
 		return { code: 200, data: { message: "Success" }};
 	}
 
@@ -221,18 +290,44 @@ export class Lobby
 		return ids;
 	}
 
+	public getLobbyState(): any
+	{
+		const players = Array.from(this.m_players).map(p => (
+		{
+			id: p.id,
+			name: p.name,
+			elo: p.elo
+		}));
+
+		return (
+		{
+			message: "UPDATE",
+			ownerId: this.m_owner.id,
+			ownerName: this.m_owner.name,
+			players: players,
+			state: this.m_state
+		});
+	}
+
 	public async leave(id: number): Promise<DbResponse>
 	{
-		// find player
 		const player = this.findPlayerById(id);
 		if (!player)
+		{
 			return { code: 200, data: { message: "You are not part of the tournament" }};
+		}
 
-		player.ws?.close();
+		if (player.ws)
+		{
+			player.ws.removeAllListeners();
+			if (player.ws.readyState === player.ws.OPEN)
+			{
+				player.ws.close();
+			}
+		}
+		
 		this.m_players.delete(player);
-
-		// notify other players
-		this.broadcast({ message: "UPDATE", ids: this.getAllPlayerIds() });
+		this.broadcast(this.getLobbyState());
 
 		Logger.success(player.name, "was removed from", this.m_owner.name, "lobby");
 		return { code: 200, data: { message: "Success" }};
@@ -242,11 +337,10 @@ export class Lobby
 	{
 		for (const p of this.m_players)
 		{
-			if (!p.ws)
-				continue;
-
-			if (p.ws.readyState == p.ws.OPEN)
+			if (p.ws && p.ws.readyState == p.ws.OPEN)
+			{
 				p.ws.send(JSON.stringify(json));
+			}
 		}
 	}
 
@@ -334,9 +428,12 @@ export class Lobby
 			const p1 = this.m_playersLeft[i].id;
 			const p2 = this.m_playersLeft[i + 1].id;
 
+			const gameInstance = new GameInstance("online", p1, p2, gameId);
+			this.m_matches.add(gameInstance);
+			GameServer.Instance?.activeGames.set(gameId, gameInstance);
+
 			chat.notifyMatch(p1, p2, gameId, 1);
 			chat.notifyMatch(p2, p1, gameId, 2);
-			this.m_matches.add(new GameInstance("online", p1, p2, gameId));
 		}
 
 		Logger.log(`${this.m_owner.name} tournament: NEW ROUND (${this.m_playersLeft.length} players left)`);
