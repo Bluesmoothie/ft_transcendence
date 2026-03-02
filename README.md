@@ -76,6 +76,7 @@ You will need to setup a .env (a .env-sample is provided just rename it .env)
 |PADDLE_SPEED| speed of the paddle in game (default: 1.5)|
 |BALL_SPEED| speed of the BALL in game (default: 1.5)|
 |BALL_SPEED_INCREMENT| amount of speed gain at each bounce (default: 0.1)|
+|MAX_ELO_DIFF | matchmaking will forbid a match between player with elo diff greater than value (-1 == disable)|
 |POINTS_TO_WIN| amount of point to win a game (default: 11)|
 |MAX_ANGLE| max random angle the ball can go when starting round (default: 1.5)|
 |PADDLE_HEIGHT| height of the paddles in % of the game view (default: 15)|

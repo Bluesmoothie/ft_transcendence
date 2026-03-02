@@ -7,6 +7,7 @@ import { Logger } from 'modules/logger.js';
 import { Chat } from 'modules/chat/chat.js';
 import { TournamentManager } from 'modules/tournament/Tournament.js';
 
+
 export interface DbResponse {
 	code:	number;
 	data:	any;

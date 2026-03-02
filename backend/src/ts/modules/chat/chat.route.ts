@@ -1,4 +1,4 @@
-import { core, chat, rateLimitMed } from 'core/server.js';
+import { core, chat, rateLimitMed, tournamentManager } from 'core/server.js';
 import { FastifyRequest, FastifyReply, FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getUserById, getUserByName, getBlockUser } from 'modules/users/user.js';
 import { jwtVerif } from 'modules/jwt/jwt.js';
@@ -81,7 +81,8 @@ export async function chatRoutes(fastify: FastifyInstance)
 		if (!data)
 			return reply.code(400).send({ message: "invalid token" });
 
-		chat.removePlayerFromQueue(data.id);
+		// chat.removePlayerFromQueue(data.id);
+		tournamentManager.leaveLobby(data.id, "0");
 		return reply.code(200).send({ message: "removed" });
 	});
 

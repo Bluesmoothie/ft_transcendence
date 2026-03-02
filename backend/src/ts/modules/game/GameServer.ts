@@ -137,8 +137,9 @@ export class GameServer
 						}
 					}
 
-					await tournamentManager.addPlayerToLobby(data.id, null, "0");
-					// await chat.addPlayerToQueue(data.id, this);
+					const res = await tournamentManager.addPlayerToLobby(data.id, null, "0");
+					if (res.code != 200)
+						return reply.code(res.code).send(res.data);
 					reply.status(202).send({ message: "added to queue", paddleHeight: params.PADDLE_HEIGHT, paddleWidth: params.PADDLE_WIDTH,
 						paddlePadding: params.PADDLE_PADDING, ballSize: params.BALL_SIZE });
 				}

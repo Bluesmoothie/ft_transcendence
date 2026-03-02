@@ -19,6 +19,8 @@ class Player
 	get id(): number			{ return this.m_id; }
 	get elo(): number			{ return this.m_elo; }
 
+	set name(value: string) { this.m_name = value; }
+
 	constructor(ws: WebSocket | null)
 	{
 		this.m_ws = ws;
@@ -353,9 +355,12 @@ export class Lobby
 
 class PublicLobby extends Lobby
 {
+	public static readonly maxEloDiff		= process.env.MAX_ELO_DIFF ? Number(process.env.MAX_ELO_DIFF) : -1;
+
 	constructor()
 	{
 		super("0", null);
+		this.owner.name = "public";
 	}
 
 	public async start(id: number): Promise<DbResponse>
@@ -372,6 +377,11 @@ class PublicLobby extends Lobby
 
 	public async addPlayer(id: number, ws: WebSocket | null): Promise<DbResponse>
 	{
+		if (!chat.isUserConnected(id))
+		{
+			Logger.warn(`user (id: ${id}) tried to connected to public lobby ${this.id} without connecting to chat`);
+			return { code: 403, data: { message: "To access public lobby, please connect to chat" }};
+		}
 
 		const p = new Player(null);
 		await p.init(id);
@@ -428,13 +438,20 @@ class PublicLobby extends Lobby
 			Logger.error("undefined player in queue:\n\tp1:", p1, "\n\tp2:", p2);
 			return;
 		}
+
+		const diff = Math.abs(p1.elo - p2.elo);
+		if (diff > PublicLobby.maxEloDiff)
+		{
+			Logger.warn(`can't start match ${p1.name} vs ${p2.name}, elo diff too big (${diff})`);
+			return ;
+		}
+
 		this.m_players.delete(p1);
 		this.m_players.delete(p2);
 
 		chat.notifyMatch(p1.id, p2.id, gameId, 1);
 		chat.notifyMatch(p2.id, p1.id, gameId, 2);
 		GameServer.Instance?.activeGames.set(gameId, new GameInstance('online', p1.id, p2.id, gameId));
-		// this.m_matches.add(new GameInstance("online", p1.id, p2.id, gameId));
 
 		Logger.log(`PUB LOBBY (${this.id}): NEW ROUND (${p1.name} vs ${p2.name})`);
 		if (this.m_players.size > 1)

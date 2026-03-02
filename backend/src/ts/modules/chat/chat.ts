@@ -1,10 +1,8 @@
-import { core, DbResponse } from 'core/server.js';
+import { core, DbResponse, tournamentManager } from 'core/server.js';
 import { getUserById, getBlockUser, getUserName } from 'modules/users/user.js';
 import { WebSocket } from '@fastify/websocket';
 import * as utils from 'utils.js';
 import { FastifyRequest } from 'fastify';
-import { GameServer } from 'modules/game/GameServer.js';
-import { GameInstance } from 'modules/game/GameInstance.js'
 import { Logger } from 'modules/logger.js';
 import { logoutUser } from 'modules/users/userManagment.js';
 import { clearDuel } from 'modules/users/duel.js';
@@ -16,24 +14,9 @@ export type LobbyInvite = {
 	lobbyId:	string
 }
 
-// class Connection
-// {
-// 	public ws:			WebSocket;
-// 	public id:			number;
-// 	public rateLimit:	number;
-//
-// 	constructor(ws: WebSocket, id: number)
-// 	{
-// 		this.ws = ws;
-// 		this.id = id;
-// 		this.rateLimit = 0;
-// 	}
-// }
-
 export class Chat
 {
 	private m_connections: Map<WebSocket, number>; // websocket <=> user login
-	// private m_connections: Set<Connection>
 
 	private m_healthQueue: number[];
 	private m_matchQueue: number[];
@@ -49,13 +32,22 @@ export class Chat
 	constructor()
 	{
 		this.m_connections = new Map<WebSocket, number>();
-		// this.m_connections = new Set<Connection>
 		this.m_lobbyInvites = [];
 		this.m_healthQueue = [];
 		this.m_matchQueue = [];
 		this.m_timerId = null;
 	}
 
+	public isUserConnected(userId: number): boolean
+	{
+		for (var [ws, id] of this.connections)
+		{
+			if (id == userId)
+				return true;
+		}
+
+		return false;
+	}
 
 	public serverMsg(str: string, flag?: string, data_i18n?: string): string
 	{
@@ -127,6 +119,7 @@ export class Chat
 		this.m_connections.delete(ws);
 		logoutUser(id, core.db);
 		ws.close();
+		tournamentManager.leaveLobby(id, "0");
 
 		Logger.log(await getUserName(id), "was disconnected");
 		if (this.m_connections.size == 0 && this.m_timerId != null)
@@ -166,50 +159,6 @@ export class Chat
 	public async removePlayerFromQueue(playerId: number)
 	{
 		this.m_matchQueue = this.m_matchQueue.filter(num => num != Number(playerId));
-	}
-
-	private async startGameMatchQueue(playerId: number, server: GameServer)
-	{
-		const player1: number = playerId;
-		const player2 = this.m_matchQueue.shift();
-		if (!player2)
-			return null;
-
-		const gameId = crypto.randomUUID();
-
-		await this.notifyMatch(player1, player2, gameId, 1);
-		await this.notifyMatch(player2, player1, gameId, 2);
-
-		server.activeGames.set(gameId, new GameInstance('online', player1, player2, gameId));
-
-
-		Logger.log(`${await getUserName(player1)} will play against ${await getUserName(player2)}`);
-		return gameId;
-	}
-
-	/**
-	 * add player to matchmaking queue and start game if enougth player
-	 * @param playerId player to add
-	 * @param server gameserver
-	 * @returns id of started match, null of no match started
-	 */
-	public async addPlayerToQueue(playerId: number, server: GameServer): Promise<string | null>
-	{
-		// check if player is already in queue
-		for (let i = 0; i < this.m_matchQueue.length; i++)
-		{
-			if (this.m_matchQueue[i] == playerId)
-				return null;
-		}
-
-		if (this.m_matchQueue.length + 1 >= 2) // run match
-		{
-			const id = await this.startGameMatchQueue(playerId, server);
-			return id;
-		}
-
-		this.m_matchQueue.push(playerId);
-		return null;
 	}
 
 	private async validateMessage(json: any): Promise<DbResponse>
