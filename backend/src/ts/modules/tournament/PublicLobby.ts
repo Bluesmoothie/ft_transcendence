@@ -1,4 +1,4 @@
-import { Lobby, LobbyState, Player } from 'modules/tournament/Tournament.js';
+import { Lobby, LobbyState, Player } from 'modules/tournament/Lobby.js';
 import { Logger } from 'modules/logger.js';
 import { DbResponse, chat } from 'core/server.js';
 import { GameServer } from 'modules/game/GameServer.js'
