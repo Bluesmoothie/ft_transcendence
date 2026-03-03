@@ -536,12 +536,12 @@ class PublicLobby extends Lobby
 			return;
 		}
 
-		const diff = Math.abs(p1.elo - p2.elo);
-		if (diff > PublicLobby.maxEloDiff)
-		{
-			Logger.warn(`can't start match ${p1.name} vs ${p2.name}, elo diff too big (${diff})`);
-			return ;
-		}
+		// const diff = Math.abs(p1.elo - p2.elo);
+		// if (diff > PublicLobby.maxEloDiff)
+		// {
+		// 	Logger.warn(`can't start match ${p1.name} vs ${p2.name}, elo diff too big (${diff})`);
+		// 	return ;
+		// }
 
 		this.m_players.delete(p1);
 		this.m_players.delete(p2);
