@@ -371,7 +371,6 @@ export function registerCmds(chat: Chat)
 			method: "POST",
 			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${chat.user?.token}` },
 			body: JSON.stringify({
-				token: chat.user.token,
 				friend_id: id
 			})
 		});

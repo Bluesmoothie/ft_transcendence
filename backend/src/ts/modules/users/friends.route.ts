@@ -63,7 +63,7 @@ export async function friendsRoutes(fastify: FastifyInstance, options: FastifyPl
 				properties: {
 					friend_id: { type: 'number' }
 				},
-				required: ['token', 'friend_id']
+				required: ['friend_id']
 			}
 		}
 	}, async (request: FastifyRequest, reply: FastifyReply) => {
