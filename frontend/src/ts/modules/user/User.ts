@@ -373,7 +373,7 @@ export class MainUser extends User
 			tutorial.style.display = "none";
 			fetch('/api/user/complete_tutorial', {
 				method: "POST",
-				headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${this.m_token}` }
+				headers: { 'Authorization': `Bearer ${this.m_token}` }
 			});
 			this.finishedTutorial = false;
 		});
@@ -621,7 +621,7 @@ export class MainUser extends User
 
 		var response = await fetch("/api/totp/remove", {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MainUser.Instance?.token}` },
+			headers: { 'Authorization': `Bearer ${MainUser.Instance?.token}` },
 			
 		});
 
@@ -648,7 +648,7 @@ export class MainUser extends User
 	{
 		const res = await fetch ('api/user/delete', {
 			method: "DELETE",
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MainUser.Instance?.token}` },
+			headers: { 'Authorization': `Bearer ${MainUser.Instance?.token}` },
 		});
 		this.logout();
 		return res.status;
@@ -658,7 +658,7 @@ export class MainUser extends User
 	{
 		const res = await fetch ('api/user/reset', {
 			method: "DELETE",
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MainUser.Instance?.token}` },
+			headers: { 'Authorization': `Bearer ${MainUser.Instance?.token}` },
 		});
 		return res.status;
 	}
@@ -669,7 +669,7 @@ export class MainUser extends User
 			return -1;
 		const res = await fetch("/api/chat/removeQueue", { 
 			method: "DELETE",
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MainUser.Instance?.token}` },
+			headers: { 'Authorization': `Bearer ${MainUser.Instance?.token}` },
 		});
 		return res.status;
 	}

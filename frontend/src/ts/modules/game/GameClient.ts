@@ -511,7 +511,7 @@ export class GameClient extends Utils
 		await fetch("/api/chat/removeQueue",
 		{
 			method: "DELETE",
-			headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${MainUser.Instance?.token}` },
+			headers: { 'Authorization': `Bearer ${MainUser.Instance?.token}` },
 		});
 	}
 

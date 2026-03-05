@@ -1,11 +1,12 @@
 import { GameInstance, Parameters } from './GameInstance.js';
 import { Bot } from './Bot.js';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { getUserByName, getUserName } from 'modules/users/user.js';
-import { core, chat, tournamentManager, tokenHeader, getToken } from 'core/server.js';
+import { addGameToHist, getUserByName, getUserName } from 'modules/users/user.js';
+import { core, chat, tournamentManager, tokenHeader, getToken, rateLimitMed } from 'core/server.js';
 import { Logger } from 'modules/logger.js';
 import { jwtVerif } from 'modules/jwt/jwt.js';
 import { getBotId } from 'modules/users/userManagment.js';
+import { GameRes } from 'modules/users/user.js';
 
 export class GameServer
 {
@@ -77,6 +78,7 @@ export class GameServer
 		{
 			schema:
 			{
+				rateLimit: rateLimitMed,
 				headers: tokenHeader,
 				body:
 				{
@@ -202,6 +204,7 @@ export class GameServer
 		{
 			schema:
 			{
+				rateLimit: rateLimitMed,
 				headers: tokenHeader,
 				params:
 				{
@@ -428,7 +431,7 @@ export class GameServer
 				{
 					clearInterval(interval);
 
-					if (game.mode === 'online' || game.mode === 'duel')
+					if (game.mode === 'online' || game.mode === 'duel' || game.mode === 'bot')
 					{
 						const connections = gameConnections.get(gameId);
 						if (connections && !game.winner)
@@ -455,6 +458,25 @@ export class GameServer
 								try
 								{
 									otherConnection.send(JSON.stringify({ type: 'winner', winner: winnerId }));
+
+									var gameRes: GameRes =
+									{
+										user1_id: game.player1Id,
+										user2_id: game.player2Id,
+										user1_score: game.p1Score,
+										user2_score: game.p2Score
+									};
+
+									if (gameRes.user1_id === game.winner)
+									{
+										gameRes.user1_score = game.parameters.POINTS_TO_WIN;
+									}
+									else
+									{
+										gameRes.user2_score = game.parameters.POINTS_TO_WIN;
+									}
+
+									addGameToHist(gameRes, core.db);
 								}
 								catch (err)
 								{
