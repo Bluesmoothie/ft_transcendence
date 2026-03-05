@@ -2,7 +2,7 @@ import { core, chat, tournamentManager, rateLimitMed, rateLimitHard } from 'core
 import { FastifyRequest, FastifyReply, FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { jwtVerif } from 'modules/jwt/jwt.js';
 import { Logger } from 'modules/logger.js';
-import type WebSocket from 'ws'; // comes from @types/ws
+import type WebSocket from 'ws';
 
 export async function tournamentRoutes(fastify: FastifyInstance)
 {
@@ -208,7 +208,7 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 		return (reply.code(res.code).send(res.data));
 	});
 
-	fastify.get('/api/blockchain/tournaments',
+	fastify.get('/blockchain',
 	async (request: FastifyRequest, reply: FastifyReply) =>
 	{
 		const contractAddress = tournamentManager.getContractAddress();

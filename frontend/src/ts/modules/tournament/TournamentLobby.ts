@@ -5,6 +5,8 @@ import { UserElement, UserElementType } from 'modules/user/UserElement.js';
 import type { Chat } from 'modules/chat/chat.js';
 import { MainUser } from 'modules/user/User.js';
 import * as utils from 'modules/utils/utils.js'
+import { Router } from 'modules/router/Router.js';
+import { LobbyView } from 'modules/pages/lobby.js';
 
 export class TournamentLobby
 {
@@ -22,6 +24,7 @@ export class TournamentLobby
 	private isLeaving: boolean = false;
 	private destroyed: boolean = false;
 	private ownerName: string = '';
+	private lobby:		LobbyView;
 
 	get id(): string | null { return this.tournamentId; }
 
@@ -35,6 +38,9 @@ export class TournamentLobby
 		this.setUpEventListeners();
 		this.setupMatchListener();
 		this.m_players = [];
+		this.lobby = Router.Instance?.activeView as LobbyView;
+
+		this.lobby.loadingIndicator?.startLoading();
 	}
 
 	private setupMatchListener()
@@ -58,6 +64,18 @@ export class TournamentLobby
 		}
 	}
 
+	private enableBtn(btn: HTMLButtonElement)
+	{
+		btn.classList.remove("btn-disable");
+		btn.disabled = false;
+	}
+
+	private disableBtn(btn: HTMLButtonElement)
+	{
+		btn.classList.add("btn-disable");
+		btn.disabled = true;
+	}
+
 	private getElements()
 	{
 		const context = this.router.view || document;
@@ -65,6 +83,9 @@ export class TournamentLobby
 		this.startBtn = context.querySelector('#lobby-start-btn') as HTMLButtonElement;
 		this.leaveBtn = context.querySelector('#lobby-leave-btn') as HTMLButtonElement;
 		this.lobbyTitle = context.querySelector('#lobby-title') as HTMLElement;
+
+		this.disableBtn(this.startBtn);
+		this.disableBtn(this.leaveBtn);
 	}
 
 	private async init()
@@ -121,7 +142,18 @@ export class TournamentLobby
 				{
 					console.log('[TournamentLobby] Tournament created with ID:', data.lobbyId);
 					this.tournamentId = data.lobbyId;
+					this.lobby.loadingIndicator?.stopLoading();
 					await this.render(data);
+
+					if (this.startBtn && this.leaveBtn)
+					{
+						this.enableBtn(this.startBtn);
+						this.enableBtn(this.leaveBtn);
+					}
+					else
+					{
+						console.warn("missing btn");
+					}
 				}
 				else if (data.message === "UPDATE")
 				{
