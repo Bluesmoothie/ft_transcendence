@@ -123,12 +123,15 @@ export class GameClient extends Utils
 		return elt;
 	}
 
-	private createPlayerHtml()
+	private async createPlayerHtml()
 	{
 		if (!this.m_playerContainer || !this.m_user || !this.m_user2)
 		{
 			return ;
 		}
+
+		await MainUser.Instance?.updateSelf();
+
 		this.m_playerContainer.innerHTML = "";
 		this.m_player1 = this.initPlayerHtml(this.m_user);
 		this.m_player2 = this.initPlayerHtml(this.m_user2);
