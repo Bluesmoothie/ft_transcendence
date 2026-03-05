@@ -92,7 +92,7 @@ export function registerCmds(chat: Chat)
 		}
 		const res = await fetch("/api/chat/list", {
 			method: "POST",
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${chat.user?.token}` },
+			headers: { 'Authorization': `Bearer ${chat.user?.token}` },
 		});
 		const json = await res.json();
 		var str = "+++ listing invites +++";
@@ -235,7 +235,7 @@ export function registerCmds(chat: Chat)
 		}
 		const res = await fetch("/api/duel/list", {
 			method: "POST",
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${chat.user?.token}` },
+			headers: { 'Authorization': `Bearer ${chat.user?.token}` },
 		});
 		const json = await res.json();
 		var str = "+++ listing duels +++";
@@ -442,7 +442,7 @@ export function registerCmds(chat: Chat)
 		}
 		const response = await fetch('/api/user/blocked_users', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${chat.user?.token}` },
+			headers: { 'Authorization': `Bearer ${chat.user?.token}` },
 		});
 		displayResponse(chat, response);
 	});
