@@ -2,7 +2,7 @@ import { GameInstance, Parameters } from './GameInstance.js';
 import { Bot } from './Bot.js';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getUserByName, getUserName } from 'modules/users/user.js';
-import { core, chat, tournamentManager } from 'core/server.js';
+import { core, chat, tournamentManager, tokenHeader, getToken } from 'core/server.js';
 import { Logger } from 'modules/logger.js';
 import { jwtVerif } from 'modules/jwt/jwt.js';
 import { getBotId } from 'modules/users/userManagment.js';
@@ -77,15 +77,7 @@ export class GameServer
 		{
 			schema:
 			{
-				headers:
-				{
-					type: "object",
-					properties:
-					{
-						authorization: { type: "string" }
-					},
-					required: ["authorization"]
-				},
+				headers: tokenHeader,
 				body:
 				{
 					type: "object",
@@ -101,15 +93,10 @@ export class GameServer
 		{
 			try
 			{
-				const authorization = request.headers.authorization as string | undefined;
-				if (!authorization || !authorization.startsWith('Bearer '))
-				{
-					reply.status(400).send({ error: 'missing authorization header' });
-					Logger.error("missing authorization header");
-					return ;
-				}
+				const token = getToken(request.headers.authorization as string);
+				if (!token)
+					return reply.status(400).send({ error: 'missing authorization header' });
 
-				const token = authorization.replace('Bearer ', '');
 				const body = request.body as { mode: string; token: string};
 				const mode = body.mode;
 				const params = new Parameters();

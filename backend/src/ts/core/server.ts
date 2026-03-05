@@ -33,16 +33,39 @@ export const tokenSchema = {
 	}
 }
 
+export const tokenHeader = 
+{
+	type: "object",
+	properties:
+	{
+		authorization: { type: "string" }
+	},
+	required: ["authorization"]
+}
+
 export function getDateFormated()
 {
 	return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Paris"})).toISOString().slice(0, 19).replace('T', ' ');
 }
 
+export function getToken(authorization: string): string | null
+{
+	if (!authorization || !authorization.startsWith('Bearer '))
+	{
+		Logger.error("missing authorization header");
+		return null;
+	}
+	const token = authorization.replace('Bearer ', '');
+	return token;
+}
+
 export const core = new Core();
 export const chat = new Chat();
-export const tournamentManager = new TournamentManager();
 
 await initVault();
+
+export const tournamentManager = new TournamentManager();
+
 
 await core.createServer();
 await initFastify();

@@ -13,7 +13,7 @@ export async function tournamentRoutes(fastify: FastifyInstance)
 			websocket: true,
 			config:
 			{
-				rateLimit: rateLimitMed // Need to change to hard
+				rateLimit: rateLimitHard
 			}
 		},
 		async (socket: WebSocket, request: FastifyRequest) =>
