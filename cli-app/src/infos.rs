@@ -272,7 +272,7 @@ impl Infos {
         let id: &str = &self.authent.borrow().id.to_string();
         map.insert("id", id);
         let url = format!("https://{}/api/chat/removeQueue", self.context.location);
-        self.context
+        let response = self.context
             .client
             .delete(url)
             .headers(headers)
