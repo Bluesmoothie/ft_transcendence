@@ -275,7 +275,7 @@ async fn chat(mut ws_stream: WsStream, sender: mpsc::Sender<serde_json::Value>, 
             Some(value) if value == "health" => {
                 let mut header = HeaderMap::new();
                 header.insert("Authorization", format!("Bearer {}", token.clone()).parse()?);
-                let response = client.post(format!("https://{}/api/chat/healthCallback", &location))
+                client.post(format!("https://{}/api/chat/healthCallback", &location))
                     .headers(header)
                     .send()
                     .await?;
